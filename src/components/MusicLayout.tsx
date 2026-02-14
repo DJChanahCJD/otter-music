@@ -7,6 +7,13 @@ import {
 } from "@/components/ui/sheet";
 import { Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
+// import { LoadBalanceDialog } from "./LoadBalanceDialog";
+// import {
+//   DropdownMenu,
+//   DropdownMenuContent,
+//   DropdownMenuItem,
+//   DropdownMenuTrigger,
+// } from "./ui/dropdown-menu";
 
 interface MusicLayoutProps {
   sidebar: ReactNode;
@@ -16,6 +23,7 @@ interface MusicLayoutProps {
 
 export function MusicLayout({ sidebar, children, player }: MusicLayoutProps) {
   const [open, setOpen] = useState(false);
+  // const [isLoadBalanceOpen, setIsLoadBalanceOpen] = useState(false);
 
   return (
     <div className="flex flex-col h-screen overflow-hidden bg-background">
@@ -38,6 +46,20 @@ export function MusicLayout({ sidebar, children, player }: MusicLayoutProps) {
           </SheetContent>
         </Sheet>
         <span className="ml-2 font-semibold">Otter Music</span>
+        {/* <div className="ml-auto">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground">
+                <Settings className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => setIsLoadBalanceOpen(true)}>
+                负载均衡
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div> */}
       </div>
 
       <div className="flex-1 min-h-0 relative">
@@ -51,6 +73,10 @@ export function MusicLayout({ sidebar, children, player }: MusicLayoutProps) {
       <div className="flex-none z-50">
         {player}
       </div>
+      {/* <LoadBalanceDialog 
+        open={isLoadBalanceOpen} 
+        onOpenChange={setIsLoadBalanceOpen} 
+      /> */}
     </div>
   );
 }

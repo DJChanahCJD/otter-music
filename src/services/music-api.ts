@@ -1,9 +1,9 @@
 import type { MusicSource, MusicTrack, SearchPageResult, MergedMusicTrack, SongLyric } from "@/types/music";
 import { cachedFetch } from "@/lib/utils/cache";
 import { mergeAndSortTracks } from "@/lib/utils/search-helper";
-import { API_URL } from "./api";
+import { getApiUrl } from "./api";
 
-const API_BASE = `${API_URL}/music-api`;
+const getApiBase = () => `${getApiUrl()}`;
 
 const TTL_SHORT = 60 * 60 * 1000; // 60 minutes
 const TTL_LONG = 7 * 24 * 60 * 60 * 1000; // 7 days
@@ -38,7 +38,7 @@ const buildUrl = (
     if (cookie) search.set('cookie', cookie);
   }
 
-  return `${API_BASE}?${search.toString()}`;
+  return `${getApiBase()}?${search.toString()}`;
 };
 
 /* -------------------------------------------------- */
