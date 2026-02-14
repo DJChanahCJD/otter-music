@@ -15,6 +15,9 @@ export default function RootLayout({ children }: PropsWithChildren) {
       <Toaster
         position="top-center"
         gutter={12}
+        containerStyle={{
+          top: "calc(16px + var(--safe-area-top))",
+        }}
         toastOptions={{
           duration: 3000,
           style: {

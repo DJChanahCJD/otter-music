@@ -59,7 +59,7 @@ export function FullScreenPlayer({
 
 
       {/* Top Control (Down Arrow) */}
-      <div className="absolute top-3 left-3 z-50">
+      <div className="absolute top-3 left-3 z-50 mt-safe">
         <Button
           variant="ghost"
           size="icon"
@@ -71,7 +71,7 @@ export function FullScreenPlayer({
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col p-8 pb-24 gap-8 overflow-hidden relative z-10">
+      <div className="flex-1 flex flex-col p-8 pb-24 gap-8 overflow-hidden relative z-10 pb-safe">
         
         {/* Mobile Layout: Single Column */}
         <div className="flex flex-col items-center justify-center w-full h-full py-8 gap-6">

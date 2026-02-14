@@ -157,16 +157,24 @@ export const useMusicStore = create<MusicState>()(
       toggleRepeat: () => set((state) => ({ isRepeat: !state.isRepeat })),
       toggleShuffle: () => set((state) => {
         const newIsShuffle = !state.isShuffle;
+        const safeCurrentIndex =
+          state.queue.length === 0
+            ? 0
+            : Math.min(Math.max(state.currentIndex, 0), state.queue.length - 1);
 
         if (newIsShuffle) {
           // 开启随机：备份 -> 打乱
           if (state.queue.length <= 1) {
-            return { isShuffle: true, originalQueue: state.queue };
+            return {
+              isShuffle: true,
+              originalQueue: state.queue,
+              currentIndex: safeCurrentIndex,
+            };
           }
 
-          const currentTrack = state.queue[state.currentIndex];
+          const currentTrack = state.queue[safeCurrentIndex];
           // 排除当前歌曲，打乱剩余的
-          const rest = state.queue.filter((_, i) => i !== state.currentIndex);
+          const rest = state.queue.filter((_, i) => i !== safeCurrentIndex);
           const shuffledRest = shuffleArray(rest);
           const newQueue = [currentTrack, ...shuffledRest];
 
@@ -182,7 +190,15 @@ export const useMusicStore = create<MusicState>()(
             return { isShuffle: false };
           }
 
-          const currentTrack = state.queue[state.currentIndex];
+          const currentTrack = state.queue[safeCurrentIndex];
+          if (!currentTrack) {
+            return {
+              isShuffle: false,
+              queue: state.originalQueue,
+              currentIndex: 0,
+              originalQueue: [],
+            };
+          }
           // 在原始队列中找到当前歌曲的新位置
           const newIndex = state.originalQueue.findIndex((t) => t.id === currentTrack.id);
 
@@ -206,7 +222,20 @@ export const useMusicStore = create<MusicState>()(
       currentIndex: 0,
 
       playContext: (tracks, startIndex) => set((state) => {
+        if (tracks.length === 0) {
+          return {
+            queue: [],
+            originalQueue: [],
+            currentIndex: 0,
+            currentAudioTime: 0,
+            isPlaying: false,
+            isLoading: false,
+            duration: 0,
+          };
+        }
+
         let actualIndex = startIndex ?? 0;
+        actualIndex = Math.min(Math.max(actualIndex, 0), tracks.length - 1);
 
         // 始终保存原始队列
         const originalQueue = tracks;
@@ -308,14 +337,51 @@ export const useMusicStore = create<MusicState>()(
         };
       }),
 
-      removeFromQueue: (trackId) => set((state) => ({
-        queue: state.queue.filter((t) => t.id !== trackId),
-        originalQueue: state.isShuffle 
-          ? (state.originalQueue || []).filter((t) => t.id !== trackId)
-          : state.originalQueue
-      })),
+      removeFromQueue: (trackId) => set((state) => {
+        const removedIndex = state.queue.findIndex((t) => t.id === trackId);
+        if (removedIndex === -1) return {};
 
-      clearQueue: () => set({ queue: [], originalQueue: [], currentIndex: 0, currentAudioTime: 0 }),
+        const nextQueue = state.queue.filter((t) => t.id !== trackId);
+        const nextOriginalQueue = state.isShuffle
+          ? (state.originalQueue || []).filter((t) => t.id !== trackId)
+          : state.originalQueue;
+
+        if (nextQueue.length === 0) {
+          return {
+            queue: [],
+            originalQueue: [],
+            currentIndex: 0,
+            currentAudioTime: 0,
+            isPlaying: false,
+            isLoading: false,
+            duration: 0,
+          };
+        }
+
+        let nextIndex = state.currentIndex;
+        if (removedIndex < state.currentIndex) {
+          nextIndex = state.currentIndex - 1;
+        } else if (removedIndex === state.currentIndex) {
+          nextIndex = Math.min(state.currentIndex, nextQueue.length - 1);
+        }
+
+        return {
+          queue: nextQueue,
+          originalQueue: nextOriginalQueue,
+          currentIndex: nextIndex,
+        };
+      }),
+
+      clearQueue: () =>
+        set({
+          queue: [],
+          originalQueue: [],
+          currentIndex: 0,
+          currentAudioTime: 0,
+          isPlaying: false,
+          isLoading: false,
+          duration: 0,
+        }),
       reshuffle: () => set((state) => {
         if (!state.isShuffle || state.queue.length <= 1) return state;
 
@@ -325,6 +391,7 @@ export const useMusicStore = create<MusicState>()(
           : state.queue;
 
         const currentTrack = state.queue[state.currentIndex];
+        if (!currentTrack) return state;
         // 排除当前歌曲
         const rest = sourceQueue.filter((t) => t.id !== currentTrack.id);
         const shuffledRest = shuffleArray(rest);
@@ -337,7 +404,10 @@ export const useMusicStore = create<MusicState>()(
       }),
       setCurrentIndex: (index, resetTime = true) =>
         set((state) => ({
-          currentIndex: index,
+          currentIndex:
+            state.queue.length === 0
+              ? 0
+              : Math.min(Math.max(index, 0), state.queue.length - 1),
           currentAudioTime: resetTime ? 0 : state.currentAudioTime,
         })),
     }),

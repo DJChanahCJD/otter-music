@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import { format } from "date-fns";
-import { GlobalPlayer } from './components/GlobalPlayer';
+import { PlayerBar } from './components/PlayerBar';
 import { GlobalMusicPlayer } from './components/GlobalMusicPlayer';
 import { MusicLayout } from './components/MusicLayout';
 import { MusicPlaylistView } from './components/MusicPlaylistView';
@@ -127,7 +127,15 @@ export default function MusicPage() {
           onRemove={(t) => {
             // 从队列中移除歌曲
             const newQueue = queue.filter(item => item.id !== t.id);
-            playContext(newQueue, Math.min(currentIndex, newQueue.length - 1));
+            if (newQueue.length === 0) {
+              clearQueue();
+              setIsPlaying(false);
+              setCurrentIndex(0);
+              return;
+            }
+
+            const nextIndex = Math.min(currentIndex, newQueue.length - 1);
+            playContext(newQueue, nextIndex);
           }}
           onDelete={() => {
             if (confirm('确定清空播放队列吗？')) {
@@ -158,7 +166,7 @@ export default function MusicPage() {
         sidebar={sidebar}
         player={
           <>
-            <GlobalPlayer />
+            <PlayerBar />
             <GlobalMusicPlayer />
           </>
         }

@@ -34,7 +34,7 @@ const getModeTitle = (isRepeat: boolean, isShuffle: boolean) => {
   return "列表循环";
 };
 
-export function GlobalPlayer() {
+export function PlayerBar() {
   const {
     isPlaying,
     currentAudioTime: currentTime,
@@ -156,7 +156,7 @@ export function GlobalPlayer() {
       {/* Bottom Player Bar */}
       <div
         className={cn(
-          "relative flex flex-col w-full backdrop-blur-md border-t z-50 pt-1 transition-all duration-500",
+          "relative flex flex-col w-full backdrop-blur-md border-t z-50 pt-1 pb-safe transition-all duration-500",
           isFullScreen
             ? "bg-black/80 border-white/10 text-white dark"
             : "bg-background/70 border-border",

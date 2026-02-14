@@ -27,3 +27,6 @@ dist-ssr
 .trae/documents
 .trae/skills
 .trae/specs
+
+# Android
+android/*

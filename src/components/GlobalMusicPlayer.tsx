@@ -6,7 +6,8 @@ import { musicApi } from "@/services/music-api";
 import { useMusicStore } from "@/store/music-store";
 import { useRef, useEffect } from "react";
 import toast from "react-hot-toast";
-
+import { Capacitor } from "@capacitor/core";
+import { MediaSession } from "@jofr/capacitor-media-session";
 export function GlobalMusicPlayer() {
   const {
     queue,
@@ -34,31 +35,9 @@ export function GlobalMusicPlayer() {
   const requestIdRef = useRef(0);
   // Ref to throttle time updates
   const lastSaveTimeRef = useRef(0);
-
-  const setMediaSessionPlaybackState = (state: "none" | "paused" | "playing") => {
-    if (!("mediaSession" in navigator)) return;
-    try {
-      navigator.mediaSession.playbackState = state;
-    } catch (error) {
-      console.log("Error setting media session playback state:", error);
-    }
-  };
-
-  const setMediaSessionPositionState = () => {
-    if (!("mediaSession" in navigator)) return;
-    const audio = audioRef.current;
-    if (!audio) return;
-
-    const mediaSession = navigator.mediaSession;
-    if (typeof (mediaSession)?.setPositionState !== "function") return;
-
-    const duration = Number.isFinite(audio.duration) ? audio.duration : 0;
-    const position = Number.isFinite(audio.currentTime) ? audio.currentTime : 0;
-    const playbackRate = Number.isFinite(audio.playbackRate) ? audio.playbackRate : 1;
-
-    mediaSession.setPositionState({ duration, position, playbackRate });
-
-  };
+  // Ref to track if music controls are created
+  const controlsReadyRef = useRef(false);
+  const listenerRef = useRef<any>(null);
 
   // Sync volume
   useEffect(() => {
@@ -86,19 +65,24 @@ export function GlobalMusicPlayer() {
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio || seekTimestamp === 0) return;
-    
+
     // Check if valid time
     if (Number.isFinite(currentAudioTime)) {
-       audio.currentTime = currentAudioTime;
-       setMediaSessionPositionState();
+      audio.currentTime = currentAudioTime;
     }
-  }, [currentAudioTime, seekTimestamp]); 
+  }, [currentAudioTime, seekTimestamp]);
   // Dependency on seekTimestamp ensures we only seek when explicit action happens
   // We don't depend on currentAudioTime alone because that changes during playback
 
   // Load Track Logic
   useEffect(() => {
-    if (!currentTrack || !currentTrackId || !currentTrackSource || !audioRef.current) return;
+    if (
+      !currentTrack ||
+      !currentTrackId ||
+      !currentTrackSource ||
+      !audioRef.current
+    )
+      return;
 
     const requestId = ++requestIdRef.current;
     let cancelled = false;
@@ -110,12 +94,17 @@ export function GlobalMusicPlayer() {
       try {
         // Pause current
         audio.pause();
-        
+
         // 1. Get URL
         const url = await retry(
-          () => musicApi.getUrl(currentTrackId, currentTrackSource, parseInt(quality, 10)),
+          () =>
+            musicApi.getUrl(
+              currentTrackId,
+              currentTrackSource,
+              parseInt(quality, 10),
+            ),
           2,
-          600
+          600,
         );
 
         if (cancelled || requestId !== requestIdRef.current) return;
@@ -143,15 +132,14 @@ export function GlobalMusicPlayer() {
             });
           }
         }
-
       } catch (err: unknown) {
         if (cancelled || requestId !== requestIdRef.current) return;
         const errorMessage = err instanceof Error ? err.message : String(err);
         console.error("Audio load failed:", errorMessage);
         toast.error(`无法播放: ${currentTrack.name}`);
-        
+
         // Auto skip to next
-        playNext(currentTrack); 
+        playNext(currentTrack);
       } finally {
         if (!cancelled && requestId === requestIdRef.current) {
           setIsLoading(false);
@@ -164,14 +152,15 @@ export function GlobalMusicPlayer() {
     return () => {
       cancelled = true;
     };
-  }, [currentTrack, currentTrackId, currentTrackSource, playNext, quality, setIsLoading, setIsPlaying]); 
-  // Note: we don't depend on isPlaying here. 
-  // If isPlaying toggles, the other effect handles it.
-  // But if we load a new track, we check isPlaying to decide auto-play.
-
-  useEffect(() => {
-    setMediaSessionPlaybackState(isPlaying ? "playing" : "paused");
-  }, [isPlaying]);
+  }, [
+    currentTrack,
+    currentTrackId,
+    currentTrackSource,
+    playNext,
+    quality,
+    setIsLoading,
+    setIsPlaying,
+  ]);
 
   // Event Handlers
   useEffect(() => {
@@ -183,14 +172,12 @@ export function GlobalMusicPlayer() {
       // Throttle store updates to every 1s
       if (now - lastSaveTimeRef.current > 1000) {
         setAudioCurrentTime(audio.currentTime);
-        setMediaSessionPositionState();
         lastSaveTimeRef.current = now;
       }
     };
 
     const onDurationChange = () => {
       setDuration(audio.duration || 0);
-      setMediaSessionPositionState();
     };
 
     const onEnded = () => {
@@ -200,32 +187,27 @@ export function GlobalMusicPlayer() {
       } else {
         // Next track
         if (queue.length > 0) {
-            const nextIndex = (currentIndex + 1) % queue.length;
-            useMusicStore.getState().setCurrentIndex(nextIndex);
+          const nextIndex = (currentIndex + 1) % queue.length;
+          useMusicStore.getState().setCurrentIndex(nextIndex);
         }
       }
     };
-    
+
     const onError = (e: Event) => {
-        console.error("Audio Error Event:", e);
-        setIsLoading(false);
+      console.error("Audio Error Event:", e);
+      setIsLoading(false);
     };
-    
+
     const onPause = () => {
-        // Only update if we think we are playing (sync external pauses like headphones)
-        // But be careful of loops.
-        // If we trigger pause via store, this event fires. Store is already false.
-        // If system pauses, store is true. We should set to false.
-        // Check if it was intentional?
-        if (isPlaying && !audio.ended && audio.error === null && audio.paused) {
-             setIsPlaying(false);
-        }
+      if (!audio.ended && audio.error === null) {
+        setIsPlaying(false);
+      }
     };
-    
+
     const onPlay = () => {
-        if (!isPlaying) {
-            setIsPlaying(true);
-        }
+      if (!isPlaying) {
+        setIsPlaying(true);
+      }
     };
 
     audio.addEventListener("timeupdate", onTimeUpdate);
@@ -243,56 +225,104 @@ export function GlobalMusicPlayer() {
       audio.removeEventListener("pause", onPause);
       audio.removeEventListener("play", onPlay);
     };
-  }, [isRepeat, currentTrack, isPlaying, setIsPlaying, setAudioCurrentTime, setDuration, queue.length, currentIndex, setIsLoading]);
+  }, [
+    isRepeat,
+    currentTrack,
+    isPlaying,
+    setIsPlaying,
+    setAudioCurrentTime,
+    setDuration,
+    queue.length,
+    currentIndex,
+    setIsLoading,
+  ]);
 
-  // Media Session
+  // Media Session Integration
   useEffect(() => {
-    if (!("mediaSession" in navigator) || !currentTrack) return;
-
-    const mediaSession = navigator.mediaSession;
-
-    mediaSession.metadata = new MediaMetadata({
-      title: currentTrack.name,
-      artist: currentTrack.artist?.join("/") ?? "Unknown",
-      album: currentTrack.album ?? "",
-      artwork: coverUrl ? [{ src: coverUrl, sizes: "300x300", type: "image/jpeg" }] : [],
-    });
-
-    const safeSetActionHandler = (
-      action: MediaSessionAction,
-      handler: MediaSessionActionHandler | null
-    ) => {
-      mediaSession.setActionHandler(action, handler);
+    const updateMetadata = async () => {
+      if (!currentTrack) return;
+      try {
+        await MediaSession.setMetadata({
+          title: currentTrack.name || "Unknown Track",
+          artist: currentTrack.artist?.join("/") || "Unknown Artist",
+          album: currentTrack.album || "",
+          artwork: coverUrl ? [{ src: coverUrl }] : [],
+        });
+      } catch (e) {
+        console.error("MediaSession metadata error:", e);
+      }
     };
+    updateMetadata();
+  }, [currentTrack, coverUrl]);
 
-    safeSetActionHandler("play", () => setIsPlaying(true));
-    safeSetActionHandler("pause", () => setIsPlaying(false));
-    safeSetActionHandler("nexttrack", () => {
-         if (queue.length > 0) {
-            const nextIndex = (currentIndex + 1) % queue.length;
-            useMusicStore.getState().setCurrentIndex(nextIndex);
-         }
-    });
-    safeSetActionHandler("previoustrack", () => {
+  useEffect(() => {
+    const updatePlaybackState = async () => {
+      try {
+        await MediaSession.setPlaybackState({
+          playbackState: isPlaying ? "playing" : "paused",
+        });
+      } catch (e) {
+        console.error("MediaSession state error:", e);
+      }
+    };
+    updatePlaybackState();
+  }, [isPlaying]);
+
+  useEffect(() => {
+    const actionHandlers: [string, (details?: any) => void][] = [
+      ["play", () => setIsPlaying(true)],
+      ["pause", () => setIsPlaying(false)],
+      ["previoustrack", () => {
+        const { queue, currentIndex } = useMusicStore.getState();
         const prevIndex = currentIndex - 1;
         useMusicStore.getState().setCurrentIndex(prevIndex < 0 ? queue.length - 1 : prevIndex);
-    });
-    safeSetActionHandler("seekto", (e) => {
-        if (e.seekTime != null && audioRef.current) {
-            audioRef.current.currentTime = e.seekTime;
-            setAudioCurrentTime(e.seekTime);
-            setMediaSessionPositionState();
+      }],
+      ["nexttrack", () => {
+        const { queue, currentIndex } = useMusicStore.getState();
+        if (queue.length > 0) {
+          const nextIndex = (currentIndex + 1) % queue.length;
+          useMusicStore.getState().setCurrentIndex(nextIndex);
         }
-    });
+      }],
+      ["seekto", (details) => {
+        if (details?.seekTime !== undefined && audioRef.current) {
+          audioRef.current.currentTime = details.seekTime;
+          setAudioCurrentTime(details.seekTime);
+        }
+      }],
+    ];
 
-    return () => {
-      safeSetActionHandler("play", null);
-      safeSetActionHandler("pause", null);
-      safeSetActionHandler("nexttrack", null);
-      safeSetActionHandler("previoustrack", null);
-      safeSetActionHandler("seekto", null);
+    for (const [action, handler] of actionHandlers) {
+      try {
+        MediaSession.setActionHandler({ action: action as any }, handler);
+      } catch (e) {
+        console.error(`Failed to set action handler for ${action}`, e);
+      }
+    }
+  }, [setIsPlaying, setAudioCurrentTime]);
+
+  // Sync Position State
+  useEffect(() => {
+    const updatePosition = async () => {
+      if (!audioRef.current) return;
+      try {
+        await MediaSession.setPositionState({
+          duration: audioRef.current.duration || 0,
+          playbackRate: audioRef.current.playbackRate,
+          position: audioRef.current.currentTime,
+        });
+      } catch {}
     };
-  }, [currentTrack, setIsPlaying, currentIndex, queue.length, setAudioCurrentTime, coverUrl]);
+
+    // Update on play/pause and seek
+    updatePosition();
+    
+    // Also update periodically? 
+    // Usually the OS extrapolates, but updating on events is good.
+    // We can hook into the existing onTimeUpdate via a ref or similar, 
+    // but the store update throttle (1s) in the main effect is not exposed here.
+    // For now, updating on dependency change (isPlaying, seekTimestamp) is a good start.
+  }, [isPlaying, currentAudioTime, seekTimestamp]);
 
   return (
     <audio
