@@ -6,7 +6,6 @@ import { musicApi } from "@/services/music-api";
 import { useMusicStore } from "@/store/music-store";
 import { useRef, useEffect } from "react";
 import toast from "react-hot-toast";
-import { Capacitor } from "@capacitor/core";
 import { MediaSession } from "@jofr/capacitor-media-session";
 export function GlobalMusicPlayer() {
   const {
@@ -35,9 +34,8 @@ export function GlobalMusicPlayer() {
   const requestIdRef = useRef(0);
   // Ref to throttle time updates
   const lastSaveTimeRef = useRef(0);
-  // Ref to track if music controls are created
-  const controlsReadyRef = useRef(false);
-  const listenerRef = useRef<any>(null);
+  // Ref to track if we are switching tracks (to avoid triggering pause event logic)
+  const isSwitchingTrackRef = useRef(false);
 
   // Sync volume
   useEffect(() => {
@@ -90,6 +88,9 @@ export function GlobalMusicPlayer() {
     const load = async () => {
       const audio = audioRef.current!;
       setIsLoading(true);
+      
+      // Mark as switching so pause events are ignored
+      isSwitchingTrackRef.current = true;
 
       try {
         // Pause current
@@ -141,8 +142,10 @@ export function GlobalMusicPlayer() {
         // Auto skip to next
         playNext(currentTrack);
       } finally {
-        if (!cancelled && requestId === requestIdRef.current) {
-          setIsLoading(false);
+        // Only reset if we are still the active request
+        if (requestId === requestIdRef.current) {
+          isSwitchingTrackRef.current = false;
+          if (!cancelled) setIsLoading(false);
         }
       }
     };
@@ -199,6 +202,9 @@ export function GlobalMusicPlayer() {
     };
 
     const onPause = () => {
+      // Ignore pause events if we are programmatically switching tracks
+      if (isSwitchingTrackRef.current) return;
+
       if (!audio.ended && audio.error === null) {
         setIsPlaying(false);
       }

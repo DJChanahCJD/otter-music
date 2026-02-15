@@ -2,7 +2,6 @@ import { cn } from "@/lib/utils";
 import { downloadMusicTrack } from "@/lib/utils/download";
 import { useMusicStore } from "@/store/music-store";
 import { MusicTrack, MergedMusicTrack, sourceBadgeStyles, sourceLabels } from "@/types/music";
-import { Pause, Play } from "lucide-react";
 import { useState } from "react";
 import toast from "react-hot-toast";
 import { useShallow } from "zustand/react/shallow";
@@ -131,7 +130,7 @@ export function MusicTrackItem({
       </div>
 
       {/* Column 3: Actions */}
-      <div className="flex items-center justify-end gap-1" onClick={(e) => e.stopPropagation()}>
+      <div className="flex items-center justify-end gap-1">
           <>
               {/* 移动端菜单 */}
               <div className="flex items-center">
