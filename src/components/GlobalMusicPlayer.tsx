@@ -16,7 +16,7 @@ export function GlobalMusicPlayer() {
     isPlaying,
     setIsPlaying,
     setIsLoading,
-    playNext,
+    playTrackAsNext,
     setAudioCurrentTime,
     currentAudioTime,
     seekTimestamp,
@@ -115,11 +115,15 @@ export function GlobalMusicPlayer() {
         if (audio.src !== url) {
           audio.src = url;
           audio.load();
+        }
 
-          const resumeTime = useMusicStore.getState().currentAudioTime;
-          if (resumeTime > 0 && Math.abs(audio.currentTime - resumeTime) > 1) {
-            audio.currentTime = resumeTime;
-          }
+        // Always reset currentTime for new track, then restore if needed
+        const resumeTime = useMusicStore.getState().currentAudioTime;
+        if (resumeTime > 0) {
+          audio.currentTime = resumeTime;
+        } else {
+          // Explicitly reset to 0 when no resume time (fixes same-track replay issue)
+          audio.currentTime = 0;
         }
 
         // 3. Play if needed
@@ -140,7 +144,7 @@ export function GlobalMusicPlayer() {
         toast.error(`无法播放: ${currentTrack.name}`);
 
         // Auto skip to next
-        playNext(currentTrack);
+        playTrackAsNext(currentTrack);
       } finally {
         // Only reset if we are still the active request
         if (requestId === requestIdRef.current) {
@@ -159,7 +163,7 @@ export function GlobalMusicPlayer() {
     currentTrack,
     currentTrackId,
     currentTrackSource,
-    playNext,
+    playTrackAsNext,
     quality,
     setIsLoading,
     setIsPlaying,
@@ -171,6 +175,9 @@ export function GlobalMusicPlayer() {
     if (!audio) return;
 
     const onTimeUpdate = () => {
+      // Prevent store pollution during track switching
+      if (isSwitchingTrackRef.current) return;
+
       const now = Date.now();
       // Throttle store updates to every 1s
       if (now - lastSaveTimeRef.current > 1000) {

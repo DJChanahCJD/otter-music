@@ -75,11 +75,10 @@ interface MusicState {
    */
   playContext: (tracks: MusicTrack[], startIndex?: number) => void;
 
-  /** Add a single track to the end of the queue */
-  addToQueue: (track: MusicTrack) => void;
-
+  /** 添加到下一首播放 */
+  addToNextPlay: (track: MusicTrack) => void;
   /** Insert a track next to current and switch to it */
-  playNext: (track: MusicTrack) => void;
+  playTrackAsNext: (track: MusicTrack) => void;
 
   /** Remove a track from the current queue */
   removeFromQueue: (trackId: string) => void;
@@ -269,23 +268,62 @@ export const useMusicStore = create<MusicState>()(
         };
       }),
 
-      addToQueue: (track) => set((state) => {
-        if (state.queue.some((t) => t.id === track.id)) return state;
-        const newQueue = [...state.queue, track];
-        // 如果在随机模式下，也要添加到 originalQueue，以防切回顺序播放时丢失
-        const newOriginalQueue = state.isShuffle 
-          ? [...(state.originalQueue || []), track] 
-          : []; // 非随机模式下 originalQueue 通常为空或不重要，但如果之后切换到随机，playContext会重置它。
-                // 不过如果用户先顺序播放，add，再切随机，toggleShuffle会用 queue 填充 originalQueue。
-                // 所以这里只需要在 isShuffle 为 true 时维护 originalQueue。
+      addToNextPlay: (track) => set((state) => {
+        // 如果队列为空，作为唯一一首
+        if (state.queue.length === 0) {
+          return {
+            queue: [track],
+            originalQueue: state.isShuffle ? [track] : [],
+            currentIndex: 0,
+            // 不自动播放
+          };
+        }
+
+        const newQueue = [...state.queue];
+        const existingIndex = newQueue.findIndex((t) => t.id === track.id);
         
-        return { 
+        // 如果这首歌已经在当前播放，不做任何操作
+        if (existingIndex === state.currentIndex) {
+          return {};
+        }
+
+        let targetIndex = state.currentIndex + 1;
+        let newCurrentIndex = state.currentIndex;
+
+        if (existingIndex !== -1) {
+          // 移除已存在的
+          newQueue.splice(existingIndex, 1);
+          // 如果移除的位置在当前位置之前，targetIndex 和 currentIndex 都需要减 1
+          if (existingIndex < state.currentIndex) {
+            targetIndex--;
+            newCurrentIndex--;
+          }
+        }
+
+        // 插入到 targetIndex
+        newQueue.splice(targetIndex, 0, track);
+
+        // 处理 originalQueue (随机模式下同步更新)
+        let newOriginalQueue = state.originalQueue;
+        if (state.isShuffle) {
+          const oQueue = [...(state.originalQueue || [])];
+          // 如果不在 originalQueue 中，添加进去（这里策略可以是加到最后，或者加到当前原始位置之后？）
+          // 简单起见加到最后，因为随机模式下 originalQueue 的顺序不影响播放顺序（除了切回顺序播放时）
+          if (!oQueue.some(t => t.id === track.id)) {
+            oQueue.push(track);
+          }
+          newOriginalQueue = oQueue;
+        }
+
+        return {
           queue: newQueue,
-          originalQueue: state.isShuffle ? newOriginalQueue : state.originalQueue
+          currentIndex: newCurrentIndex,
+          originalQueue: newOriginalQueue,
         };
       }),
 
-      playNext: (track) => set((state) => {
+
+      playTrackAsNext: (track) => set((state) => {
         // 如果队列为空，直接播放
         if (state.queue.length === 0) {
           return {

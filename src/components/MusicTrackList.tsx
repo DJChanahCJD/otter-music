@@ -128,18 +128,18 @@ export function MusicTrackList({
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const {
-    addToQueue,
     addToFavorites,
     playlists,
     addToPlaylist,
     createPlaylist,
+    addToNextPlay,
   } = useMusicStore(
     useShallow((state) => ({
-      addToQueue: state.addToQueue,
       addToFavorites: state.addToFavorites,
       playlists: state.playlists,
       addToPlaylist: state.addToPlaylist,
       createPlaylist: state.createPlaylist,
+      addToNextPlay: state.addToNextPlay,
     })),
   );
 
@@ -283,11 +283,11 @@ export function MusicTrackList({
                     size="sm"
                     variant="secondary"
                     className="h-8 px-3 text-xs font-normal whitespace-nowrap"
-                    onClick={() => handleBatch(addToQueue, "已添加")}
+                    onClick={() => handleBatch(addToNextPlay, "已添加")}
                     disabled={selectedIds.size === 0}
                   >
                     <Plus className="w-3.5 h-3.5 mr-1.5" />
-                    加入播放列表
+                    添加下一首播放
                   </Button>
                   <Popover>
                     <PopoverTrigger asChild>

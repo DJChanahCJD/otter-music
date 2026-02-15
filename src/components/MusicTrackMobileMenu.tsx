@@ -7,7 +7,7 @@ import {
   DrawerTrigger,
 } from "@/components/ui/drawer";
 import { cn } from "@/lib/utils";
-import { Download, Heart, ListPlus, MoreVertical, Plus, Trash2, Moon, Sun } from "lucide-react";
+import { Download, Heart, ListPlus, MoreVertical, Trash2, Moon, Sun, CornerDownRight } from "lucide-react";
 import { ReactNode } from "react";
 import { useTheme } from "next-themes";
 import { MusicCover } from "./MusicCover";
@@ -18,14 +18,13 @@ interface MusicTrackMobileMenuProps {
   track: MusicTrack;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onAddToQueue: () => void;
+  onAddToNextPlay: () => void;
   onAddToPlaylistTrigger: () => void;
   onDownload: () => void;
   onToggleLike: () => void;
   isFavorite: boolean;
   onRemove?: () => void;
   hideLike?: boolean;
-  hideAddToQueue?: boolean;
   hideAddToPlaylist?: boolean;
   customActions?: ReactNode;
   showThemeToggle?: boolean;
@@ -36,14 +35,13 @@ export function MusicTrackMobileMenu({
   track,
   open,
   onOpenChange,
-  onAddToQueue,
+  onAddToNextPlay,
   onAddToPlaylistTrigger,
   onDownload,
   onToggleLike,
   isFavorite,
   onRemove,
   hideLike,
-  hideAddToQueue,
   hideAddToPlaylist,
   customActions,
   showThemeToggle,
@@ -86,16 +84,16 @@ export function MusicTrackMobileMenu({
           </div>
         </DrawerTitle>
         <div className="p-4 flex flex-col gap-2">
-          {!hideAddToQueue && (
+          {onAddToNextPlay && (
             <Button
               variant="ghost"
               className="justify-start w-full"
               onClick={() => {
-                onAddToQueue();
+                onAddToNextPlay();
                 onOpenChange(false);
               }}
             >
-              <Plus className="mr-2 h-4 w-4" /> 添加到播放列表
+              <CornerDownRight className="mr-2 h-4 w-4" /> 下一首播放
             </Button>
           )}
 

@@ -30,13 +30,13 @@ export async function downloadMusicTrack(track: MusicTrack) {
 /* ================= 原生下载 ================= */
 
 async function nativeDownload(url: string, fileName: string, toastId: string) {
-
+  const dirPath = "Download/OtterMusic";
   // 确保目录存在
-  await ensureDir("OtterMusic");
+  await ensureDownloadDir("OtterMusic");
 
   const fileUri = await Filesystem.getUri({
     directory: Directory.ExternalStorage,
-    path: `Download/OtterMusic/${fileName}`
+    path: `${dirPath}/${fileName}`
   });
 
   const listener = await FileTransfer.addListener("progress", p => {
@@ -52,7 +52,7 @@ async function nativeDownload(url: string, fileName: string, toastId: string) {
 
   await listener.remove();
 
-  toast.success("已保存到: 下载/OtterMusic", { id: toastId });
+  toast.success(`已保存到: ${dirPath} 目录`, { id: toastId });
 }
 
 /* ================= 浏览器 ================= */
@@ -69,7 +69,7 @@ function browserDownload(url: string, filename: string) {
 
 /* ================= 工具 ================= */
 
-async function ensureDir(name: string) {
+async function ensureDownloadDir(name: string) {
   try {
     await Filesystem.mkdir({
       directory: Directory.ExternalStorage,

@@ -23,7 +23,6 @@ interface MusicTrackItemProps {
   onPlay: () => void;
   // Optional overrides or disabling default actions
   hideLike?: boolean;
-  hideAddToQueue?: boolean;
   hideAddToPlaylist?: boolean;
   // Custom actions to render (e.g. Delete button)
   onRemove?: () => void;
@@ -41,7 +40,6 @@ export function MusicTrackItem({
   showCheckbox,
   onPlay,
   hideLike,
-  hideAddToQueue,
   hideAddToPlaylist,
   onRemove,
   className,
@@ -51,13 +49,13 @@ export function MusicTrackItem({
     addToFavorites, 
     removeFromFavorites, 
     isFavorite, 
-    addToQueue, 
+    addToNextPlay,
   } = useMusicStore(
     useShallow((state) => ({
       addToFavorites: state.addToFavorites,
       removeFromFavorites: state.removeFromFavorites,
       isFavorite: state.isFavorite,
-      addToQueue: state.addToQueue,
+      addToNextPlay: state.addToNextPlay,
     }))
   );
   
@@ -138,9 +136,9 @@ export function MusicTrackItem({
                       track={track}
                       open={isMobileMenuOpen}
                       onOpenChange={setIsMobileMenuOpen}
-                      onAddToQueue={() => {
-                          addToQueue(track);
-                          toast.success("已加入播放列表");
+                      onAddToNextPlay={() => {
+                          addToNextPlay(track);
+                          toast.success("已添加到下一首播放");
                       }}
                       onAddToPlaylistTrigger={() => {
                           setIsAddToPlaylistOpen(true);
@@ -158,7 +156,6 @@ export function MusicTrackItem({
                       isFavorite={isFavorite(track.id)}
                       onRemove={onRemove}
                       hideLike={hideLike}
-                      hideAddToQueue={hideAddToQueue}
                       hideAddToPlaylist={hideAddToPlaylist}
                   />
                   

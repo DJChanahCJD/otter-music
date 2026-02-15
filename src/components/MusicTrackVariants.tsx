@@ -22,15 +22,15 @@ export function MusicTrackVariants({ variants }: MusicTrackVariantsProps) {
     addToFavorites, 
     removeFromFavorites, 
     isFavorite, 
-    addToQueue, 
-    playNext
+    playTrackAsNext,
+    addToNextPlay
   } = useMusicStore(
     useShallow((state) => ({
       addToFavorites: state.addToFavorites,
       removeFromFavorites: state.removeFromFavorites,
       isFavorite: state.isFavorite,
-      addToQueue: state.addToQueue,
-      playNext: state.playNext
+      playTrackAsNext: state.playTrackAsNext,
+      addToNextPlay: state.addToNextPlay
     }))
   );
 
@@ -85,7 +85,7 @@ export function MusicTrackVariants({ variants }: MusicTrackVariantsProps) {
                      variant="ghost"
                      className="h-6 w-6"
                      onClick={() => {
-                       playNext(variant);
+                       playTrackAsNext(variant);
                      }}
                      title="播放"
                    >
@@ -95,15 +95,15 @@ export function MusicTrackVariants({ variants }: MusicTrackVariantsProps) {
                       track={variant}
                       open={mobileMenuOpenId === `${variant.source}-${variant.id}`}
                       onOpenChange={(open) => setMobileMenuOpenId(open ? `${variant.source}-${variant.id}` : null)}
-                      onAddToQueue={() => {
-                          addToQueue(variant);
-                          toast.success("已加入播放列表");
-                      }}
                       onAddToPlaylistTrigger={() => {
                           setActiveTrack(variant);
                           setIsAddToPlaylistOpen(true);
                       }}
                       onDownload={() => downloadMusicTrack(variant)}
+                      onAddToNextPlay={() => {
+                          addToNextPlay(variant);
+                          toast.success("已加入下一首播放");
+                      }}
                       onToggleLike={() => {
                           if (isFavorite(variant.id)) {
                               removeFromFavorites(variant.id);

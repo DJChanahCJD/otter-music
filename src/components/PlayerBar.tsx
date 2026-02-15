@@ -56,7 +56,8 @@ export function PlayerBar() {
     setCurrentIndex,
     clearQueue,
     reshuffle,
-    addToQueue
+
+    addToNextPlay,
   } = useMusicStore(
     useShallow((state) => ({
       isPlaying: state.isPlaying,
@@ -79,7 +80,8 @@ export function PlayerBar() {
       setCurrentIndex: state.setCurrentIndex,
       clearQueue: state.clearQueue,
       reshuffle: state.reshuffle,
-      addToQueue: state.addToQueue
+
+      addToNextPlay: state.addToNextPlay,
     }))
   );
 
@@ -225,10 +227,7 @@ export function PlayerBar() {
                         track={currentTrack}
                         open={isMobileMenuOpen}
                         onOpenChange={setIsMobileMenuOpen}
-                        onAddToQueue={() => {
-                           addToQueue(currentTrack);
-                           toast.success("已加入播放列表");
-                        }}
+                        onAddToNextPlay={() => addToNextPlay(currentTrack)}
                         onAddToPlaylistTrigger={() => setIsAddToPlaylistOpen(true)}
                         onDownload={handleDownload}
                         onToggleLike={handleToggleFavorite}
