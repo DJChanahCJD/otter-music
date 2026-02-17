@@ -68,7 +68,7 @@ export function FullScreenPlayer({
 
   useBackButton(onClose, isFullScreen);
 
-  const { queue, currentIndex, setCurrentIndex, setIsPlaying, clearQueue, reshuffle, addToNextPlay, currentAudioUrl } = useMusicStore(
+  const { queue, quality, currentIndex, setCurrentIndex, setIsPlaying, clearQueue, reshuffle, addToNextPlay, currentAudioUrl } = useMusicStore(
     useShallow((state) => ({
       queue: state.queue,
       currentIndex: state.currentIndex,
@@ -78,6 +78,7 @@ export function FullScreenPlayer({
       reshuffle: state.reshuffle,
       addToNextPlay: state.addToNextPlay,
       currentAudioUrl: state.currentAudioUrl,
+      quality: state.quality,
     }))
   );
 
@@ -251,7 +252,7 @@ export function FullScreenPlayer({
                     toast.success("已添加到下一首播放");
                   }}
                   onAddToPlaylistTrigger={() => setIsAddToPlaylistOpen(true)}
-                  onDownload={() => downloadMusicTrack(currentTrack)}
+                  onDownload={() => downloadMusicTrack(currentTrack, quality)}
                   onToggleLike={() => onToggleFavorite?.()}
                   isFavorite={isFavorite}
                   showThemeToggle={true}

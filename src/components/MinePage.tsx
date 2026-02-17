@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ListVideo, Download, ListMusic, SquarePlus, MoreHorizontal, Trash2, Pencil } from "lucide-react";
+import { ListVideo, Settings, ListMusic, SquarePlus, MoreHorizontal, Trash2, Pencil } from "lucide-react";
 import { useMusicStore } from "@/store/music-store";
 import { useShallow } from "zustand/react/shallow";
 import { Button } from "./ui/button";
@@ -25,11 +25,11 @@ import {
 
 interface MinePageProps {
   onOpenQueue: () => void;
-  onOpenLocalMusic: () => void;
+  onOpenSettings: () => void;
   onSelectPlaylist: (playlistId: string) => void;
 }
 
-export function MinePage({ onOpenQueue, onOpenLocalMusic, onSelectPlaylist }: MinePageProps) {
+export function MinePage({ onOpenQueue, onOpenSettings, onSelectPlaylist }: MinePageProps) {
   const { playlists, createPlaylist, renamePlaylist, deletePlaylist } = useMusicStore(
     useShallow((state) => ({
       playlists: state.playlists,
@@ -87,13 +87,13 @@ export function MinePage({ onOpenQueue, onOpenLocalMusic, onSelectPlaylist }: Mi
         </button>
 
         <button
-          onClick={onOpenLocalMusic}
+          onClick={onOpenSettings}
           className="flex-1 flex items-center gap-3 p-4 rounded-2xl bg-card/60 hover:bg-card/80 border border-border/50 transition-colors"
         >
           <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center">
-            <Download className="h-5 w-5 text-primary" />
+            <Settings className="h-5 w-5 text-primary" />
           </div>
-          <span className="font-medium text-foreground">下载管理</span>
+          <span className="font-medium text-foreground">系统设置</span>
         </button>
       </div>
 

@@ -50,12 +50,14 @@ export function MusicTrackItem({
     removeFromFavorites, 
     isFavorite, 
     addToNextPlay,
+    quality,
   } = useMusicStore(
     useShallow((state) => ({
       addToFavorites: state.addToFavorites,
       removeFromFavorites: state.removeFromFavorites,
       isFavorite: state.isFavorite,
       addToNextPlay: state.addToNextPlay,
+      quality: state.quality,
     }))
   );
   
@@ -143,7 +145,7 @@ export function MusicTrackItem({
                       onAddToPlaylistTrigger={() => {
                           setIsAddToPlaylistOpen(true);
                       }}
-                      onDownload={() => downloadMusicTrack(track)}
+                      onDownload={() => downloadMusicTrack(track, quality)}
                       onToggleLike={() => {
                           if (isFavorite(track.id)) {
                               removeFromFavorites(track.id);

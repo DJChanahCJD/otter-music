@@ -261,11 +261,11 @@ export async function getDownloadDirPath(): Promise<string> {
 /**
  * 下载音乐文件
  */
-export async function downloadMusicTrack(track: MusicTrack) {
+export async function downloadMusicTrack(track: MusicTrack, br = 192) {
   const toastId = toast.loading(`准备下载: ${track.name}`);
 
   try {
-    const url = await musicApi.getUrl(track.id, track.source);
+    const url = await musicApi.getUrl(track.id, track.source, br);
     if (!url) throw new Error("无法获取下载链接");
 
     const fileName = sanitize(`${track.artist?.join(", ") || "Unknown"} - ${track.name}.mp3`);

@@ -133,6 +133,7 @@ export function MusicTrackList({
     addToPlaylist,
     createPlaylist,
     addToNextPlay,
+    quality
   } = useMusicStore(
     useShallow((state) => ({
       addToFavorites: state.addToFavorites,
@@ -140,6 +141,7 @@ export function MusicTrackList({
       addToPlaylist: state.addToPlaylist,
       createPlaylist: state.createPlaylist,
       addToNextPlay: state.addToNextPlay,
+      quality: state.quality
     })),
   );
 
@@ -200,7 +202,7 @@ export function MusicTrackList({
 
     await processBatchIO(
       selectedTracks,
-      downloadMusicTrack,
+      (track) => downloadMusicTrack(track, quality),
       (current, total) => {
         toast.loading(`已开始下载 ${current}/${total}...`, { id: toastId });
       },

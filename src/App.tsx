@@ -11,7 +11,7 @@ import { MusicSearchView } from "./components/MusicSearchView";
 import { FullScreenPlayer } from "./components/FullScreenPlayer";
 import { MinePage } from "./components/MinePage";
 import { QueuePage } from "./components/QueuePage";
-import { LocalMusicPage } from "./components/LocalMusicPage";
+import { SettingsPage } from "./components/SettingsPage";
 import { useMusicStore } from "./store/music-store";
 import { useMusicCover } from "./hooks/useMusicCover";
 import type { MusicTrack } from "./types/music";
@@ -50,7 +50,7 @@ export default function MusicPage() {
   const [activePlaylistId, setActivePlaylistId] = useState<string>();
   const [isFullScreenPlayer, setIsFullScreenPlayer] = useState(false);
   const [isQueuePage, setIsQueuePage] = useState(false);
-  const [isLocalMusicPage, setIsLocalMusicPage] = useState(false);
+  const [isSettingsPage, setIsSettingsPage] = useState(false);
 
   const currentTrack = queue[currentIndex];
   const coverUrl = useMusicCover(currentTrack);
@@ -108,7 +108,7 @@ export default function MusicPage() {
 
   const handleSelectPlaylist = (playlistId: string) => {
     setActivePlaylistId(playlistId);
-    setIsLocalMusicPage(false);
+    setIsSettingsPage(false);
   };
 
   const handleBackFromPlaylist = () => {
@@ -147,10 +147,10 @@ export default function MusicPage() {
   };
 
   const renderContent = () => {
-    if (isLocalMusicPage) {
+    if (isSettingsPage) {
       return (
-        <LocalMusicPage
-          onBack={() => setIsLocalMusicPage(false)}
+        <SettingsPage
+          onBack={() => setIsSettingsPage(false)}
         />
       );
     }
@@ -217,7 +217,7 @@ export default function MusicPage() {
       return (
         <MinePage
           onOpenQueue={() => setIsQueuePage(true)}
-          onOpenLocalMusic={() => setIsLocalMusicPage(true)}
+          onOpenSettings={() => setIsSettingsPage(true)}
           onSelectPlaylist={handleSelectPlaylist}
         />
       );
@@ -239,7 +239,7 @@ export default function MusicPage() {
               setCurrentTab(tab);
               setActivePlaylistId(undefined);
               setIsQueuePage(false);
-              setIsLocalMusicPage(false);
+              setIsSettingsPage(false);
             }}
           />
         }

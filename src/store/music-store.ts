@@ -156,7 +156,7 @@ export const useMusicStore = create<MusicState>()(
         localTracks: state.localTracks.filter(t => !trackIds.includes(t.id))
       })),
 
-      quality: "320",
+      quality: "192",
       searchSource: "all",
       setQuality: (quality) => set({ quality }),
       setSearchSource: (searchSource) => set({ searchSource }),

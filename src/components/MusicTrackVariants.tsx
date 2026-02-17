@@ -23,14 +23,16 @@ export function MusicTrackVariants({ variants }: MusicTrackVariantsProps) {
     removeFromFavorites, 
     isFavorite, 
     playTrackAsNext,
-    addToNextPlay
+    addToNextPlay,
+    quality
   } = useMusicStore(
     useShallow((state) => ({
       addToFavorites: state.addToFavorites,
       removeFromFavorites: state.removeFromFavorites,
       isFavorite: state.isFavorite,
       playTrackAsNext: state.playTrackAsNext,
-      addToNextPlay: state.addToNextPlay
+      addToNextPlay: state.addToNextPlay,
+      quality: state.quality
     }))
   );
 
@@ -99,7 +101,7 @@ export function MusicTrackVariants({ variants }: MusicTrackVariantsProps) {
                           setActiveTrack(variant);
                           setIsAddToPlaylistOpen(true);
                       }}
-                      onDownload={() => downloadMusicTrack(variant)}
+                      onDownload={() => downloadMusicTrack(variant, parseInt(quality))}
                       onAddToNextPlay={() => {
                           addToNextPlay(variant);
                           toast.success("已加入下一首播放");

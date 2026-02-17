@@ -109,7 +109,7 @@ export const musicApi = {
 
   /* ---------------- URL ---------------- */
 
-  async getUrl(id: string, source: MusicSource, br = 320): Promise<string | null> {
+  async getUrl(id: string, source: MusicSource, br = 192): Promise<string | null> {
     const key = `url:${source}:${id}:${br}`;
 
     const res = await cachedFetch<{ url: string }>(
