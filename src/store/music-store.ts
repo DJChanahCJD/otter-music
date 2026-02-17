@@ -60,6 +60,7 @@ interface MusicState {
   seekTimestamp: number; // Used to trigger seek
   duration: number;
   currentAudioUrl: string | null; // Current audio source URL
+  isInitialized: boolean; // 标记用户是否已主动操作过（用于区分启动恢复和用户操作）
 
   setVolume: (volume: number) => void;
   toggleRepeat: () => void;
@@ -71,6 +72,7 @@ interface MusicState {
   setIsLoading: (isLoading: boolean) => void;
   seek: (time: number) => void;
   setCurrentAudioUrl: (url: string | null) => void;
+  setIsInitialized: (value: boolean) => void;
 
   // --- Playback (Queue) ---
   queue: MusicTrack[];
@@ -172,6 +174,7 @@ export const useMusicStore = create<MusicState>()(
       seekTimestamp: 0,
       duration: 0,
       currentAudioUrl: null,
+      isInitialized: false,
 
       setVolume: (volume) => set({ volume }),
       toggleRepeat: () => set((state) => ({ isRepeat: !state.isRepeat })),
@@ -237,6 +240,7 @@ export const useMusicStore = create<MusicState>()(
       setIsLoading: (isLoading) => set({ isLoading }),
       seek: (time) => set({ currentAudioTime: time, seekTimestamp: Date.now() }),
       setCurrentAudioUrl: (url) => set({ currentAudioUrl: url }),
+      setIsInitialized: (value) => set({ isInitialized: value }),
 
       queue: [],
       originalQueue: [],

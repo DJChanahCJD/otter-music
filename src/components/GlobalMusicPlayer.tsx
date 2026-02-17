@@ -23,6 +23,8 @@ export function GlobalMusicPlayer() {
     quality,
     setDuration,
     setCurrentAudioUrl,
+    isInitialized,
+    setIsInitialized,
   } = useMusicStore();
 
   const audioRef = useRef<HTMLAudioElement>(null);
@@ -133,13 +135,19 @@ export function GlobalMusicPlayer() {
         }
 
         // 3. Auto-play when switching tracks (user expects playback to start)
-        setIsPlaying(true);
-        const playPromise = audio.play();
-        if (playPromise !== undefined) {
-          playPromise.catch((error) => {
-            console.error("Auto-play failed:", error);
-            setIsPlaying(false);
-          });
+        // 只有用户已主动操作过才自动播放，避免 APP 启动时自动播放
+        if (isInitialized) {
+          setIsPlaying(true);
+          const playPromise = audio.play();
+          if (playPromise !== undefined) {
+            playPromise.catch((error) => {
+              console.error("Auto-play failed:", error);
+              setIsPlaying(false);
+            });
+          }
+        } else {
+          // APP 启动恢复状态，不自动播放，但需要设置 isInitialized
+          setIsInitialized(true);
         }
       } catch (err: unknown) {
         if (cancelled || requestId !== requestIdRef.current) return;
@@ -168,7 +176,7 @@ export function GlobalMusicPlayer() {
     return () => {
       cancelled = true;
     };
-  }, [currentTrack, currentTrackId, currentTrackSource, playTrackAsNext, quality, setCurrentAudioUrl, setIsLoading, setIsPlaying]);
+  }, [currentTrack, currentTrackId, currentTrackSource, playTrackAsNext, quality, setCurrentAudioUrl, setIsLoading, setIsPlaying, isInitialized, setIsInitialized]);
 
   // Event Handlers
   useEffect(() => {

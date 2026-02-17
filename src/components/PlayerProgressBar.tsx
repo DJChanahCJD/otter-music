@@ -81,7 +81,7 @@ export function PlayerProgressBar({
     <div className={cn("w-full", className)}>
       <div
         ref={barRef}
-        className="group relative w-full h-1 hover:h-2 cursor-pointer select-none transition-all flex items-center z-10"
+        className="group relative w-full py-3 cursor-pointer select-none flex items-center z-10"
         onMouseMove={(e) => {
           const p = getPercent(e.clientX);
           setHoverTime(p * duration);
@@ -90,14 +90,16 @@ export function PlayerProgressBar({
         onMouseDown={(e) => handleStart(e.clientX)}
         onTouchStart={(e) => handleStart(e.touches[0].clientX)}
       >
-        <div className="absolute inset-0 bg-muted/80" />
-        <div
-          className={cn(
-            "absolute inset-y-0 left-0 bg-primary",
-            !isDragging && "transition-all"
-          )}
-          style={{ width: `${displayProgress}%` }}
-        />
+        <div className="relative w-full h-1.5 group-hover:h-2 transition-all">
+          <div className="absolute inset-0 bg-muted/80 rounded-full" />
+          <div
+            className={cn(
+              "absolute inset-y-0 left-0 bg-primary rounded-full",
+              !isDragging && "transition-all"
+            )}
+            style={{ width: `${displayProgress}%` }}
+          />
+        </div>
       </div>
       <div className="flex justify-between text-xs text-muted-foreground mt-1 px-0.5">
         <span>{formatMediaTime(isDragging ? dragTime : currentTime)}</span>
