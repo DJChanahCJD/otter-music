@@ -1,6 +1,7 @@
 # 🦦 Otter Music
 
 移动端音乐播放器，支持多音源聚合搜索。
+> API 来自GD音乐台(https://music.gdstudio.xyz)
 
 ## 功能
 
