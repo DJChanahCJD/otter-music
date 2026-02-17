@@ -31,3 +31,8 @@ android {
 
 // Apply Capacitor build configuration
 apply from: "capacitor.build.gradle"
+
+dependencies {
+    implementation project(':capacitor-android')
+    implementation 'androidx.appcompat:appcompat:1.7.0'
+}
