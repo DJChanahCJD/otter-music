@@ -7,9 +7,8 @@ import {
   DrawerTrigger,
 } from "@/components/ui/drawer";
 import { cn } from "@/lib/utils";
-import { Download, Heart, ListPlus, MoreVertical, Trash2, Moon, Sun, CornerDownRight } from "lucide-react";
+import { Download, Heart, ListPlus, MoreVertical, Trash2, CornerDownRight } from "lucide-react";
 import { ReactNode } from "react";
-import { useTheme } from "next-themes";
 import { MusicCover } from "./MusicCover";
 import { useMusicCover } from "@/hooks/useMusicCover";
 import { MusicTrack } from "@/types/music";
@@ -27,7 +26,6 @@ interface MusicTrackMobileMenuProps {
   hideLike?: boolean;
   hideAddToPlaylist?: boolean;
   customActions?: ReactNode;
-  showThemeToggle?: boolean;
   triggerClassName?: string;
 }
 
@@ -44,10 +42,8 @@ export function MusicTrackMobileMenu({
   hideLike,
   hideAddToPlaylist,
   customActions,
-  showThemeToggle,
   triggerClassName,
 }: MusicTrackMobileMenuProps) {
-  const { theme, setTheme } = useTheme();
   const coverUrl = useMusicCover(track, open);
 
   return (
@@ -140,7 +136,6 @@ export function MusicTrackMobileMenu({
             </Button>
           )}
 
-          {(onRemove || customActions || showThemeToggle) && <div className="my-1 border-t" />}
 
           {onRemove && (
             <Button
@@ -154,24 +149,6 @@ export function MusicTrackMobileMenu({
               }}
             >
               <Trash2 className="mr-2 h-4 w-4" /> 移除
-            </Button>
-          )}
-
-          {showThemeToggle && (
-            <Button
-              variant="ghost"
-              className="justify-start w-full"
-              onClick={() => {
-                setTheme(theme === "dark" ? "light" : "dark");
-                onOpenChange(false);
-              }}
-            >
-              {theme === "dark" ? (
-                <Sun className="mr-2 h-4 w-4" />
-              ) : (
-                <Moon className="mr-2 h-4 w-4" />
-              )}
-              {theme === "dark" ? "切换到浅色模式" : "切换到深色模式"}
             </Button>
           )}
 
