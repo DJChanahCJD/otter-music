@@ -1,85 +1,54 @@
-TODO: 
-1. 本地导入导出
-2. 参考spotify\ netease 移动端UI，全面优化。  v0已经有原型图了
-3. 下载管理、我的下载、本地音乐识别、历史记录功能
-3. 分享码功能，通过分享码来持久化数据。（metadata: 创建时间、备注、是否已使用）
+# 🦦 Otter Music
 
-fix:
-1. 上一首、下一首、点击播放，无法自动触发播放
-2. 左滑或退出应该是有一个UI栈的退出顺序，不要直接退出APP
-3. 需要验证负载均衡是否正常运作....
-4. 切歌时没有重置时长
+移动端音乐播放器，支持多音源聚合搜索。
 
-# React + TypeScript + Vite
+## 功能
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+- **多音源搜索**：网易云音乐、酷我音乐、Joox 聚合搜索
+- **本地音乐**：扫描播放本地音乐文件
+- **播放管理**：播放队列、收藏、自定义歌单
+- **歌词显示**：支持滚动歌词
+- **主题切换**：明/暗主题
 
-Currently, two official plugins are available:
+## 技术栈
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+React 19 + TypeScript + Vite + Tailwind CSS + Capacitor + Zustand
 
-## React Compiler
+## 开发
 
-The React Compiler is currently not compatible with SWC. See [this issue](https://github.com/vitejs/vite-plugin-react/issues/428) for tracking the progress.
+```bash
+# 安装依赖
+npm install
 
-## Expanding the ESLint configuration
+# 启动开发服务器
+npm run dev
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+# 构建生产版本
+npm run build
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## Android 构建
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+```bash
+# 添加 Android 平台
+npm run cap:add:android
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+# 同步并构建
+npm run build:android:debug
 ```
+
+## 目录结构
+
+```
+src/
+├── components/     # UI 组件
+├── hooks/          # 自定义 Hooks
+├── services/       # API 服务
+├── store/          # Zustand 状态管理
+├── types/          # TypeScript 类型定义
+└── lib/utils/      # 工具函数
+```
+
+## License
+
+MIT
