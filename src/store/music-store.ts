@@ -50,6 +50,19 @@ interface MusicState {
   setQuality: (quality: string) => void;
   setSearchSource: (source: MusicSource) => void;
 
+  // --- Search State (Not Persisted) ---
+  searchQuery: string;
+  searchResults: MusicTrack[];
+  searchLoading: boolean;
+  searchHasMore: boolean;
+  searchPage: number;
+  setSearchQuery: (query: string) => void;
+  setSearchResults: (results: MusicTrack[]) => void;
+  setSearchLoading: (loading: boolean) => void;
+  setSearchHasMore: (hasMore: boolean) => void;
+  setSearchPage: (page: number) => void;
+  resetSearch: () => void;
+
   // --- Playback State (Persisted) ---
   volume: number;
   isRepeat: boolean;
@@ -60,7 +73,7 @@ interface MusicState {
   seekTimestamp: number; // Used to trigger seek
   duration: number;
   currentAudioUrl: string | null; // Current audio source URL
-  isInitialized: boolean; // 标记用户是否已主动操作过（用于区分启动恢复和用户操作）
+  hasUserGesture: boolean; // 标记用户是否有过真正的交互（阻止自动播放）
 
   setVolume: (volume: number) => void;
   toggleRepeat: () => void;
@@ -72,7 +85,7 @@ interface MusicState {
   setIsLoading: (isLoading: boolean) => void;
   seek: (time: number) => void;
   setCurrentAudioUrl: (url: string | null) => void;
-  setIsInitialized: (value: boolean) => void;
+  setUserGesture: () => void;
 
   // --- Playback (Queue) ---
   queue: MusicTrack[];
@@ -165,6 +178,25 @@ export const useMusicStore = create<MusicState>()(
       setQuality: (quality) => set({ quality }),
       setSearchSource: (searchSource) => set({ searchSource }),
 
+      // --- Search State Defaults & Methods ---
+      searchQuery: "",
+      searchResults: [],
+      searchLoading: false,
+      searchHasMore: false,
+      searchPage: 0,
+      setSearchQuery: (searchQuery) => set({ searchQuery }),
+      setSearchResults: (searchResults) => set({ searchResults }),
+      setSearchLoading: (searchLoading) => set({ searchLoading }),
+      setSearchHasMore: (searchHasMore) => set({ searchHasMore }),
+      setSearchPage: (searchPage) => set({ searchPage }),
+      resetSearch: () => set({
+        searchQuery: "",
+        searchResults: [],
+        searchLoading: false,
+        searchHasMore: false,
+        searchPage: 0
+      }),
+
       volume: 0.7,
       isRepeat: false,
       isShuffle: false,
@@ -174,7 +206,7 @@ export const useMusicStore = create<MusicState>()(
       seekTimestamp: 0,
       duration: 0,
       currentAudioUrl: null,
-      isInitialized: false,
+      hasUserGesture: false,
 
       setVolume: (volume) => set({ volume }),
       toggleRepeat: () => set((state) => ({ isRepeat: !state.isRepeat })),
@@ -236,11 +268,14 @@ export const useMusicStore = create<MusicState>()(
       setAudioCurrentTime: (currentTime) => set({ currentAudioTime: currentTime }),
       setDuration: (duration) => set({ duration }),
       setIsPlaying: (isPlaying) => set({ isPlaying }),
-      togglePlay: () => set((state) => ({ isPlaying: !state.isPlaying })),
+      togglePlay: () => set((state) => ({ 
+        hasUserGesture: true,
+        isPlaying: !state.isPlaying 
+      })),
       setIsLoading: (isLoading) => set({ isLoading }),
       seek: (time) => set({ currentAudioTime: time, seekTimestamp: Date.now() }),
       setCurrentAudioUrl: (url) => set({ currentAudioUrl: url }),
-      setIsInitialized: (value) => set({ isInitialized: value }),
+      setUserGesture: () => set({ hasUserGesture: true }),
 
       queue: [],
       originalQueue: [],
@@ -262,11 +297,9 @@ export const useMusicStore = create<MusicState>()(
         let actualIndex = startIndex ?? 0;
         actualIndex = Math.min(Math.max(actualIndex, 0), tracks.length - 1);
 
-        // 始终保存原始队列
         const originalQueue = tracks;
 
         if (state.isShuffle && tracks.length > 0) {
-          // 如果 startIndex 未定义，且是随机模式，随机选一首作为第一首
           if (startIndex === undefined) {
             actualIndex = Math.floor(Math.random() * tracks.length);
           }
@@ -282,6 +315,7 @@ export const useMusicStore = create<MusicState>()(
             currentIndex: 0,
             currentAudioTime: 0,
             isPlaying: true,
+            hasUserGesture: true,
           };
         }
 
@@ -291,6 +325,7 @@ export const useMusicStore = create<MusicState>()(
           currentIndex: actualIndex,
           currentAudioTime: 0,
           isPlaying: true,
+          hasUserGesture: true,
         };
       }),
 
@@ -481,6 +516,7 @@ export const useMusicStore = create<MusicState>()(
             currentIndex: Math.min(Math.max(index, 0), state.queue.length - 1),
             currentAudioTime: 0,
             isPlaying: true,
+            hasUserGesture: true,
           };
         }),
     }),

@@ -71,6 +71,9 @@ const Row = ({
 }: RowProps & { index: number; style: React.CSSProperties }) => {
   if (index < tracks.length) {
     const track = tracks[index];
+    if (!track) {
+      return null;
+    }
     return (
       <MusicTrackItem
         style={style}

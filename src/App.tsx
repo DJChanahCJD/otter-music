@@ -45,7 +45,6 @@ export default function MusicPage() {
     seek,
     toggleRepeat,
     toggleShuffle,
-    setIsInitialized,
   } = useMusicStore();
 
   const [currentTab, setCurrentTab] = useState<TabId>("search");
@@ -63,8 +62,6 @@ export default function MusicPage() {
       return;
     }
 
-    setIsInitialized(true);
-
     const index = list.findIndex((t) => t.id === track.id);
     if (index === -1) return;
 
@@ -72,8 +69,7 @@ export default function MusicPage() {
       queue.length === list.length && queue[0]?.id === list[0]?.id;
 
     if (isSameContext) {
-      setCurrentIndex(index);
-      setIsPlaying(true);
+      setCurrentIndexAndPlay(index);
     } else {
       playContext(list, index);
     }
@@ -84,8 +80,6 @@ export default function MusicPage() {
       togglePlay();
       return;
     }
-
-    setIsInitialized(true);
 
     const list =
       currentTab === "favorites"
@@ -100,7 +94,6 @@ export default function MusicPage() {
       togglePlay();
       return;
     }
-    setIsInitialized(true);
     playContext(queue, index);
   };
 

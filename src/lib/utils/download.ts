@@ -2,7 +2,7 @@ import { Capacitor } from "@capacitor/core";
 import { Filesystem, Directory, FileInfo } from "@capacitor/filesystem";
 import { FileTransfer } from "@capacitor/file-transfer";
 import { AppLauncher } from "@capacitor/app-launcher";
-import { musicApi } from "@/services/music-api";
+import { musicApi } from "@/lib/music-api";
 import type { LocalMusicTrack } from "@/types/music";
 import { MusicTrack } from "@/types/music";
 import { v4 as uuidv4 } from 'uuid';

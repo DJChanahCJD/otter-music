@@ -1,7 +1,7 @@
 import { memo, useEffect, useRef, useState } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
-import { musicApi } from "@/services/music-api";
+import { musicApi } from "@/lib/music-api";
 import { MusicTrack } from "@/types/music";
 
 interface LyricsPanelProps {

@@ -1,4 +1,4 @@
-import { musicApi } from "@/services/music-api";
+import { musicApi } from "@/lib/music-api";
 import type { MusicTrack } from "@/types/music";
 import { useState, useEffect } from "react";
 

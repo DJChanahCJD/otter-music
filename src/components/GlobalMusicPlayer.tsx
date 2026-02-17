@@ -2,7 +2,7 @@
 
 import { useMusicCover } from "@/hooks/useMusicCover";
 import { retry } from "@/lib/utils";
-import { musicApi } from "@/services/music-api";
+import { musicApi } from "@/lib/music-api";
 import { useMusicStore } from "@/store/music-store";
 import { useRef, useEffect } from "react";
 import toast from "react-hot-toast";
@@ -23,8 +23,7 @@ export function GlobalMusicPlayer() {
     quality,
     setDuration,
     setCurrentAudioUrl,
-    isInitialized,
-    setIsInitialized,
+    hasUserGesture,
   } = useMusicStore();
 
   const audioRef = useRef<HTMLAudioElement>(null);
@@ -77,6 +76,7 @@ export function GlobalMusicPlayer() {
 
   // Load Track Logic
   useEffect(() => {
+    if (!hasUserGesture) return;
     if (
       !currentTrack ||
       !currentTrackId ||
@@ -130,14 +130,10 @@ export function GlobalMusicPlayer() {
         if (resumeTime > 0) {
           audio.currentTime = resumeTime;
         } else {
-          // Explicitly reset to 0 when no resume time (fixes same-track replay issue)
           audio.currentTime = 0;
         }
 
-        // 3. Auto-play when switching tracks (user expects playback to start)
-        // 只有用户已主动操作过才自动播放，避免 APP 启动时自动播放
-        if (isInitialized) {
-          setIsPlaying(true);
+        if (isPlaying) {
           const playPromise = audio.play();
           if (playPromise !== undefined) {
             playPromise.catch((error) => {
@@ -145,9 +141,6 @@ export function GlobalMusicPlayer() {
               setIsPlaying(false);
             });
           }
-        } else {
-          // APP 启动恢复状态，不自动播放，但需要设置 isInitialized
-          setIsInitialized(true);
         }
       } catch (err: unknown) {
         if (cancelled || requestId !== requestIdRef.current) return;
@@ -176,7 +169,7 @@ export function GlobalMusicPlayer() {
     return () => {
       cancelled = true;
     };
-  }, [currentTrack, currentTrackId, currentTrackSource, playTrackAsNext, quality, setCurrentAudioUrl, setIsLoading, setIsPlaying, isInitialized, setIsInitialized]);
+  }, [hasUserGesture, currentTrack, currentTrackId, currentTrackSource, playTrackAsNext, quality, setCurrentAudioUrl, setIsLoading, setIsPlaying, isPlaying]);
 
   // Event Handlers
   useEffect(() => {
@@ -292,7 +285,10 @@ export function GlobalMusicPlayer() {
 
   useEffect(() => {
     const actionHandlers: [string, (details?: any) => void][] = [
-      ["play", () => setIsPlaying(true)],
+      ["play", () => {
+        useMusicStore.getState().setUserGesture();
+        setIsPlaying(true);
+      }],
       ["pause", () => setIsPlaying(false)],
       ["previoustrack", () => {
         const { queue, currentIndex } = useMusicStore.getState();

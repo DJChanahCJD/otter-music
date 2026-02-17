@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Plus, Trash2, RotateCcw } from "lucide-react";
-import { getApiUrls, setApiUrls, DEFAULT_API_URL } from "@/services/api/config";
+import { getApiUrls, setApiUrls, DEFAULT_API_URL } from "@/lib/api/config";
 import toast from "react-hot-toast";
 
 interface LoadBalanceDialogProps {
