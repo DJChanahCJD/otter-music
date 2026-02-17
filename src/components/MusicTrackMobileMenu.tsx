@@ -75,6 +75,7 @@ export function MusicTrackMobileMenu({
               <div className="font-bold truncate text-lg">{track.name}</div>
               <div className="text-sm text-muted-foreground truncate">
                 {track.artist.join(" / ")}
+                {track.album && ` • ${track.album}`}
               </div>
             </div>
           </div>
