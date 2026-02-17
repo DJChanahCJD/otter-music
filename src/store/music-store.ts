@@ -94,6 +94,8 @@ interface MusicState {
   clearQueue: () => void;
   reshuffle: () => void;
   setCurrentIndex: (index: number, resetTime?: boolean) => void;
+  /** Switch to track at index and start playing */
+  setCurrentIndexAndPlay: (index: number) => void;
 }
 
 export const useMusicStore = create<MusicState>()(
@@ -468,6 +470,15 @@ export const useMusicStore = create<MusicState>()(
               : Math.min(Math.max(index, 0), state.queue.length - 1),
           currentAudioTime: resetTime ? 0 : state.currentAudioTime,
         })),
+      setCurrentIndexAndPlay: (index) =>
+        set((state) => {
+          if (state.queue.length === 0) return { currentIndex: 0 };
+          return {
+            currentIndex: Math.min(Math.max(index, 0), state.queue.length - 1),
+            currentAudioTime: 0,
+            isPlaying: true,
+          };
+        }),
     }),
     {
       name: storeKey.MusicStore,

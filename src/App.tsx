@@ -34,6 +34,7 @@ export default function MusicPage() {
     setIsPlaying,
     togglePlay,
     setCurrentIndex,
+    setCurrentIndexAndPlay,
     isFavorite,
     addToFavorites,
     removeFromFavorites: removeFavorite,
@@ -117,13 +118,13 @@ export default function MusicPage() {
 
   const handlePrev = useCallback(() => {
     if (queue.length === 0) return;
-    setCurrentIndex((currentIndex - 1 + queue.length) % queue.length);
-  }, [queue.length, currentIndex, setCurrentIndex]);
+    setCurrentIndexAndPlay((currentIndex - 1 + queue.length) % queue.length);
+  }, [queue.length, currentIndex, setCurrentIndexAndPlay]);
 
   const handleNext = useCallback(() => {
     if (queue.length === 0) return;
-    setCurrentIndex((currentIndex + 1) % queue.length);
-  }, [queue.length, currentIndex, setCurrentIndex]);
+    setCurrentIndexAndPlay((currentIndex + 1) % queue.length);
+  }, [queue.length, currentIndex, setCurrentIndexAndPlay]);
 
   const handleSeek = useCallback((value: number[]) => {
     seek(value[0]);

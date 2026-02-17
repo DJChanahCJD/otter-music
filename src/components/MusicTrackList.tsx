@@ -289,7 +289,7 @@ export function MusicTrackList({
                     disabled={selectedIds.size === 0}
                   >
                     <Plus className="w-3.5 h-3.5 mr-1.5" />
-                    添加下一首播放
+                    下一首播放
                   </Button>
                   <Popover>
                     <PopoverTrigger asChild>

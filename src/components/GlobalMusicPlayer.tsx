@@ -97,20 +97,22 @@ export function GlobalMusicPlayer() {
         // Pause current
         audio.pause();
 
-        // 1. Get URL
+        // 1. Get URL with proper retry (null -> throw to trigger retry)
         const url = await retry(
-          () =>
-            musicApi.getUrl(
+          async () => {
+            const result = await musicApi.getUrl(
               currentTrackId,
               currentTrackSource,
               parseInt(quality, 10),
-            ),
+            );
+            if (!result) throw new Error("EMPTY_URL");
+            return result;
+          },
           2,
-          600,
+          800,
         );
 
         if (cancelled || requestId !== requestIdRef.current) return;
-        if (!url) throw new Error("EMPTY_URL");
 
         // 保存当前音频 URL 到 store
         setCurrentAudioUrl(url);
@@ -130,22 +132,25 @@ export function GlobalMusicPlayer() {
           audio.currentTime = 0;
         }
 
-        // 3. Play if needed
-        // If isPlaying was true, we continue playing.
-        if (useMusicStore.getState().isPlaying) {
-          const playPromise = audio.play();
-          if (playPromise !== undefined) {
-            playPromise.catch((error) => {
-              console.error("Auto-play failed:", error);
-              setIsPlaying(false);
-            });
-          }
+        // 3. Auto-play when switching tracks (user expects playback to start)
+        setIsPlaying(true);
+        const playPromise = audio.play();
+        if (playPromise !== undefined) {
+          playPromise.catch((error) => {
+            console.error("Auto-play failed:", error);
+            setIsPlaying(false);
+          });
         }
       } catch (err: unknown) {
         if (cancelled || requestId !== requestIdRef.current) return;
         const errorMessage = err instanceof Error ? err.message : String(err);
         console.error("Audio load failed:", errorMessage);
         toast.error(`无法播放: ${currentTrack.name}`);
+
+        // Clear audio source to prevent playing previous track
+        audio.src = "";
+        audio.load();
+        setCurrentAudioUrl(null);
 
         // Auto skip to next
         playTrackAsNext(currentTrack);
@@ -191,10 +196,10 @@ export function GlobalMusicPlayer() {
         audio.currentTime = 0;
         audio.play();
       } else {
-        // Next track
+        // Next track with auto-play
         if (queue.length > 0) {
           const nextIndex = (currentIndex + 1) % queue.length;
-          useMusicStore.getState().setCurrentIndex(nextIndex);
+          useMusicStore.getState().setCurrentIndexAndPlay(nextIndex);
         }
       }
     };
@@ -284,13 +289,13 @@ export function GlobalMusicPlayer() {
       ["previoustrack", () => {
         const { queue, currentIndex } = useMusicStore.getState();
         const prevIndex = currentIndex - 1;
-        useMusicStore.getState().setCurrentIndex(prevIndex < 0 ? queue.length - 1 : prevIndex);
+        useMusicStore.getState().setCurrentIndexAndPlay(prevIndex < 0 ? queue.length - 1 : prevIndex);
       }],
       ["nexttrack", () => {
         const { queue, currentIndex } = useMusicStore.getState();
         if (queue.length > 0) {
           const nextIndex = (currentIndex + 1) % queue.length;
-          useMusicStore.getState().setCurrentIndex(nextIndex);
+          useMusicStore.getState().setCurrentIndexAndPlay(nextIndex);
         }
       }],
       ["seekto", (details) => {
