@@ -29,6 +29,16 @@ dist-ssr
 .trae/specs
 
 # Android
-android/*
-
+android/app/build
+android/.gradle/
+android/build/
+android/local.properties
+android/.externalNativeBuild/
+android/.cxx/
+android/*.apk
+android/*.aab
+android/*.ap_
+android/.idea/
+android/captures/
+android/app/src/main/assets/public/assets
 tsconfig.tsbuildinfo

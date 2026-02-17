@@ -202,7 +202,7 @@ export function MusicTrackList({
 
     await processBatchIO(
       selectedTracks,
-      (track) => downloadMusicTrack(track, quality),
+      (track) => downloadMusicTrack(track, parseInt(quality)),
       (current, total) => {
         toast.loading(`已开始下载 ${current}/${total}...`, { id: toastId });
       },

@@ -252,7 +252,7 @@ export function FullScreenPlayer({
                     toast.success("已添加到下一首播放");
                   }}
                   onAddToPlaylistTrigger={() => setIsAddToPlaylistOpen(true)}
-                  onDownload={() => downloadMusicTrack(currentTrack, quality)}
+                  onDownload={() => downloadMusicTrack(currentTrack, parseInt(quality))}
                   onToggleLike={() => onToggleFavorite?.()}
                   isFavorite={isFavorite}
                   showThemeToggle={true}

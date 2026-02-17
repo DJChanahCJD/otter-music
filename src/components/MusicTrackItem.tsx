@@ -145,7 +145,7 @@ export function MusicTrackItem({
                       onAddToPlaylistTrigger={() => {
                           setIsAddToPlaylistOpen(true);
                       }}
-                      onDownload={() => downloadMusicTrack(track, quality)}
+                      onDownload={() => downloadMusicTrack(track, parseInt(quality))}
                       onToggleLike={() => {
                           if (isFavorite(track.id)) {
                               removeFromFavorites(track.id);
