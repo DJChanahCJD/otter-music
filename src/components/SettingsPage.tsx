@@ -3,6 +3,7 @@
 import { ArrowLeft } from "lucide-react";
 import { Button } from "./ui/button";
 import { ThemeToggle } from "./ThemeToggle";
+import { SyncConfig } from "./SyncConfig";
 import { useBackButton } from "@/hooks/use-back-button";
 import { useMusicStore } from "@/store/music-store";
 import {
@@ -57,6 +58,8 @@ export function SettingsPage({ onBack }: SettingsPageProps) {
             </SelectContent>
           </Select>
         </div>
+
+        <SyncConfig />
       </div>
     </div>
   );

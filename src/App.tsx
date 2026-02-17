@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { format } from "date-fns";
 import { GlobalMusicPlayer } from "./components/GlobalMusicPlayer";
 import { MusicLayout } from "./components/MusicLayout";
@@ -13,7 +13,9 @@ import { MinePage } from "./components/MinePage";
 import { QueuePage } from "./components/QueuePage";
 import { SettingsPage } from "./components/SettingsPage";
 import { useMusicStore } from "./store/music-store";
+import { useSyncStore } from "./store/sync-store";
 import { useMusicCover } from "./hooks/useMusicCover";
+import { checkAndSync } from "./lib/sync";
 import type { MusicTrack } from "./types/music";
 
 
@@ -46,6 +48,18 @@ export default function MusicPage() {
     toggleRepeat,
     toggleShuffle,
   } = useMusicStore();
+
+  const { syncKey } = useSyncStore();
+  const syncInProgress = useRef(false);
+
+  useEffect(() => {
+    if (syncKey && !syncInProgress.current) {
+      syncInProgress.current = true;
+      checkAndSync().finally(() => {
+        syncInProgress.current = false;
+      });
+    }
+  }, [syncKey]);
 
   const [currentTab, setCurrentTab] = useState<TabId>("search");
   const [activePlaylistId, setActivePlaylistId] = useState<string>();

@@ -1,7 +1,9 @@
 import { type ApiResponse } from "@/types/index";
 
+export const MY_API_URL = "https://otterhub.411130.xyz";
+
 export const DEFAULT_API_URL = "https://music-api.gdstudio.xyz/api.php";
-export const MY_PROXY_API_URL = "https://otterhub.411130.xyz/music-api";
+export const MY_PROXY_API_URL = `${MY_API_URL}/music-api`;
 const STORAGE_KEY_URLS = "otter_api_urls";
 
 export function getApiUrls(): string[] {
