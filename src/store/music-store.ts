@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { v4 as uuidv4 } from 'uuid';
 import { storeKey } from '.';
-import type { MusicTrack, MusicSource, LocalMusicTrack } from '@/types/music';
+import type { MusicTrack, MusicSource } from '@/types/music';
 
 /**
  * Fisher-Yates shuffle
@@ -27,7 +27,6 @@ interface MusicState {
   // --- Library (Persisted) ---
   favorites: MusicTrack[];
   playlists: Playlist[];
-  localTracks: LocalMusicTrack[];
 
   addToFavorites: (track: MusicTrack) => void;
   removeFromFavorites: (trackId: string) => void;
@@ -38,11 +37,6 @@ interface MusicState {
   renamePlaylist: (id: string, name: string) => void;
   addToPlaylist: (playlistId: string, track: MusicTrack) => void;
   removeFromPlaylist: (playlistId: string, trackId: string) => void;
-
-  // --- Local Music ---
-  setLocalTracks: (tracks: LocalMusicTrack[]) => void;
-  removeLocalTrack: (trackId: string) => void;
-  removeLocalTracks: (trackIds: string[]) => void;
 
   // --- Settings (Persisted) ---
   quality: string;
@@ -118,7 +112,6 @@ export const useMusicStore = create<MusicState>()(
     (set, get) => ({
       favorites: [],
       playlists: [],
-      localTracks: [],
 
       addToFavorites: (track) => set((state) => {
         if (state.favorites.some(t => t.id === track.id)) return state;
@@ -162,15 +155,6 @@ export const useMusicStore = create<MusicState>()(
             ? { ...p, tracks: p.tracks.filter(t => t.id !== tid) }
             : p
         )
-      })),
-
-      // --- Local Music Methods ---
-      setLocalTracks: (tracks) => set({ localTracks: tracks }),
-      removeLocalTrack: (trackId) => set((state) => ({
-        localTracks: state.localTracks.filter(t => t.id !== trackId)
-      })),
-      removeLocalTracks: (trackIds) => set((state) => ({
-        localTracks: state.localTracks.filter(t => !trackIds.includes(t.id))
       })),
 
       quality: "192",
@@ -525,7 +509,6 @@ export const useMusicStore = create<MusicState>()(
       partialize: (state) => ({
         favorites: state.favorites,
         playlists: state.playlists,
-        localTracks: state.localTracks,
         queue: state.queue,
         currentIndex: state.currentIndex,
         volume: state.volume,

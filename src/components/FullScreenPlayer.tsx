@@ -20,6 +20,17 @@ import { useMusicStore } from "@/store/music-store";
 import { useShallow } from "zustand/react/shallow";
 import toast from "react-hot-toast";
 
+interface ModeIconProps {
+  isRepeat: boolean;
+  isShuffle: boolean;
+}
+
+function ModeIcon({ isRepeat, isShuffle }: ModeIconProps) {
+  if (isRepeat) return <Repeat1 className="h-5 w-5" />;
+  if (isShuffle) return <Shuffle className="h-5 w-5" />;
+  return <Repeat className="h-5 w-5" />;
+}
+
 interface FullScreenPlayerProps {
   isFullScreen: boolean;
   onClose: () => void;
@@ -114,12 +125,6 @@ export function FullScreenPlayer({
   };
 
   if (!isMounted) return null;
-
-  const ModeIcon = () => {
-    if (isRepeat) return <Repeat1 className="h-5 w-5" />;
-    if (isShuffle) return <Shuffle className="h-5 w-5" />;
-    return <Repeat className="h-5 w-5" />;
-  };
 
   const getModeTitle = () => {
     if (isRepeat) return "单曲循环";
@@ -291,7 +296,7 @@ export function FullScreenPlayer({
           onClick={handleModeToggle}
           title={getModeTitle()}
         >
-          <ModeIcon />
+          <ModeIcon isRepeat={isRepeat} isShuffle={isShuffle} />
         </Button>
 
         <Button
