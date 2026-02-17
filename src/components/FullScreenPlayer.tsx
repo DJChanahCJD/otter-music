@@ -187,11 +187,13 @@ export function FullScreenPlayer({
       </header>
 
       {/* Main Content Area */}
-      <div className="flex-1 flex flex-col items-center justify-center px-8 relative z-10 overflow-hidden">
+      <div 
+        className="flex-1 flex flex-col items-center justify-center px-8 relative z-10 overflow-hidden cursor-pointer"
+        onClick={() => setShowLyrics(!showLyrics)}
+      >
         {showLyrics ? (
           <div
-            className="w-full h-full cursor-pointer"
-            onClick={() => setShowLyrics(false)}
+            className="w-full h-full"
           >
             <LyricsPanel
               track={currentTrack}
@@ -201,10 +203,9 @@ export function FullScreenPlayer({
         ) : (
           <div
             className={cn(
-              "relative aspect-square w-72 max-w-[320px] overflow-hidden rounded-3xl shadow-2xl cursor-pointer transition-transform duration-500",
+              "relative aspect-square w-72 max-w-[320px] overflow-hidden rounded-3xl shadow-2xl transition-transform duration-500",
               isPlaying ? "scale-100" : "scale-[0.95]"
             )}
-            onClick={() => setShowLyrics(true)}
           >
             <MusicCover
               src={coverUrl}
