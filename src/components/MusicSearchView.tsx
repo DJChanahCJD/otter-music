@@ -92,7 +92,7 @@ export function MusicSearchView({ onPlay, currentTrackId, isPlaying }: MusicSear
       setSearchPage(nextPage);
 
     } catch (e) {
-      if ((e as any)?.name !== "AbortError") toast.error("搜索失败，请重试");
+      if ((e as any)?.name !== "AbortError") toast.error("搜索失败，请稍后重试");
     } finally {
       if (version === versionRef.current) setSearchLoading(false);
     }

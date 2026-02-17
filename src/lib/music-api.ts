@@ -2,6 +2,7 @@ import type { MusicSource, MusicTrack, SearchPageResult, MergedMusicTrack, SongL
 import { cachedFetch } from "@/lib/utils/cache";
 import { mergeAndSortTracks } from "@/lib/utils/search-helper";
 import { getApiUrl } from "./api";
+import { retry } from "@/lib/utils";
 
 const getApiBase = () => `${getApiUrl()}`;
 
@@ -44,14 +45,15 @@ const buildUrl = (
 /* -------------------------------------------------- */
 /* fetch wrapper */
 
-async function requestJSON<T>(url: string, signal?: AbortSignal): Promise<T | null> {
+async function requestJSON<T>(url: string, signal?: AbortSignal): Promise<T> {
   try {
     const res = await fetch(url, { signal });
-    if (!res.ok) return null;
+    if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
     return await res.json();
   } catch (e) {
-    if (!isAbort(e)) console.error('Request failed:', url, e);
-    return null;
+    if (isAbort(e)) throw e;
+    console.error('Request failed:', url, e);
+    throw e;
   }
 }
 
@@ -71,12 +73,14 @@ export const musicApi = {
 
     if (source === 'all') return this.searchAll(query, page, count, signal);
 
-    const json = await requestJSON<Partial<MusicTrack>[]>(
-      buildUrl({ types: 'search', name: query, count, pages: page }, source),
-      signal
+    const json = await retry(
+      () => requestJSON<Partial<MusicTrack>[]>(
+        buildUrl({ types: 'search', name: query, count, pages: page }, source),
+        signal
+      ),
+      2,
+      500
     );
-
-    if (!json) return { items: [], hasMore: false };
 
     const items = json.map(t => normalizeTrack(t, source));
     return { items, hasMore: items.length >= count };
