@@ -21,7 +21,7 @@ interface MusicTrackMobileMenuProps {
   onAddToPlaylistTrigger: () => void;
   onDownload: () => void;
   onToggleLike: () => void;
-  isFavorite: boolean;
+  isFavorite?: boolean;
   onRemove?: () => void;
   hideLike?: boolean;
   hideAddToPlaylist?: boolean;
@@ -81,6 +81,25 @@ export function MusicTrackMobileMenu({
           </div>
         </DrawerTitle>
         <div className="p-4 flex flex-col gap-2">
+          {!hideLike && (
+            <Button
+              variant="ghost"
+              className="justify-start w-full"
+              onClick={() => {
+                onToggleLike();
+                onOpenChange(false);
+              }}
+            >
+              <Heart
+                className={cn(
+                  "mr-2 h-4 w-4",
+                  isFavorite && "fill-primary text-primary"
+                )}
+              />
+              {isFavorite ? "取消喜欢" : "喜欢"}
+            </Button>
+          )}
+
           {onAddToNextPlay && (
             <Button
               variant="ghost"
@@ -117,25 +136,6 @@ export function MusicTrackMobileMenu({
           >
             <Download className="mr-2 h-4 w-4" /> 下载
           </Button>
-
-          {!hideLike && (
-            <Button
-              variant="ghost"
-              className="justify-start w-full"
-              onClick={() => {
-                onToggleLike();
-                onOpenChange(false);
-              }}
-            >
-              <Heart
-                className={cn(
-                  "mr-2 h-4 w-4",
-                  isFavorite && "fill-primary text-primary"
-                )}
-              />
-              {isFavorite ? "取消喜欢" : "喜欢"}
-            </Button>
-          )}
 
 
           {onRemove && (

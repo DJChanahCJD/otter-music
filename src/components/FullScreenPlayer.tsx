@@ -260,7 +260,7 @@ export function FullScreenPlayer({
                   onAddToPlaylistTrigger={() => setIsAddToPlaylistOpen(true)}
                   onDownload={() => downloadMusicTrack(currentTrack, parseInt(quality))}
                   onToggleLike={() => onToggleFavorite?.()}
-                  isFavorite={isFavorite}
+                  hideLike={true}
                   triggerClassName="h-10 w-10 text-muted-foreground hover:bg-muted/40 hover:text-foreground"
                 />
                 <AddToPlaylistDialog
