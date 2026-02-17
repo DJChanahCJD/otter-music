@@ -16,10 +16,10 @@ export default function RootLayout({ children }: PropsWithChildren) {
         position="top-center"
         gutter={12}
         containerStyle={{
-          top: "calc(16px + var(--safe-area-top))",
+          top: "calc(24px + var(--safe-area-top))",
         }}
         toastOptions={{
-          duration: 3000,
+          duration: 2000,
           style: {
             padding: "12px 16px",
             fontSize: "14px",

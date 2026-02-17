@@ -90,7 +90,7 @@ const Row = ({
   } else {
     // Last item: Load More Button or Spacer
     return (
-      <div style={style} className="px-4 pb-20 pt-2">
+      <div style={style} className="px-4 pb-28 pt-2">
         {onLoadMore ? (
           <Button
             variant="outline"

@@ -22,6 +22,7 @@ export function GlobalMusicPlayer() {
     seekTimestamp,
     quality,
     setDuration,
+    setCurrentAudioUrl,
   } = useMusicStore();
 
   const audioRef = useRef<HTMLAudioElement>(null);
@@ -111,6 +112,9 @@ export function GlobalMusicPlayer() {
         if (cancelled || requestId !== requestIdRef.current) return;
         if (!url) throw new Error("EMPTY_URL");
 
+        // 保存当前音频 URL 到 store
+        setCurrentAudioUrl(url);
+
         // 2. Set Source
         if (audio.src !== url) {
           audio.src = url;
@@ -159,15 +163,7 @@ export function GlobalMusicPlayer() {
     return () => {
       cancelled = true;
     };
-  }, [
-    currentTrack,
-    currentTrackId,
-    currentTrackSource,
-    playTrackAsNext,
-    quality,
-    setIsLoading,
-    setIsPlaying,
-  ]);
+  }, [currentTrack, currentTrackId, currentTrackSource, playTrackAsNext, quality, setCurrentAudioUrl, setIsLoading, setIsPlaying]);
 
   // Event Handlers
   useEffect(() => {

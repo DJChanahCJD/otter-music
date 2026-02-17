@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { v4 as uuidv4 } from 'uuid';
 import { storeKey } from '.';
-import type { MusicTrack, MusicSource } from '@/types/music';
+import type { MusicTrack, MusicSource, LocalMusicTrack } from '@/types/music';
 
 /**
  * Fisher-Yates shuffle
@@ -27,6 +27,7 @@ interface MusicState {
   // --- Library (Persisted) ---
   favorites: MusicTrack[];
   playlists: Playlist[];
+  localTracks: LocalMusicTrack[];
 
   addToFavorites: (track: MusicTrack) => void;
   removeFromFavorites: (trackId: string) => void;
@@ -37,6 +38,11 @@ interface MusicState {
   renamePlaylist: (id: string, name: string) => void;
   addToPlaylist: (playlistId: string, track: MusicTrack) => void;
   removeFromPlaylist: (playlistId: string, trackId: string) => void;
+
+  // --- Local Music ---
+  setLocalTracks: (tracks: LocalMusicTrack[]) => void;
+  removeLocalTrack: (trackId: string) => void;
+  removeLocalTracks: (trackIds: string[]) => void;
 
   // --- Settings (Persisted) ---
   quality: string;
@@ -53,6 +59,7 @@ interface MusicState {
   isLoading: boolean;
   seekTimestamp: number; // Used to trigger seek
   duration: number;
+  currentAudioUrl: string | null; // Current audio source URL
 
   setVolume: (volume: number) => void;
   toggleRepeat: () => void;
@@ -63,6 +70,7 @@ interface MusicState {
   togglePlay: () => void;
   setIsLoading: (isLoading: boolean) => void;
   seek: (time: number) => void;
+  setCurrentAudioUrl: (url: string | null) => void;
 
   // --- Playback (Queue) ---
   queue: MusicTrack[];
@@ -93,6 +101,7 @@ export const useMusicStore = create<MusicState>()(
     (set, get) => ({
       favorites: [],
       playlists: [],
+      localTracks: [],
 
       addToFavorites: (track) => set((state) => {
         if (state.favorites.some(t => t.id === track.id)) return state;
@@ -138,6 +147,15 @@ export const useMusicStore = create<MusicState>()(
         )
       })),
 
+      // --- Local Music Methods ---
+      setLocalTracks: (tracks) => set({ localTracks: tracks }),
+      removeLocalTrack: (trackId) => set((state) => ({
+        localTracks: state.localTracks.filter(t => t.id !== trackId)
+      })),
+      removeLocalTracks: (trackIds) => set((state) => ({
+        localTracks: state.localTracks.filter(t => !trackIds.includes(t.id))
+      })),
+
       quality: "320",
       searchSource: "all",
       setQuality: (quality) => set({ quality }),
@@ -151,6 +169,7 @@ export const useMusicStore = create<MusicState>()(
       isLoading: false,
       seekTimestamp: 0,
       duration: 0,
+      currentAudioUrl: null,
 
       setVolume: (volume) => set({ volume }),
       toggleRepeat: () => set((state) => ({ isRepeat: !state.isRepeat })),
@@ -215,6 +234,7 @@ export const useMusicStore = create<MusicState>()(
       togglePlay: () => set((state) => ({ isPlaying: !state.isPlaying })),
       setIsLoading: (isLoading) => set({ isLoading }),
       seek: (time) => set({ currentAudioTime: time, seekTimestamp: Date.now() }),
+      setCurrentAudioUrl: (url) => set({ currentAudioUrl: url }),
 
       queue: [],
       originalQueue: [],
@@ -454,6 +474,7 @@ export const useMusicStore = create<MusicState>()(
       partialize: (state) => ({
         favorites: state.favorites,
         playlists: state.playlists,
+        localTracks: state.localTracks,
         queue: state.queue,
         currentIndex: state.currentIndex,
         volume: state.volume,

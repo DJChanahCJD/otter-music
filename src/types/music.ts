@@ -70,7 +70,7 @@ export type MusicSource =
   | 'qingting'
   | 'ximalaya'
   // Common sources mentioned in doc: netease, tencent, tidal, spotify, ytmusic, qobuz, joox, deezer, migu, kugou, kuwo, ximalaya, apple
-  | 'tidal' | 'spotify' | 'ytmusic' | 'qobuz' | 'joox' | 'deezer' | 'apple' | 'all';
+  | 'tidal' | 'spotify' | 'ytmusic' | 'qobuz' | 'joox' | 'deezer' | 'apple' | 'all' | 'local';
 
 export interface MusicTrack {
   id: string;
@@ -88,6 +88,13 @@ export interface Playlist {
   name: string;
   tracks: MusicTrack[];
   createdAt: number;
+}
+
+// 本地音乐轨道信息
+export interface LocalMusicTrack extends MusicTrack {
+  localPath: string;     // 本地文件路径
+  fileSize?: number;     // 文件大小
+  lastModified?: number; // 最后修改时间
 }
 
 // 需要持久化存储的音乐数据结构
