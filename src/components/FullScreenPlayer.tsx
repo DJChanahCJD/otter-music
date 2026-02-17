@@ -94,13 +94,18 @@ export function FullScreenPlayer({
   };
 
   const handleShare = async () => {
+    if (!currentTrack) {
+      toast.error("暂无歌曲信息");
+      return;
+    }
     if (!currentAudioUrl) {
       toast.error("暂无音频链接");
       return;
     }
     try {
-      await navigator.clipboard.writeText(currentAudioUrl);
-      toast.success("音频链接已复制到剪贴板");
+      const shareText = `【OtterMusic】${currentTrack.name} - ${currentTrack.artist.join(", ")}\n${currentAudioUrl}`;
+      await navigator.clipboard.writeText(shareText);
+      toast.success("已复制到剪贴板");
     } catch (err) {
       console.error("复制失败:", err);
       toast.error("复制失败，请重试");
