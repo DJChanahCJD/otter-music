@@ -144,44 +144,42 @@ export function MusicTrackItem({
       </div>
 
       {/* Column 3: Actions */}
-      <div className="flex items-center justify-end gap-1" onClick={(e) => e.stopPropagation()}>
-        <>
-          {/* 移动端菜单 */}
-          <div className="flex items-center">
-            <MusicTrackMobileMenu
-              track={track}
-              open={isMobileMenuOpen}
-              onOpenChange={setIsMobileMenuOpen}
-              onAddToNextPlay={() => {
-                addToNextPlay(track);
-                toast.success("已添加到下一首播放");
-              }}
-              onAddToPlaylistTrigger={() => {
-                setIsAddToPlaylistOpen(true);
-              }}
-              onDownload={() => downloadMusicTrack(track, parseInt(quality))}
-              onToggleLike={() => {
-                if (isFavorite(track.id)) {
-                  removeFromFavorites(track.id);
-                  toast.success("已取消喜欢");
-                } else {
-                  addToFavorites(track);
-                  toast.success("已喜欢");
-                }
-              }}
-              isFavorite={isFavorite(track.id)}
-              onRemove={onRemove}
-              hideLike={hideLike}
-              hideAddToPlaylist={hideAddToPlaylist}
-            />
+      <div className="flex items-center justify-end gap-1">
+        {/* 移动端菜单 */}
+        <div className="flex items-center">
+          <MusicTrackMobileMenu
+            track={track}
+            open={isMobileMenuOpen}
+            onOpenChange={setIsMobileMenuOpen}
+            onAddToNextPlay={() => {
+              addToNextPlay(track);
+              toast.success("已添加到下一首播放");
+            }}
+            onAddToPlaylistTrigger={() => {
+              setIsAddToPlaylistOpen(true);
+            }}
+            onDownload={() => downloadMusicTrack(track, parseInt(quality))}
+            onToggleLike={() => {
+              if (isFavorite(track.id)) {
+                removeFromFavorites(track.id);
+                toast.success("已取消喜欢");
+              } else {
+                addToFavorites(track);
+                toast.success("已喜欢");
+              }
+            }}
+            isFavorite={isFavorite(track.id)}
+            onRemove={onRemove}
+            hideLike={hideLike}
+            hideAddToPlaylist={hideAddToPlaylist}
+          />
 
-            <AddToPlaylistDialog
-              open={isAddToPlaylistOpen}
-              onOpenChange={setIsAddToPlaylistOpen}
-              track={track}
-            />
-          </div>
-        </>
+          <AddToPlaylistDialog
+            open={isAddToPlaylistOpen}
+            onOpenChange={setIsAddToPlaylistOpen}
+            track={track}
+          />
+        </div>
       </div>
     </div>
   );

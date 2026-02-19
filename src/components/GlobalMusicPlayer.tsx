@@ -18,8 +18,9 @@ export function GlobalMusicPlayer() {
     setIsLoading,
     playTrackAsNext,
     setAudioCurrentTime,
-    currentAudioTime,
+    seekTargetTime,
     seekTimestamp,
+    clearSeekTargetTime,
     quality,
     setDuration,
     setCurrentAudioUrl,
@@ -64,15 +65,14 @@ export function GlobalMusicPlayer() {
   // Handle Seek
   useEffect(() => {
     const audio = audioRef.current;
-    if (!audio || seekTimestamp === 0) return;
+    if (!audio || seekTimestamp === 0 || seekTargetTime < 0) return;
 
-    // Check if valid time
-    if (Number.isFinite(currentAudioTime)) {
-      audio.currentTime = currentAudioTime;
+    if (Number.isFinite(seekTargetTime)) {
+      audio.currentTime = seekTargetTime;
+      setAudioCurrentTime(seekTargetTime);
+      clearSeekTargetTime();
     }
-  }, [currentAudioTime, seekTimestamp]);
-  // Dependency on seekTimestamp ensures we only seek when explicit action happens
-  // We don't depend on currentAudioTime alone because that changes during playback
+  }, [seekTargetTime, seekTimestamp, setAudioCurrentTime, clearSeekTargetTime]);
 
   // Load Track Logic
   useEffect(() => {
@@ -125,13 +125,8 @@ export function GlobalMusicPlayer() {
           audio.load();
         }
 
-        // Always reset currentTime for new track, then restore if needed
-        const resumeTime = useMusicStore.getState().currentAudioTime;
-        if (resumeTime > 0) {
-          audio.currentTime = resumeTime;
-        } else {
-          audio.currentTime = 0;
-        }
+        // 新歌曲从 0 开始播放，不再使用旧的 currentAudioTime
+        audio.currentTime = 0;
 
         if (isPlaying) {
           const playPromise = audio.play();
@@ -303,9 +298,8 @@ export function GlobalMusicPlayer() {
         }
       }],
       ["seekto", (details) => {
-        if (details?.seekTime !== undefined && audioRef.current) {
-          audioRef.current.currentTime = details.seekTime;
-          setAudioCurrentTime(details.seekTime);
+        if (details?.seekTime !== undefined) {
+          useMusicStore.getState().seek(details.seekTime);
         }
       }],
     ];
@@ -317,7 +311,7 @@ export function GlobalMusicPlayer() {
         console.error(`Failed to set action handler for ${action}`, e);
       }
     }
-  }, [setIsPlaying, setAudioCurrentTime]);
+  }, [setIsPlaying]);
 
   // Sync Position State
   useEffect(() => {
@@ -332,15 +326,8 @@ export function GlobalMusicPlayer() {
       } catch {}
     };
 
-    // Update on play/pause and seek
     updatePosition();
-    
-    // Also update periodically? 
-    // Usually the OS extrapolates, but updating on events is good.
-    // We can hook into the existing onTimeUpdate via a ref or similar, 
-    // but the store update throttle (1s) in the main effect is not exposed here.
-    // For now, updating on dependency change (isPlaying, seekTimestamp) is a good start.
-  }, [isPlaying, currentAudioTime, seekTimestamp]);
+  }, [isPlaying, seekTargetTime, seekTimestamp]);
 
   return (
     <audio

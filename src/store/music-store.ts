@@ -65,6 +65,7 @@ interface MusicState {
   isPlaying: boolean;
   isLoading: boolean;
   seekTimestamp: number; // Used to trigger seek
+  seekTargetTime: number; // 用户 seek 的目标位置（与 currentAudioTime 分离）
   duration: number;
   currentAudioUrl: string | null; // Current audio source URL
   hasUserGesture: boolean; // 标记用户是否有过真正的交互（阻止自动播放）
@@ -78,6 +79,7 @@ interface MusicState {
   togglePlay: () => void;
   setIsLoading: (isLoading: boolean) => void;
   seek: (time: number) => void;
+  clearSeekTargetTime: () => void;
   setCurrentAudioUrl: (url: string | null) => void;
   setUserGesture: () => void;
 
@@ -188,6 +190,7 @@ export const useMusicStore = create<MusicState>()(
       isPlaying: false,
       isLoading: false,
       seekTimestamp: 0,
+      seekTargetTime: -1, // -1 表示无 seek 目标
       duration: 0,
       currentAudioUrl: null,
       hasUserGesture: false,
@@ -257,7 +260,8 @@ export const useMusicStore = create<MusicState>()(
         isPlaying: !state.isPlaying 
       })),
       setIsLoading: (isLoading) => set({ isLoading }),
-      seek: (time) => set({ currentAudioTime: time, seekTimestamp: Date.now() }),
+      seek: (time) => set({ seekTargetTime: time, seekTimestamp: Date.now() }),
+      clearSeekTargetTime: () => set({ seekTargetTime: -1 }),
       setCurrentAudioUrl: (url) => set({ currentAudioUrl: url }),
       setUserGesture: () => set({ hasUserGesture: true }),
 

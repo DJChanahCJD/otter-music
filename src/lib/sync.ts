@@ -100,7 +100,6 @@ export async function checkAndSync(): Promise<SyncResult> {
     }
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : "数据同步失败";
-    toast.error(errorMessage);
     return { success: false, error: errorMessage };
   }
 }

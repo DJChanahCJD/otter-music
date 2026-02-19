@@ -61,7 +61,7 @@ export function MusicTrackMobileMenu({
           <MoreVertical className="h-4 w-4" />
         </Button>
       </DrawerTrigger>
-      <DrawerContent onClick={(e) => e.stopPropagation()}>
+      <DrawerContent>
         <DrawerTitle>
           {/* Header with Cover and Info */}
           <div className="flex items-center gap-4 px-6 py-4">

@@ -5,7 +5,7 @@ import { MusicTrack, MusicSource, searchOptions } from "@/types/music";
 import { Search, Loader2 } from "lucide-react";
 import { Input } from "./ui/input"
 import { Select } from "./ui/select"
-import { useState, useRef } from "react";
+import { useRef } from "react";
 import toast from "react-hot-toast";
 import { useShallow } from "zustand/react/shallow";
 import { MusicTrackList } from "./MusicTrackList";
