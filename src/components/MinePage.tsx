@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ListVideo, Settings, ListMusic, SquarePlus, MoreHorizontal, Trash2, Pencil } from "lucide-react";
+import { ListVideo, Settings, ListMusic, SquarePlus, MoreHorizontal, Trash2, Pencil, HardDriveDownload } from "lucide-react";
 import { useMusicStore } from "@/store/music-store";
 import { useShallow } from "zustand/react/shallow";
 import { Button } from "./ui/button";
@@ -26,10 +26,11 @@ import {
 interface MinePageProps {
   onOpenQueue: () => void;
   onOpenSettings: () => void;
+  onOpenLocalMusic: () => void;
   onSelectPlaylist: (playlistId: string) => void;
 }
 
-export function MinePage({ onOpenQueue, onOpenSettings, onSelectPlaylist }: MinePageProps) {
+export function MinePage({ onOpenQueue, onOpenSettings, onOpenLocalMusic, onSelectPlaylist }: MinePageProps) {
   const { playlists, createPlaylist, renamePlaylist, deletePlaylist } = useMusicStore(
     useShallow((state) => ({
       playlists: state.playlists,
@@ -75,25 +76,35 @@ export function MinePage({ onOpenQueue, onOpenSettings, onSelectPlaylist }: Mine
 
   return (
     <div className="p-5">
-      <div className="flex gap-3 mb-6">
+      <div className="flex gap-2 mb-6">
         <button
           onClick={onOpenQueue}
-          className="flex-1 flex items-center gap-3 p-4 rounded-2xl bg-card/60 hover:bg-card/80 border border-border/50 transition-colors"
+          className="flex-1 flex flex-col items-center justify-center gap-2 p-4 rounded-2xl bg-card/70 hover:bg-card transition-all duration-300"
         >
-          <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center">
-            <ListVideo className="h-5 w-5 text-primary" />
+          <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
+            <ListVideo className="h-6 w-6 text-primary" />
           </div>
-          <span className="font-medium text-foreground">播放列表</span>
+          <span className="text-sm font-medium text-foreground">列表</span>
+        </button>
+
+        <button
+          onClick={onOpenLocalMusic}
+          className="flex-1 flex flex-col items-center justify-center gap-2 p-4 rounded-2xl bg-card/70 hover:bg-card transition-all duration-300"
+        >
+          <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
+            <HardDriveDownload className="h-6 w-6 text-primary" />
+          </div>
+          <span className="text-sm font-medium text-foreground">本地</span>
         </button>
 
         <button
           onClick={onOpenSettings}
-          className="flex-1 flex items-center gap-3 p-4 rounded-2xl bg-card/60 hover:bg-card/80 border border-border/50 transition-colors"
+          className="flex-1 flex flex-col items-center justify-center gap-2 p-4 rounded-2xl bg-card/70 hover:bg-card transition-all duration-300"
         >
-          <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center">
-            <Settings className="h-5 w-5 text-primary" />
+          <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
+            <Settings className="h-6 w-6 text-primary" />
           </div>
-          <span className="font-medium text-foreground">系统设置</span>
+          <span className="text-sm font-medium text-foreground">设置</span>
         </button>
       </div>
 

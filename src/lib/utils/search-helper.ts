@@ -2,18 +2,20 @@ import type { MusicSource, MusicTrack, MergedMusicTrack } from '@/types/music';
 import { normalizeText, normalizeArtists, getExactKey } from './music-key';
 
 /* 常量 */
-const SOURCE_PRIORITY: MusicSource[] = ['kuwo', 'joox', 'netease'];
-
 const SOURCE_WEIGHT: Record<string, number> = {
-  kuwo: 30,
-  joox: 25,
-  netease: 20
+  joox: 30,
+  netease: 25,
+  kuwo: 20,
 };
+
+const SOURCE_PRIORITY: MusicSource[] = Object.entries(SOURCE_WEIGHT)
+  .sort(([, a], [, b]) => b - a)
+  .map(([source]) => source as MusicSource);
 
 /* 内部预处理结构（缓存所有可复用信息） */
 type PreparedTrack = MusicTrack & {
-  nName: string;
-  nArtists: string[];
+  normalizedName: string;
+  normalizedArtists: string[];
   artistKey: string;
   exactKey: string;
   nameKey: string;
@@ -21,16 +23,16 @@ type PreparedTrack = MusicTrack & {
 
 function prepareTracks(tracks: MusicTrack[]): PreparedTrack[] {
   return tracks.map(t => {
-    const nName = normalizeText(t.name);
-    const nArtists = normalizeArtists(t.artist);
+    const normalizedName = normalizeText(t.name);
+    const normalizedArtists = normalizeArtists(t.artist);
 
     return {
       ...t,
-      nName,
-      nArtists,
-      artistKey: nArtists.join('/'),
+      normalizedName,
+      normalizedArtists,
+      artistKey: normalizedArtists.join('/'),
       exactKey: getExactKey(t),
-      nameKey: nName
+      nameKey: normalizedName
     };
   });
 }
@@ -83,7 +85,7 @@ function clusterTracks(tracks: (MergedMusicTrack & PreparedTrack)[]): (MergedMus
       let merged = false;
 
       for (const c of clusters) {
-        if (item.nArtists.some(a => c.nArtists.includes(a))) {
+        if (item.normalizedArtists.some(a => c.normalizedArtists.includes(a))) {
           // 选更好的主曲
           const better =
             item.name.length < c.name.length ||
@@ -119,9 +121,9 @@ function score(t: MergedMusicTrack & PreparedTrack, q: string): number {
   let s = 0;
 
   // 歌名匹配
-  if (t.nName === q) s += 100;
-  else if (t.nName.startsWith(q)) s += 80;
-  else if (t.nName.includes(q)) s += 50;
+  if (t.normalizedName === q) s += 100;
+  else if (t.normalizedName.startsWith(q)) s += 80;
+  else if (t.normalizedName.includes(q)) s += 50;
 
   // 艺人匹配
   if (t.artistKey.includes(q)) s += 40;
@@ -138,35 +140,50 @@ function score(t: MergedMusicTrack & PreparedTrack, q: string): number {
   return s;
 }
 
-/* 4. 混排（核心） */
-function interleave(tracks: (MergedMusicTrack & PreparedTrack)[], query: string): MergedMusicTrack[] {
+/* 4. 多源排序（避免重复 + 平台偏好） */
+function diversifiedSort(
+  tracks: (MergedMusicTrack & PreparedTrack)[],
+  query: string
+): MergedMusicTrack[] {
+
   const q = normalizeText(query);
 
-  const buckets = new Map<MusicSource, (MergedMusicTrack & PreparedTrack)[]>();
+  // 1️⃣ 初始评分
+  const pool = tracks.map(t => ({
+    track: t,
+    base: score(t, q)
+  }));
 
-  for (const t of tracks) {
-    if (!buckets.has(t.source)) buckets.set(t.source, []);
-    buckets.get(t.source)!.push(t);
-  }
-
-  // 每个平台内部按评分排序
-  for (const arr of buckets.values()) {
-    arr.sort((a, b) => score(b, q) - score(a, q));
-  }
-
-  // 轮询混排
   const result: MergedMusicTrack[] = [];
-  let active = true;
+  const sourceCount = new Map<MusicSource, number>();
 
-  while (active) {
-    active = false;
-    for (const src of SOURCE_PRIORITY) {
-      const item = buckets.get(src)?.shift();
-      if (item) {
-        result.push(item);
-        active = true;
+  while (pool.length) {
+
+    let bestIndex = 0;
+    let bestScore = -Infinity;
+
+    for (let i = 0; i < pool.length; i++) {
+      const { track, base } = pool[i];
+
+      // 平台惩罚：越多出现越难再上
+      const used = sourceCount.get(track.source) || 0;
+
+      // 关键公式（非常重要）
+      const diversityPenalty = used * 10;
+
+      // 最终排序分
+      const finalScore = base - diversityPenalty;
+
+      if (finalScore > bestScore) {
+        bestScore = finalScore;
+        bestIndex = i;
       }
     }
+
+    const chosen = pool.splice(bestIndex, 1)[0].track;
+
+    result.push(chosen);
+    sourceCount.set(chosen.source, (sourceCount.get(chosen.source) || 0) + 1);
   }
 
   return result;
@@ -177,5 +194,5 @@ export function mergeAndSortTracks(tracks: MusicTrack[], query = ''): MergedMusi
   const prepared = prepareTracks(tracks);
   const unique = dedupeExact(prepared);
   const clustered = clusterTracks(unique);
-  return interleave(clustered, query);
+  return diversifiedSort(clustered, query);
 }

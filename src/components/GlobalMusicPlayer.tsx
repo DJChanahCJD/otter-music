@@ -31,6 +31,7 @@ export function GlobalMusicPlayer() {
   const currentTrack = queue[currentIndex];
   const currentTrackId = currentTrack?.id;
   const currentTrackSource = currentTrack?.source;
+  const currentTrackUrlId = currentTrack?.url_id;
   const coverUrl = useMusicCover(currentTrack);
 
   // Ref to track current request to avoid race conditions
@@ -102,8 +103,10 @@ export function GlobalMusicPlayer() {
         // 1. Get URL with proper retry (null -> throw to trigger retry)
         const url = await retry(
           async () => {
+            // 本地音乐使用 url_id（本地文件路径），在线音乐使用 id
+            const urlId = currentTrackSource === 'local' ? currentTrackUrlId : currentTrackId;
             const result = await musicApi.getUrl(
-              currentTrackId,
+              urlId || '',
               currentTrackSource,
               parseInt(quality, 10),
             );
@@ -164,7 +167,7 @@ export function GlobalMusicPlayer() {
     return () => {
       cancelled = true;
     };
-  }, [hasUserGesture, currentTrack, currentTrackId, currentTrackSource, playTrackAsNext, quality, setCurrentAudioUrl, setIsLoading, setIsPlaying, isPlaying]);
+  }, [hasUserGesture, currentTrack, currentTrackId, currentTrackSource, currentTrackUrlId, playTrackAsNext, quality, setCurrentAudioUrl, setIsLoading, setIsPlaying, isPlaying]);
 
   // Event Handlers
   useEffect(() => {

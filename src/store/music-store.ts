@@ -2,7 +2,25 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { v4 as uuidv4 } from 'uuid';
 import { storeKey } from '.';
-import type { MusicTrack, MusicSource } from '@/types/music';
+import type { MusicTrack, MusicSource, MergedMusicTrack, Playlist } from '@/types/music';
+
+/**
+ * 清理 MusicTrack，移除 variants 字段
+ */
+function cleanTrack(track: MusicTrack | MergedMusicTrack): MusicTrack {
+  const { variants, ...rest } = track as MergedMusicTrack;
+  return rest;
+}
+
+/**
+ * 清理 Playlist，移除 tracks 中的 variants
+ */
+function cleanPlaylist(playlist: Playlist): Playlist {
+  return {
+    ...playlist,
+    tracks: playlist.tracks.map(cleanTrack),
+  };
+}
 
 /**
  * Fisher-Yates shuffle
@@ -14,13 +32,6 @@ function shuffleArray<T>(array: T[]): T[] {
     [newArr[i], newArr[j]] = [newArr[j], newArr[i]];
   }
   return newArr;
-}
-
-export interface Playlist {
-  id: string;
-  name: string;
-  tracks: MusicTrack[];
-  createdAt: number;
 }
 
 interface MusicState {
@@ -511,9 +522,9 @@ export const useMusicStore = create<MusicState>()(
     {
       name: storeKey.MusicStore,
       partialize: (state) => ({
-        favorites: state.favorites,
-        playlists: state.playlists,
-        queue: state.queue,
+        favorites: state.favorites.map(cleanTrack),
+        playlists: state.playlists.map(cleanPlaylist),
+        queue: state.queue.map(cleanTrack),
         currentIndex: state.currentIndex,
         volume: state.volume,
         isRepeat: state.isRepeat,

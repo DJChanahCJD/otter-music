@@ -308,7 +308,7 @@ async function nativeDownload(url: string, fileName: string, toastId: string) {
 
   await listener.remove();
 
-  toast.success(`已保存到: ${dirPath} 目录`, { id: toastId });
+  toast.success(`已保存到目录:\n${dirPath}`, { id: toastId });
 }
 
 /* ================= 浏览器 ================= */

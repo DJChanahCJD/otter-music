@@ -6,6 +6,7 @@ import { useMusicStore } from "@/store/music-store";
 import { useShallow } from "zustand/react/shallow";
 import { useMusicCover } from "@/hooks/useMusicCover";
 import { PlayerQueuePopover } from "./PlayerQueuePopover";
+import { MusicCover } from "./MusicCover";
 import { useCallback } from "react";
 import toast from "react-hot-toast";
 
@@ -77,13 +78,11 @@ export function MusicNowPlayingBar({ onOpenFullScreen }: MusicNowPlayingBarProps
       >
         {/* 专辑封面 */}
         <div className="relative h-8 w-8 shrink-0 overflow-hidden rounded-md">
-          <img
-            src={coverUrl || undefined}
+          <MusicCover
+            src={coverUrl}
             alt={currentTrack.name}
-            className={cn(
-              "w-full h-full object-cover transition-transform duration-[3s]",
-              isPlaying && "animate-spin-slow"
-            )}
+            className="w-full h-full"
+            iconClassName="h-4 w-4"
           />
         </div>
 

@@ -3,6 +3,7 @@ import { cachedFetch } from "@/lib/utils/cache";
 import { mergeAndSortTracks } from "@/lib/utils/search-helper";
 import { getApiUrl } from "./api";
 import { retry } from "@/lib/utils";
+import { Capacitor } from "@capacitor/core";
 
 const getApiBase = () => `${getApiUrl()}`;
 
@@ -114,6 +115,10 @@ export const musicApi = {
   /* ---------------- URL ---------------- */
 
   async getUrl(id: string, source: MusicSource, br = 192): Promise<string | null> {
+    if (source === 'local') {
+      return Capacitor.convertFileSrc(id);
+    }
+
     const key = `url:${source}:${id}:${br}`;
 
     const res = await cachedFetch<{ url: string }>(

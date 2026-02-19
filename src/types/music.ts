@@ -30,15 +30,15 @@ export interface SearchPageResult<T = MusicTrack> {
 
 export const searchOptions: Record<string, string> = {
   all: "聚合搜索",
-  kuwo: "酷我音乐",
   joox: "Joox",
   netease: "网易云音乐",
+  kuwo: "酷我音乐",
 };
 
 export const sourceLabels: Record<string, string> = {
-  kuwo: "酷我",
-  netease: "网易",
   joox: "Joox",
+  netease: "网易",
+  kuwo: "酷我",
 };
 
 export const sourceBadgeStyles: Record<string, string> = {

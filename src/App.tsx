@@ -12,6 +12,7 @@ import { FullScreenPlayer } from "./components/FullScreenPlayer";
 import { MinePage } from "./components/MinePage";
 import { QueuePage } from "./components/QueuePage";
 import { SettingsPage } from "./components/SettingsPage";
+import { LocalMusicPage } from "./components/LocalMusicPage";
 import { useMusicStore } from "./store/music-store";
 import { useSyncStore } from "./store/sync-store";
 import { useMusicCover } from "./hooks/useMusicCover";
@@ -66,6 +67,7 @@ export default function MusicPage() {
   const [isFullScreenPlayer, setIsFullScreenPlayer] = useState(false);
   const [isQueuePage, setIsQueuePage] = useState(false);
   const [isSettingsPage, setIsSettingsPage] = useState(false);
+  const [isLocalMusicPage, setIsLocalMusicPage] = useState(false);
 
   const currentTrack = queue[currentIndex];
   const coverUrl = useMusicCover(currentTrack);
@@ -161,6 +163,17 @@ export default function MusicPage() {
   };
 
   const renderContent = () => {
+    if (isLocalMusicPage) {
+      return (
+        <LocalMusicPage
+          onBack={() => setIsLocalMusicPage(false)}
+          onPlay={handlePlayContext}
+          currentTrackId={currentTrack?.id}
+          isPlaying={isPlaying}
+        />
+      );
+    }
+
     if (isSettingsPage) {
       return (
         <SettingsPage
@@ -232,6 +245,7 @@ export default function MusicPage() {
         <MinePage
           onOpenQueue={() => setIsQueuePage(true)}
           onOpenSettings={() => setIsSettingsPage(true)}
+          onOpenLocalMusic={() => setIsLocalMusicPage(true)}
           onSelectPlaylist={handleSelectPlaylist}
         />
       );
@@ -254,6 +268,7 @@ export default function MusicPage() {
               setActivePlaylistId(undefined);
               setIsQueuePage(false);
               setIsSettingsPage(false);
+              setIsLocalMusicPage(false);
             }}
           />
         }

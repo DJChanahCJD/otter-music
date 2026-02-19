@@ -1,92 +1,68 @@
-"use client";
+import { useMusicStore } from "@/store/music-store";
+import type { MusicTrack } from "@/types/music";
+import { ListMusic, Plus } from "lucide-react";
+import toast from "react-hot-toast";
+import { Button } from "./ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog";
+import { ScrollArea } from "./ui/scroll-area";
 
-import { Button } from "@/components/ui/button";
-import { Spinner } from "@/components/ui/spinner";
-import { Play, Pause, SkipBack, SkipForward } from "lucide-react";
-
-interface PlayerControlsProps {
-  isPlaying: boolean;
-  isLoading: boolean;
-  onPlayToggle: () => void;
-  onPrev: () => void;
-  onNext: () => void;
-  size?: "sm" | "md" | "lg";
-  showPrevNext?: boolean;
+interface AddToPlaylistDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  track?: MusicTrack;
 }
 
-export function PlayerControls({
-  isPlaying,
-  isLoading,
-  onPlayToggle,
-  onPrev,
-  onNext,
-  size = "md",
-  showPrevNext = true,
-}: PlayerControlsProps) {
-  const sizeClasses = {
-    sm: {
-      play: "h-8 w-8",
-      nav: "h-6 w-6",
-      iconPlay: "h-4 w-4",
-      iconNav: "h-4 w-4",
-    },
-    md: {
-      play: "h-10 w-10",
-      nav: "h-8 w-8",
-      iconPlay: "h-5 w-5",
-      iconNav: "h-5 w-5",
-    },
-    lg: {
-      play: "h-12 w-12",
-      nav: "h-10 w-10",
-      iconPlay: "h-6 w-6",
-      iconNav: "h-5 w-5",
-    },
+export function AddToPlaylistDialog({ open, onOpenChange, track }: AddToPlaylistDialogProps) {
+  const { playlists, addToPlaylist, createPlaylist } = useMusicStore();
+
+  if (!track) return null;
+
+  const handleAddToPlaylist = (playlistId: string, playlistName: string) => {
+    addToPlaylist(playlistId, track);
+    toast.success(`已添加到歌单「${playlistName}」`);
+    onOpenChange(false);
   };
 
-  const classes = sizeClasses[size];
+  const handleCreatePlaylist = () => {
+    const name = window.prompt("请输入新歌单名称");
+    if (name) {
+      const id = createPlaylist(name);
+      addToPlaylist(id, track);
+      toast.success(`已创建并添加到歌单「${name}」`);
+      onOpenChange(false);
+    }
+  };
 
   return (
-    <div className="flex items-center gap-3">
-      {showPrevNext && (
-        <Button
-          variant="ghost"
-          size="icon"
-          className={`${classes.nav} text-muted-foreground hover:bg-muted/40 hover:text-foreground`}
-          onClick={onPrev}
-          title="上一首"
-        >
-          <SkipBack className={`${classes.iconNav} fill-current`} />
-        </Button>
-      )}
-
-      <Button
-        size="icon"
-        className={`${classes.play} rounded-full bg-primary text-primary-foreground hover:bg-primary/90`}
-        onClick={onPlayToggle}
-        disabled={isLoading}
-        title={isPlaying ? "暂停" : "播放"}
-      >
-        {isLoading ? (
-          <Spinner className={classes.iconPlay} />
-        ) : isPlaying ? (
-          <Pause className={`${classes.iconPlay} fill-current`} />
-        ) : (
-          <Play className={`${classes.iconPlay} fill-current`} />
-        )}
-      </Button>
-
-      {showPrevNext && (
-        <Button
-          variant="ghost"
-          size="icon"
-          className={`${classes.nav} text-muted-foreground hover:bg-muted/40 hover:text-foreground`}
-          onClick={onNext}
-          title="下一首"
-        >
-          <SkipForward className={`${classes.iconNav} fill-current`} />
-        </Button>
-      )}
-    </div>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-[425px] p-0 gap-0 overflow-hidden" onClick={(e) => e.stopPropagation()}>
+        <DialogHeader className="px-6 py-4 border-b">
+          <DialogTitle>添加到歌单</DialogTitle>
+        </DialogHeader>
+        <ScrollArea className="h-[50vh] max-h-[400px] p-2">
+            {playlists.map((p) => (
+              <div
+                key={p.id}
+                className="flex items-center px-4 py-3 text-sm rounded-md hover:bg-accent cursor-pointer transition-colors"
+                onClick={() => handleAddToPlaylist(p.id, p.name)}
+              >
+                <ListMusic className="mr-3 h-5 w-5 text-muted-foreground" />
+                <span className="truncate font-medium">{p.name}</span>
+              </div>
+            ))}
+            {playlists.length === 0 && (
+                <div className="text-center py-8 text-muted-foreground text-sm">
+                    暂无歌单
+                </div>
+            )}
+        </ScrollArea>
+        <div className="p-2 border-t bg-muted/20">
+            <Button variant="ghost" className="w-full justify-start pl-4" onClick={handleCreatePlaylist}>
+                <Plus className="mr-2 h-5 w-5" />
+                新建歌单
+            </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
