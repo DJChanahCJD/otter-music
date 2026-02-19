@@ -103,15 +103,15 @@ const LyricLineView = memo(function LyricLineView({
   return (
     <div
       className={cn(
-        "px-4 transition-all duration-300 ease-out",
+        "px-4 w-full max-w-md transition-all duration-300 ease-out text-center",
         isActive
           ? "text-white text-lg font-semibold scale-105"
           : "text-muted-foreground/60 scale-100 blur-[0.5px]",
       )}
     >
-      <p className="leading-relaxed text-lg">{line.text}</p>
+      <p className="leading-relaxed text-lg wrap-break-word">{line.text}</p>
       {line.ttext && (
-        <p className="mt-1 font-medium text-sm text-muted-foreground/90">
+        <p className="mt-1 font-medium text-sm text-muted-foreground/90 wrap-break-word">
           {line.ttext}
         </p>
       )}
@@ -287,7 +287,7 @@ export function LyricsPanel({ track, currentTime }: LyricsPanelProps) {
   }
 
   const LyricsList = (
-    <div className="py-[45%] space-y-4 text-center">
+    <div className="py-[45%] space-y-4 flex flex-col items-center w-full">
       {lyrics.length === 0 ? (
         <div className="h-full flex items-center justify-center">
           <p className="text-muted-foreground text-center">暂无歌词</p>
