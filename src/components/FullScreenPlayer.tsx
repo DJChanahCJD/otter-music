@@ -193,7 +193,7 @@ export function FullScreenPlayer({
 
       {/* Main Content Area */}
       <div 
-        className="flex-1 flex flex-col items-center justify-center px-8 relative z-10 overflow-hidden cursor-pointer"
+        className="flex-1 flex flex-col items-center justify-center px-2 relative z-10 overflow-hidden cursor-pointer"
         onClick={() => setShowLyrics(!showLyrics)}
       >
         {showLyrics ? (

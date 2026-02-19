@@ -1,8 +1,10 @@
-import { memo, useEffect, useRef, useState } from "react";
+import { memo, useEffect, useRef, useState, useCallback } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import { musicApi } from "@/lib/music-api";
 import { MusicTrack } from "@/types/music";
+import { Play } from "lucide-react";
+import { useMusicStore } from "@/store/music-store";
 
 interface LyricsPanelProps {
   track: MusicTrack | null;
@@ -16,6 +18,16 @@ interface LyricLine {
 }
 
 const TIME_EXP = /\[(\d{2}):(\d{2})\.(\d{2,3})]/;
+const LYRIC_OFFSET = -0.5;
+const MATCH_TOLERANCE = 0.5;
+const AUTO_SCROLL_DELAY = 5000;
+const PADDING_LINES = 2;
+
+function formatTime(seconds: number): string {
+  const mins = Math.floor(seconds / 60);
+  const secs = Math.floor(seconds % 60);
+  return `${mins}:${secs.toString().padStart(2, "0")}`;
+}
 
 function parseTime(timeStr: string): number | null {
   const m = TIME_EXP.exec(timeStr);
@@ -52,21 +64,21 @@ function parseLrc(lrc: string, tLrc?: string): LyricLine[] {
   for (const line of lLines) {
     let ttext: string | undefined;
 
-    while (tIdx < tLines.length && tLines[tIdx].time < line.time - 0.5) {
+    while (tIdx < tLines.length && tLines[tIdx].time < line.time - MATCH_TOLERANCE) {
       tIdx++;
     }
 
     let bestMatchIdx = -1;
-    let minDiff = 0.5;
+    let minDiff = MATCH_TOLERANCE;
 
     for (let i = tIdx; i < tLines.length; i++) {
       const diff = Math.abs(tLines[i].time - line.time);
       
-      if (tLines[i].time > line.time + 0.5) {
+      if (tLines[i].time > line.time + MATCH_TOLERANCE) {
         break;
       }
 
-      if (diff <= 0.5 && diff < minDiff) {
+      if (diff <= MATCH_TOLERANCE && diff < minDiff) {
         minDiff = diff;
         bestMatchIdx = i;
       }
@@ -116,16 +128,77 @@ export function LyricsPanel({
 }: LyricsPanelProps) {
   const [lyrics, setLyrics] = useState<LyricLine[]>([]);
   const [loading, setLoading] = useState(false);
+  const [isUserScrolling, setIsUserScrolling] = useState(false);
+  const [centerLineIndex, setCenterLineIndex] = useState(-1);
+  
   const trackId = track?.id ?? null;
   const lyricId = track?.lyric_id ?? null;
   const source = track?.source ?? null;
 
   const activeIndex = lyrics.length > 0 
-    ? Math.max(0, lyrics.findLastIndex((line: LyricLine) => currentTime >= line.time))
+    ? Math.max(0, lyrics.findLastIndex((line: LyricLine) => currentTime >= line.time + LYRIC_OFFSET))
     : 0;
 
   const lineRefs = useRef<(HTMLDivElement | null)[]>([]);
   const viewportRef = useRef<HTMLDivElement>(null);
+  const scrollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isAutoScrollingRef = useRef(false);
+  const seek = useMusicStore((s) => s.seek);
+
+  const handleSeek = useCallback((time: number) => {
+    seek(time);
+    setIsUserScrolling(false);
+    setCenterLineIndex(-1);
+    if (scrollTimeoutRef.current) {
+      clearTimeout(scrollTimeoutRef.current);
+      scrollTimeoutRef.current = null;
+    }
+  }, [seek]);
+
+  const handleScroll = useCallback(() => {
+    if (isAutoScrollingRef.current) return;
+
+    setIsUserScrolling(true);
+    if (scrollTimeoutRef.current) {
+      clearTimeout(scrollTimeoutRef.current);
+    }
+    scrollTimeoutRef.current = setTimeout(() => {
+      setIsUserScrolling(false);
+      setCenterLineIndex(-1);
+    }, AUTO_SCROLL_DELAY);
+
+    const container = viewportRef.current;
+    if (!container || lyrics.length === 0) return;
+
+    const containerRect = container.getBoundingClientRect();
+    const containerCenter = containerRect.top + containerRect.height / 2;
+
+    let closestIdx = 0;
+    let closestDist = Infinity;
+
+    lineRefs.current.forEach((el, i) => {
+      if (!el) return;
+      const rect = el.getBoundingClientRect();
+      const elCenter = rect.top + rect.height / 2;
+      const dist = Math.abs(elCenter - containerCenter);
+      if (dist < closestDist) {
+        closestDist = dist;
+        closestIdx = i;
+      }
+    });
+
+    setCenterLineIndex(closestIdx);
+  }, [lyrics.length]);
+
+  useEffect(() => {
+    const container = viewportRef.current;
+    if (!container) return;
+
+    container.addEventListener("scroll", handleScroll, { passive: true });
+    return () => {
+      container.removeEventListener("scroll", handleScroll);
+    };
+  }, [handleScroll]);
 
   useEffect(() => {
     if (!trackId || !lyricId || !source) return;
@@ -163,6 +236,8 @@ export function LyricsPanel({
   }, [trackId, lyricId, source]);
 
   useEffect(() => {
+    if (isUserScrolling) return;
+
     const container = viewportRef.current;
     const el = lineRefs.current[activeIndex];
     
@@ -170,11 +245,26 @@ export function LyricsPanel({
 
     const offset = el.offsetTop - container.clientHeight / 2 + el.clientHeight / 2;
 
+    isAutoScrollingRef.current = true;
     container.scrollTo({
       top: offset,
       behavior: "smooth",
     });
-  }, [activeIndex]);
+    
+    const timer = setTimeout(() => {
+      isAutoScrollingRef.current = false;
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [activeIndex, isUserScrolling]);
+
+  useEffect(() => {
+    return () => {
+      if (scrollTimeoutRef.current) {
+        clearTimeout(scrollTimeoutRef.current);
+      }
+    };
+  }, []);
 
   if (!track) {
     return (
@@ -194,6 +284,9 @@ export function LyricsPanel({
 
   const LyricsList = (
     <div className="py-[45%] space-y-4 text-center">
+      {Array.from({ length: PADDING_LINES }).map((_, i) => (
+        <div key={`pad-top-${i}`} className="h-6" />
+      ))}
       {lyrics.map((line, i) => (
         <div
           key={i}
@@ -207,6 +300,9 @@ export function LyricsPanel({
           />
         </div>
       ))}
+      {Array.from({ length: PADDING_LINES }).map((_, i) => (
+        <div key={`pad-bottom-${i}`} className="h-6" />
+      ))}
 
       {lyrics.length === 0 && (
         <div className="h-full flex items-center justify-center">
@@ -218,11 +314,31 @@ export function LyricsPanel({
     </div>
   );
 
+  const centerLine = centerLineIndex >= 0 ? lyrics[centerLineIndex] : null;
+
   return (
-    <div className="h-full flex flex-col">
+    <div className="h-full flex flex-col relative">
       <ScrollArea className="h-full" viewportRef={viewportRef}>
         {LyricsList}
       </ScrollArea>
+      
+      {isUserScrolling && centerLine && (
+        <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 flex items-center px-4 pointer-events-none">
+          <span className="text-xs text-white/70 font-medium min-w-[40px]">
+            {formatTime(centerLine.time)}
+          </span>
+          <div className="flex-1 h-px bg-white/20 mx-2" />
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              handleSeek(centerLine.time)
+            }}
+            className="pointer-events-auto w-6 h-6 flex bg-transparent items-center justify-center"
+          >
+            <Play className="w-3 h-3 text-white/80 fill-white/80" />
+          </button>
+        </div>
+      )}
     </div>
   );
 }
