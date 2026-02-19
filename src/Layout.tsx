@@ -6,7 +6,6 @@ export default function RootLayout({ children }: PropsWithChildren) {
   return (
     <ThemeProvider
       attribute="class"
-      defaultTheme="dark"
       enableSystem
       disableTransitionOnChange
     >

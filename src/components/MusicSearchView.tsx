@@ -5,7 +5,7 @@ import { MusicTrack, MusicSource, searchOptions } from "@/types/music";
 import { Search, Loader2 } from "lucide-react";
 import { Input } from "./ui/input"
 import { Select } from "./ui/select"
-import { useRef } from "react";
+import { useRef, useEffect } from "react";
 import toast from "react-hot-toast";
 import { useShallow } from "zustand/react/shallow";
 import { MusicTrackList } from "./MusicTrackList";
@@ -52,8 +52,15 @@ export function MusicSearchView({ onPlay, currentTrackId, isPlaying }: MusicSear
   const abortRef = useRef<AbortController | null>(null);
   const versionRef = useRef(0);
   const seenRef = useRef(new Set<string>());
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   /* ---------------- 请求核心 ---------------- */
+
+  useEffect(() => {
+    if (searchResults.length === 0) {
+      searchInputRef.current?.focus();
+    }
+  }, []);
 
   const fetchPage = async (nextPage: number, reset = false) => {
     if (!searchQuery.trim()) return;
@@ -107,6 +114,7 @@ export function MusicSearchView({ onPlay, currentTrackId, isPlaying }: MusicSear
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
+              ref={searchInputRef}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && fetchPage(1, true)}

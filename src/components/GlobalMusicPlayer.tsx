@@ -167,7 +167,7 @@ export function GlobalMusicPlayer() {
     return () => {
       cancelled = true;
     };
-  }, [hasUserGesture, currentTrack, currentTrackId, currentTrackSource, currentTrackUrlId, playTrackAsNext, quality, setCurrentAudioUrl, setIsLoading, setIsPlaying, isPlaying]);
+  }, [hasUserGesture, currentTrack, currentTrackId, currentTrackSource, currentTrackUrlId, playTrackAsNext, quality, setCurrentAudioUrl, setIsLoading]);
 
   // Event Handlers
   useEffect(() => {
