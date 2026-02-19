@@ -262,6 +262,11 @@ export async function getDownloadDirPath(): Promise<string> {
  * 下载音乐文件
  */
 export async function downloadMusicTrack(track: MusicTrack, br = 192) {
+  if (track.source === 'local') {
+    toast("本地音乐，无需下载");
+    return;
+  }
+
   const toastId = toast.loading(`准备下载: ${track.name}`);
 
   try {

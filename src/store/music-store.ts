@@ -3,6 +3,7 @@ import { persist } from 'zustand/middleware';
 import { v4 as uuidv4 } from 'uuid';
 import { storeKey } from '.';
 import type { MusicTrack, MusicSource, MergedMusicTrack, Playlist } from '@/types/music';
+import toast from 'react-hot-toast';
 
 /**
  * 清理 MusicTrack，移除 variants 字段
@@ -127,6 +128,10 @@ export const useMusicStore = create<MusicState>()(
       playlists: [],
 
       addToFavorites: (track) => set((state) => {
+        if (track.source === 'local') {
+          toast("本地音乐不支持喜欢");
+          return state;
+        }
         if (state.favorites.some(t => t.id === track.id)) return state;
         return { favorites: [track, ...state.favorites] };
       }),
@@ -155,13 +160,19 @@ export const useMusicStore = create<MusicState>()(
             : p
         )
       })),
-      addToPlaylist: (pid, track) => set((state) => ({
-        playlists: state.playlists.map(p =>
-          p.id === pid
-            ? { ...p, tracks: p.tracks.some(t => t.id === track.id) ? p.tracks : [track, ...p.tracks] }
-            : p
-        )
-      })),
+      addToPlaylist: (pid, track) => set((state) => {
+        if (track.source === 'local') {
+          toast("本地音乐不支持添加歌单");
+          return state;
+        }
+        return {
+          playlists: state.playlists.map(p =>
+            p.id === pid
+              ? { ...p, tracks: p.tracks.some(t => t.id === track.id) ? p.tracks : [track, ...p.tracks] }
+              : p
+          )
+        };
+      }),
       removeFromPlaylist: (pid, tid) => set((state) => ({
         playlists: state.playlists.map(p =>
           p.id === pid
