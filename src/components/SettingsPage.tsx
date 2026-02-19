@@ -1,10 +1,8 @@
 "use client";
 
-import { ArrowLeft } from "lucide-react";
-import { Button } from "./ui/button";
+import { PageHeader } from "./PageHeader";
 import { ThemeToggle } from "./ThemeToggle";
 import { SyncConfig } from "./SyncConfig";
-import { useBackButton } from "@/hooks/use-back-button";
 import { useMusicStore } from "@/store/music-store";
 import {
   Select,
@@ -19,24 +17,11 @@ interface SettingsPageProps {
 }
 
 export function SettingsPage({ onBack }: SettingsPageProps) {
-  useBackButton(onBack);
   const { quality, setQuality } = useMusicStore();
 
   return (
     <div className="h-full flex flex-col">
-      <div className="sticky top-0 z-10 px-4 py-3 bg-background border-b border-border/50">
-        <div className="flex items-center gap-3">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={onBack}
-            className="h-8 w-8"
-          >
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-          <h1 className="text-lg font-semibold text-foreground">系统设置</h1>
-        </div>
-      </div>
+      <PageHeader title="系统设置" onBack={onBack} />
 
       <div className="flex-1 p-4 space-y-4">
         <div className="flex items-center justify-between p-4 rounded-xl bg-card/50 border border-border/50">

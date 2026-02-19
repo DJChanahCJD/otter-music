@@ -1,12 +1,12 @@
 "use client";
 
 import { useState, useEffect, useCallback, useMemo } from "react";
-import { ArrowLeft, RefreshCw, Music } from "lucide-react";
+import { RefreshCw, Music } from "lucide-react";
 import { LocalMusicPlugin, LocalMusicFile } from "@/plugins/local-music";
 import { MusicTrack, MusicSource } from "@/types/music";
 import { MusicPlaylistView } from "./MusicPlaylistView";
 import { cn } from "@/lib/utils";
-import { useBackButton } from "@/hooks/use-back-button";
+import { PageHeader } from "./PageHeader";
 import toast from "react-hot-toast";
 
 interface LocalMusicPageProps {
@@ -87,21 +87,25 @@ export function LocalMusicPage({
     }
   };
 
-  // 使用返回按钮钩子，绑定 onBack 函数
-  useBackButton(onBack);
+  const refreshAction = (
+    <button
+      onClick={handleRefresh}
+      disabled={isLoading}
+      className={cn(
+        "p-2 rounded-lg transition-colors",
+        isLoading
+          ? "text-muted-foreground/50 cursor-not-allowed"
+          : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+      )}
+    >
+      <RefreshCw className={cn("h-5 w-5", isLoading && "animate-spin")} />
+    </button>
+  );
 
   if (isLoading) {
     return (
       <div className="flex flex-col h-full">
-        <div className="flex items-center justify-between p-4 border-b border-border/50">
-          <button
-            onClick={onBack}
-            className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
-          >
-            <ArrowLeft className="h-5 w-5" />
-            <span className="font-medium">本地音乐</span>
-          </button>
-        </div>
+        <PageHeader title="本地音乐" onBack={onBack} action={refreshAction} />
         <div className="flex-1 flex flex-col items-center justify-center">
           <RefreshCw className="h-8 w-8 text-primary animate-spin mb-3" />
           <p className="text-muted-foreground text-sm">正在扫描本地音乐...</p>
@@ -113,15 +117,7 @@ export function LocalMusicPage({
   if (error) {
     return (
       <div className="flex flex-col h-full">
-        <div className="flex items-center justify-between p-4 border-b border-border/50">
-          <button
-            onClick={onBack}
-            className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
-          >
-            <ArrowLeft className="h-5 w-5" />
-            <span className="font-medium">本地音乐</span>
-          </button>
-        </div>
+        <PageHeader title="本地音乐" onBack={onBack} action={refreshAction} />
         <div className="flex-1 flex flex-col items-center justify-center px-6 text-center">
           <Music className="h-12 w-12 text-muted-foreground/40 mb-3" />
           <p className="text-muted-foreground text-sm mb-1">无法访问本地音乐</p>
@@ -138,39 +134,14 @@ export function LocalMusicPage({
   }
 
   return (
-    <div className="flex flex-col h-full">
-      <div className="flex items-center justify-between p-4 border-b border-border/50">
-        <button
-          onClick={onBack}
-          className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
-        >
-          <ArrowLeft className="h-5 w-5" />
-          <span className="font-medium">本地音乐</span>
-        </button>
-        <button
-          onClick={handleRefresh}
-          disabled={isLoading}
-          className={cn(
-            "p-2 rounded-lg transition-colors",
-            isLoading
-              ? "text-muted-foreground/50 cursor-not-allowed"
-              : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
-          )}
-        >
-          <RefreshCw className={cn("h-5 w-5", isLoading && "animate-spin")} />
-        </button>
-      </div>
-
-      <div className="flex-1 min-h-0">
-        <MusicPlaylistView
-          title="本地音乐"
-          tracks={tracks}
-          onPlay={handlePlay}
-          currentTrackId={currentTrackId}
-          isPlaying={isPlaying}
-          description={`${tracks.length} 首歌曲`}
-        />
-      </div>
-    </div>
+    <MusicPlaylistView
+      title="本地音乐"
+      tracks={tracks}
+      onPlay={handlePlay}
+      currentTrackId={currentTrackId}
+      isPlaying={isPlaying}
+      action={refreshAction}
+      description={`${tracks.length} 首歌曲`}
+    />
   );
 }
