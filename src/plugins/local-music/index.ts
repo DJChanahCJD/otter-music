@@ -27,12 +27,18 @@ export interface HasPermissionResult {
   hasPermission: boolean;
 }
 
+export interface DeleteResult {
+  success: boolean;
+  error?: string;
+}
+
 export interface LocalMusicPlugin {
   scanLocalMusic(): Promise<ScanResult>;
   scanAllStorage(): Promise<ScanResult>;
   getLocalFileUrl(options: { localPath: string }): Promise<LocalFileUrlResult>;
   openManageStorageSettings(): Promise<void>;
   hasAllStoragePermission(): Promise<HasPermissionResult>;
+  deleteLocalMusic(options: { localPath: string }): Promise<DeleteResult>;
 }
 
 const LocalMusicPlugin = registerPlugin<LocalMusicPlugin>('LocalMusicPlugin');

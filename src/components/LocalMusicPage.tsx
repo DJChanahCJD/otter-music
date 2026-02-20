@@ -3,12 +3,13 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { RefreshCw, Music, Zap, HardDrive } from "lucide-react";
 import { LocalMusicPlugin, LocalMusicFile } from "@/plugins/local-music";
-import { MusicTrack } from "@/types/music";
+import { LocalMusicTrack, MusicTrack } from "@/types/music";
 import { MusicPlaylistView } from "./MusicPlaylistView";
 import { cn } from "@/lib/utils";
 import { PageLayout } from "./PageLayout";
 import toast from "react-hot-toast";
 import { convertToMusicTrack } from "@/lib/utils/download";
+import { useMusicStore } from "@/store/music-store";
 
 type ScanMode = "quick" | "full";
 
@@ -30,6 +31,7 @@ export function LocalMusicPage({
   const [error, setError] = useState<string | null>(null);
   const [scanMode, setScanMode] = useState<ScanMode>("quick");
   const [needManageStorage, setNeedManageStorage] = useState(false);
+  const { queue, currentIndex, skipToNext } = useMusicStore();
 
   const scanLocalMusic = useCallback(async (mode: ScanMode) => {
     setIsLoading(true);
@@ -86,6 +88,35 @@ export function LocalMusicPage({
 
   const handleOpenSettings = async () => {
     await LocalMusicPlugin.openManageStorageSettings();
+  };
+
+  const handleDeleteTrack = async (track: MusicTrack) => {
+    if (!confirm(`确认删除本地音频「${track.name}」？`)) {
+      return;
+    }
+    const localPath = track.url_id;
+    if (!localPath) {
+      toast.error("无法删除：缺少文件路径");
+      return;
+    }
+
+    try {
+      const result = await LocalMusicPlugin.deleteLocalMusic({ localPath });
+      if (result.success) {
+        setFiles((prev) => prev.filter((f) => f.localPath !== localPath));
+        toast.success("已删除");
+
+        const currentTrack = queue[currentIndex];
+        if (currentTrack && currentTrack.id === track.id) {
+          skipToNext();
+        }
+      } else {
+        toast.error(result.error || "删除失败");
+      }
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "删除失败";
+      toast.error(errorMessage);
+    }
   };
 
   const tracks = useMemo(() => files.map(convertToMusicTrack), [files]);
@@ -213,6 +244,7 @@ export function LocalMusicPage({
         onPlay={handlePlay}
         currentTrackId={currentTrackId}
         isPlaying={isPlaying}
+        onRemove={handleDeleteTrack}
       />
     </PageLayout>
   );

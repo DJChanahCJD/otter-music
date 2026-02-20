@@ -495,4 +495,51 @@ public class LocalMusicPlugin extends Plugin {
             call.resolve(result);
         }
     }
+
+    /**
+     * 删除本地音乐文件
+     * 直接删除文件系统中的音频文件
+     */
+    @PluginMethod
+    public void deleteLocalMusic(PluginCall call) {
+        String localPath = call.getString("localPath");
+        
+        if (localPath == null || localPath.isEmpty()) {
+            JSObject result = new JSObject();
+            result.put("success", false);
+            result.put("error", "localPath is required");
+            call.resolve(result);
+            return;
+        }
+
+        try {
+            File file = new File(localPath);
+            
+            if (!file.exists()) {
+                JSObject result = new JSObject();
+                result.put("success", true);
+                call.resolve(result);
+                return;
+            }
+
+            boolean deleted = file.delete();
+            
+            JSObject result = new JSObject();
+            result.put("success", deleted);
+            if (!deleted) {
+                result.put("error", "Failed to delete file");
+            }
+            call.resolve(result);
+        } catch (SecurityException e) {
+            JSObject result = new JSObject();
+            result.put("success", false);
+            result.put("error", "Permission denied: " + e.getMessage());
+            call.resolve(result);
+        } catch (Exception e) {
+            JSObject result = new JSObject();
+            result.put("success", false);
+            result.put("error", "Failed to delete file: " + e.getMessage());
+            call.resolve(result);
+        }
+    }
 }
