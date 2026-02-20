@@ -31,7 +31,8 @@ export function MusicSearchView({ onPlay, currentTrackId, isPlaying }: MusicSear
     searchHasMore,
     setSearchHasMore,
     searchPage,
-    setSearchPage
+    setSearchPage,
+    aggregatedSources
   } = useMusicStore(
     useShallow(s => ({
       source: s.searchSource, 
@@ -45,7 +46,8 @@ export function MusicSearchView({ onPlay, currentTrackId, isPlaying }: MusicSear
       searchHasMore: s.searchHasMore,
       setSearchHasMore: s.setSearchHasMore,
       searchPage: s.searchPage,
-      setSearchPage: s.setSearchPage
+      setSearchPage: s.setSearchPage,
+      aggregatedSources: s.aggregatedSources
     }))
   );
 
@@ -82,7 +84,7 @@ export function MusicSearchView({ onPlay, currentTrackId, isPlaying }: MusicSear
       const signal = abortRef.current?.signal;
       const res =
         source === "all"
-          ? await musicApi.searchAll(searchQuery, nextPage, 20, signal)
+          ? await musicApi.searchAll(searchQuery, nextPage, 20, signal, aggregatedSources)
           : await musicApi.search(searchQuery, source, nextPage, 20, signal);
 
       if (version !== versionRef.current) return; // 过期响应

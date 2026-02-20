@@ -53,8 +53,10 @@ interface MusicState {
   // --- Settings (Persisted) ---
   quality: string;
   searchSource: MusicSource;
+  aggregatedSources: MusicSource[];
   setQuality: (quality: string) => void;
   setSearchSource: (source: MusicSource) => void;
+  setAggregatedSources: (sources: MusicSource[]) => void;
 
   // --- Search State (Not Persisted) ---
   searchQuery: string;
@@ -185,8 +187,10 @@ export const useMusicStore = create<MusicState>()(
 
       quality: "192",
       searchSource: "all",
+      aggregatedSources: ['joox', 'netease', 'bilibili'],
       setQuality: (quality) => set({ quality }),
       setSearchSource: (searchSource) => set({ searchSource }),
+      setAggregatedSources: (aggregatedSources) => set({ aggregatedSources }),
 
       // --- Search State Defaults & Methods ---
       searchQuery: "",
@@ -555,6 +559,7 @@ export const useMusicStore = create<MusicState>()(
         currentAudioTime: state.currentAudioTime,
         quality: state.quality,
         searchSource: state.searchSource,
+        aggregatedSources: state.aggregatedSources,
       }),
     }
   )

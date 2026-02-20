@@ -43,6 +43,13 @@ export const sourceLabels: Record<string, string> = {
   kuwo: "酷我",
 };
 
+export const aggregatedSourceOptions: { value: MusicSource; label: string }[] = [
+  { value: 'joox', label: 'Joox' },
+  { value: 'netease', label: '网易云音乐' },
+  { value: 'bilibili', label: 'B站' },
+  { value: 'kuwo', label: '酷我音乐' },
+];
+
 export const sourceBadgeStyles: Record<string, string> = {
   netease: "bg-red-50 text-red-600 border-red-200 hover:bg-red-100",
   bilibili: "bg-pink-50 text-pink-600 border-pink-200 hover:bg-pink-100",
