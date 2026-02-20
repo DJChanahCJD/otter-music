@@ -7,7 +7,7 @@ interface PageHeaderProps {
   title: string;
   onBack: () => void;
   subtitle?: string;
-  action?: React.ReactNode;
+  action?: React.ReactNode | React.ReactNode[];
 }
 
 export function PageHeader({ title, onBack, subtitle, action }: PageHeaderProps) {
@@ -29,7 +29,11 @@ export function PageHeader({ title, onBack, subtitle, action }: PageHeaderProps)
             <p className="text-sm text-muted-foreground/80 mt-0.5 truncate">{subtitle}</p>
           )}
         </div>
-        {action}
+        {action && (
+          <div className="flex items-center gap-2">
+            {Array.isArray(action) ? action : action}
+          </div>
+        )}
       </div>
     </div>
   );
