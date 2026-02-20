@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { RefreshCw, Music, Zap, HardDrive } from "lucide-react";
 import { LocalMusicPlugin, LocalMusicFile } from "@/plugins/local-music";
-import { LocalMusicTrack, MusicTrack } from "@/types/music";
+import { MusicTrack } from "@/types/music";
 import { MusicPlaylistView } from "./MusicPlaylistView";
 import { cn } from "@/lib/utils";
 import { PageLayout } from "./PageLayout";

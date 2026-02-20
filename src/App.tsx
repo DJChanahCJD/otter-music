@@ -211,6 +211,7 @@ export default function MusicPage() {
             deletePlaylist(id);
             handleBackFromPlaylist();
           }}
+          onBack={handleBackFromPlaylist}
           currentTrackId={currentTrack?.id}
           isPlaying={isPlaying}
         />

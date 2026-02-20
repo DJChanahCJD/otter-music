@@ -11,6 +11,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { MusicTrack } from "@/types/music";
+import { useBackButton } from "@/hooks/use-back-button";
 
 interface MusicPlaylistViewProps {
   title: string;
@@ -25,6 +26,7 @@ interface MusicPlaylistViewProps {
   onRemove?: (track: MusicTrack) => void;
   onRename?: (playlistId: string, newName: string) => void;
   onDelete?: (playlistId: string) => void;
+  onBack?: () => void;
   description?: string;
   currentTrackId?: string;
   isPlaying?: boolean;
@@ -40,6 +42,7 @@ export function MusicPlaylistView({
   onRemove,
   onRename,
   onDelete,
+  onBack,
   description,
   currentTrackId,
   isPlaying,
@@ -47,6 +50,10 @@ export function MusicPlaylistView({
   coverUrl
 }: MusicPlaylistViewProps) {
   const [searchQuery, setSearchQuery] = useState("");
+
+  useBackButton(() => {
+    onBack?.();
+  }, !!onBack);
 
   const filteredTracks = useMemo(() => {
     if (!searchQuery.trim()) return tracks;
