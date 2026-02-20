@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useMemo } from "react";
-import { RefreshCw, Music, Zap, HardDrive } from "lucide-react";
+import { RefreshCw, Music, HardDrive } from "lucide-react";
 import { LocalMusicPlugin, LocalMusicFile } from "@/plugins/local-music";
 import { MusicTrack } from "@/types/music";
 import { MusicPlaylistView } from "./MusicPlaylistView";
@@ -10,8 +10,7 @@ import { PageLayout } from "./PageLayout";
 import toast from "react-hot-toast";
 import { convertToMusicTrack } from "@/lib/utils/download";
 import { useMusicStore } from "@/store/music-store";
-
-type ScanMode = "quick" | "full";
+import { useLocalMusicStore } from "@/store/local-music-store";
 
 interface LocalMusicPageProps {
   onBack: () => void;
@@ -28,61 +27,81 @@ export function LocalMusicPage({
 }: LocalMusicPageProps) {
   const [files, setFiles] = useState<LocalMusicFile[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [backgroundScanning, setBackgroundScanning] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [scanMode, setScanMode] = useState<ScanMode>("quick");
   const [needManageStorage, setNeedManageStorage] = useState(false);
   const { queue, currentIndex, skipToNext } = useMusicStore();
+  const { setFiles: setCachedFiles, updateFiles: updateCachedFiles } = useLocalMusicStore();
 
-  const scanLocalMusic = useCallback(async (mode: ScanMode) => {
-    setIsLoading(true);
-    setError(null);
-    setNeedManageStorage(false);
-    try {
-      const result =
-        mode === "quick"
-          ? await LocalMusicPlugin.scanLocalMusic()
-          : await LocalMusicPlugin.scanAllStorage();
-
-      if (result.success) {
-        setFiles(result.files);
-        if (result.files.length === 0) {
-          toast("未找到本地音乐文件", { icon: "📁" });
-        } else {
-          toast.success(`找到 ${result.files.length} 首本地音乐`);
-        }
+  const scanLocalMusic = useCallback(
+    async (type: "quick" | "full", silent = false) => {
+      if (!silent) {
+        setIsLoading(true);
+        setError(null);
       } else {
-        if (result.needManageStorage) {
-          setNeedManageStorage(true);
-          setError(result.error || '需要授予"允许管理所有文件"权限');
-        } else {
-          const errorMsg = result.error || "扫描失败";
-          setError(errorMsg);
-          toast.error(errorMsg);
-        }
+        setBackgroundScanning(true);
       }
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "扫描失败";
-      setError(errorMessage);
-      toast.error(errorMessage);
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
+      setNeedManageStorage(false);
+
+      try {
+        const result =
+          type === "quick"
+            ? await LocalMusicPlugin.scanLocalMusic()
+            : await LocalMusicPlugin.scanAllStorage();
+
+        if (result.success) {
+          setFiles(result.files);
+          setCachedFiles(result.files, type);
+
+          if (!silent) {
+            if (result.files.length === 0) {
+              toast("未找到本地音乐文件", { icon: "📁" });
+            } else {
+              toast.success(`找到 ${result.files.length} 首本地音乐`);
+            }
+          }
+        } else {
+          if (result.needManageStorage) {
+            setNeedManageStorage(true);
+            setError(result.error || '需要授予"允许管理所有文件"权限');
+          } else {
+            const errorMsg = result.error || "扫描失败";
+            setError(errorMsg);
+            if (!silent) toast.error(errorMsg);
+          }
+        }
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : "扫描失败";
+        setError(errorMessage);
+        if (!silent) toast.error(errorMessage);
+      } finally {
+        setIsLoading(false);
+        setBackgroundScanning(false);
+      }
+    },
+    [setCachedFiles]
+  );
 
   useEffect(() => {
-    scanLocalMusic(scanMode);
-  }, []);
+    const cached = useLocalMusicStore.getState();
+    if (cached.files.length > 0) {
+      setFiles(cached.files);
+      scanLocalMusic("quick", true);
+    } else {
+      scanLocalMusic("quick", false);
+    }
+  }, [scanLocalMusic]);
 
   const handleRefresh = () => {
-    if (!isLoading) {
-      scanLocalMusic(scanMode);
+    if (!isLoading && !backgroundScanning) {
+      scanLocalMusic("quick", false);
     }
   };
 
-  const handleModeChange = (mode: ScanMode) => {
-    if (mode !== scanMode && !isLoading) {
-      setScanMode(mode);
-      scanLocalMusic(mode);
+  const handleFullScan = () => {
+    if (!isLoading && !backgroundScanning) {
+      toast("开始全盘扫描，请稍候...", { icon: "🔍" });
+      scanLocalMusic("full", false);
     }
   };
 
@@ -104,6 +123,7 @@ export function LocalMusicPage({
       const result = await LocalMusicPlugin.deleteLocalMusic({ localPath });
       if (result.success) {
         setFiles((prev) => prev.filter((f) => f.localPath !== localPath));
+        updateCachedFiles((files) => files.filter((f) => f.localPath !== localPath));
         toast.success("已删除");
 
         const currentTrack = queue[currentIndex];
@@ -136,78 +156,50 @@ export function LocalMusicPage({
   const refreshAction = (
     <button
       onClick={handleRefresh}
-      disabled={isLoading}
+      disabled={isLoading || backgroundScanning}
       className={cn(
         "p-2 rounded-lg transition-all duration-200",
-        isLoading
+        isLoading || backgroundScanning
           ? "text-muted-foreground/30 cursor-not-allowed"
-          : "text-muted-foreground hover:text-foreground hover:bg-muted/50 active:scale-95",
+          : "text-muted-foreground hover:text-foreground hover:bg-muted/50 active:scale-95"
       )}
     >
-      <RefreshCw className={cn("h-5 w-5", isLoading && "animate-spin")} />
+      <RefreshCw
+        className={cn("h-5 w-5", (isLoading || backgroundScanning) && "animate-spin")}
+      />
     </button>
   );
 
-  const scanModeSelector = (
-    <div className="flex gap-1.5 p-1.5 bg-muted/40 rounded-xl">
-      <button
-        onClick={() => handleModeChange("quick")}
-        disabled={isLoading}
-        className={cn(
-          "flex items-center gap-2 px-4 py-2 text-xs font-medium rounded-lg transition-all duration-200",
-          scanMode === "quick"
-            ? "bg-background text-foreground shadow-sm ring-1 ring-border/50"
-            : "text-muted-foreground hover:text-foreground hover:bg-background/50",
-          isLoading && "cursor-not-allowed opacity-50",
-        )}
-      >
-        <Zap className="h-3.5 w-3.5" />
-        快速扫描
-      </button>
-      <button
-        onClick={() => handleModeChange("full")}
-        disabled={isLoading}
-        className={cn(
-          "flex items-center gap-2 px-4 py-2 text-xs font-medium rounded-lg transition-all duration-200",
-          scanMode === "full"
-            ? "bg-background text-foreground shadow-sm ring-1 ring-border/50"
-            : "text-muted-foreground hover:text-foreground hover:bg-background/50",
-          isLoading && "cursor-not-allowed opacity-50",
-        )}
-      >
-        <HardDrive className="h-3.5 w-3.5" />
-        全盘扫描
-      </button>
-    </div>
+  const fullScanAction = (
+    <button
+      onClick={handleFullScan}
+      disabled={isLoading || backgroundScanning}
+      className={cn(
+        "flex items-center gap-2 px-3 py-1.5 text-xs font-medium rounded-lg transition-all",
+        "bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground",
+        (isLoading || backgroundScanning) && "opacity-50 cursor-not-allowed"
+      )}
+    >
+      <HardDrive className="h-3.5 w-3.5" />
+      全盘扫描
+    </button>
   );
 
-  if (isLoading) {
+  if (isLoading && files.length === 0) {
     return (
       <PageLayout title="本地音乐" onBack={onBack} action={refreshAction}>
         <div className="flex-1 flex flex-col items-center justify-center gap-4">
           <RefreshCw className="h-10 w-10 text-primary/80 animate-spin" />
-          <div className="flex flex-col items-center gap-1">
-            <p className="text-foreground text-sm font-medium">
-              {scanMode === "quick"
-                ? "正在扫描本地音乐..."
-                : "正在进行全盘扫描..."}
-            </p>
-            {scanMode === "full" && (
-              <p className="text-muted-foreground/60 text-xs">
-                全盘扫描可能需要较长时间
-              </p>
-            )}
-          </div>
+          <p className="text-foreground text-sm font-medium">正在扫描本地音乐...</p>
         </div>
       </PageLayout>
     );
   }
 
-  if (error) {
+  if (error && files.length === 0) {
     return (
       <PageLayout title="本地音乐" onBack={onBack} action={refreshAction}>
         <div className="flex-1 flex flex-col items-center justify-center px-6 text-center">
-
           <div className="flex flex-col items-center gap-3 mb-4">
             <Music className="h-14 w-14 text-muted-foreground/30" />
             <div className="flex flex-col gap-1">
@@ -237,7 +229,12 @@ export function LocalMusicPage({
 
   return (
     <PageLayout title="本地音乐" onBack={onBack} action={refreshAction}>
-      <div className="px-4 pb-4">{scanModeSelector}</div>
+      {backgroundScanning && (
+        <div className="px-4 py-2 text-xs text-muted-foreground flex items-center gap-2 bg-muted/30">
+          <RefreshCw className="h-3 w-3 animate-spin" />
+          正在更新...
+        </div>
+      )}
       <MusicPlaylistView
         title="本地音乐"
         tracks={tracks}
@@ -245,6 +242,7 @@ export function LocalMusicPage({
         currentTrackId={currentTrackId}
         isPlaying={isPlaying}
         onRemove={handleDeleteTrack}
+        action={fullScanAction}
       />
     </PageLayout>
   );
