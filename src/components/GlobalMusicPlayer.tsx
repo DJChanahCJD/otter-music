@@ -4,6 +4,7 @@ import { useMusicCover } from "@/hooks/useMusicCover";
 import { retry } from "@/lib/utils";
 import { musicApi } from "@/lib/music-api";
 import { useMusicStore } from "@/store/music-store";
+import { useSourceQualityStore } from "@/store/source-quality-store";
 import { useRef, useEffect } from "react";
 import toast from "react-hot-toast";
 import { MediaSession } from "@jofr/capacitor-media-session";
@@ -92,7 +93,7 @@ export function GlobalMusicPlayer() {
     const load = async () => {
       const audio = audioRef.current!;
       setIsLoading(true);
-      
+
       // Mark as switching so pause events are ignored
       isSwitchingTrackRef.current = true;
 
@@ -145,6 +146,11 @@ export function GlobalMusicPlayer() {
         const errorMessage = err instanceof Error ? err.message : String(err);
         console.error("Audio load failed:", errorMessage);
         toast.error(`无法播放: ${currentTrack.name}`);
+
+        // 记录播放失败
+        if (currentTrackSource) {
+          useSourceQualityStore.getState().recordFail(currentTrackSource);
+        }
 
         // Clear audio source to prevent playing previous track
         audio.src = "";
@@ -206,6 +212,10 @@ export function GlobalMusicPlayer() {
     const onError = (e: Event) => {
       console.error("Audio Error Event:", e);
       setIsLoading(false);
+      // 记录播放失败
+      if (currentTrack?.source) {
+        useSourceQualityStore.getState().recordFail(currentTrack.source);
+      }
     };
 
     const onPause = () => {
@@ -220,6 +230,10 @@ export function GlobalMusicPlayer() {
     const onPlay = () => {
       if (!isPlaying) {
         setIsPlaying(true);
+        // 记录播放成功
+        if (currentTrack?.source) {
+          useSourceQualityStore.getState().recordSuccess(currentTrack.source);
+        }
       }
     };
 

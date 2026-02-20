@@ -1,5 +1,6 @@
 import type { MusicSource, MusicTrack, MergedMusicTrack } from '@/types/music';
 import { normalizeText, normalizeArtists, getExactKey } from './music-key';
+import { useSourceQualityStore } from '@/store/source-quality-store';
 
 /* 常量 */
 const SOURCE_WEIGHT: Record<string, number> = {
@@ -132,8 +133,11 @@ function score(t: MergedMusicTrack & PreparedTrack, q: string): number {
   // 多来源 = 热门
   s += Math.min((t.variants?.length || 0) * 15, 60);
 
-  // 平台质量
+  // 静态权重（基础分，保留不变）
   s += SOURCE_WEIGHT[t.source] || 0;
+
+  // 动态学习加成（0 ~ 50，基于实际播放数据）
+  s += useSourceQualityStore.getState().getSourceDynamicScore(t.source);
 
   // 原版通常更短
   s -= t.name.length * 0.3;
