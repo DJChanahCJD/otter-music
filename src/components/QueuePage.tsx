@@ -4,8 +4,7 @@ import { Trash2 } from "lucide-react";
 import { MusicPlaylistView } from "./MusicPlaylistView";
 import { MusicTrack } from "@/types/music";
 import { Button } from "./ui/button";
-import { useBackButton } from "@/hooks/use-back-button";
-import { PageHeader } from "./PageHeader";
+import { PageLayout } from "./PageLayout";
 
 interface QueuePageProps {
   queue: MusicTrack[];
@@ -26,8 +25,6 @@ export function QueuePage({
   onClear,
   onBack,
 }: QueuePageProps) {
-  useBackButton(onBack);
-  
   const clearAction = queue.length > 0 && (
     <Button
       variant="ghost"
@@ -44,8 +41,7 @@ export function QueuePage({
   );
 
   return (
-    <div className="flex flex-col h-full">
-      <PageHeader title="播放列表" onBack={onBack} action={clearAction}/>
+    <PageLayout title="播放列表" onBack={onBack} action={clearAction}>
       <MusicPlaylistView
       title="播放列表"
       tracks={queue}
@@ -55,6 +51,6 @@ export function QueuePage({
       isPlaying={isPlaying}
       description={`${queue.length} 首歌曲`}
     />
-    </div>
+    </PageLayout>
   );
 }

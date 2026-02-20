@@ -131,7 +131,7 @@ export const useMusicStore = create<MusicState>()(
 
       addToFavorites: (track) => set((state) => {
         if (track.source === 'local') {
-          toast("本地音乐不支持喜欢");
+          toast.custom("本地音乐不支持喜欢", {icon: "ℹ️"});
           return state;
         }
         if (state.favorites.some(t => t.id === track.id)) return state;
@@ -164,7 +164,7 @@ export const useMusicStore = create<MusicState>()(
       })),
       addToPlaylist: (pid, track) => set((state) => {
         if (track.source === 'local') {
-          toast("本地音乐不支持添加歌单");
+          toast.custom("本地音乐不支持添加歌单", {icon: "ℹ️"});
           return state;
         }
         return {

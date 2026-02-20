@@ -1,6 +1,6 @@
 "use client";
 
-import { PageHeader } from "./PageHeader";
+import { PageLayout } from "./PageLayout";
 import { ThemeToggle } from "./ThemeToggle";
 import { SyncConfig } from "./SyncConfig";
 import { useMusicStore } from "@/store/music-store";
@@ -20,9 +20,7 @@ export function SettingsPage({ onBack }: SettingsPageProps) {
   const { quality, setQuality } = useMusicStore();
 
   return (
-    <div className="h-full flex flex-col">
-      <PageHeader title="系统设置" onBack={onBack} />
-
+    <PageLayout title="系统设置" onBack={onBack}>
       <div className="flex-1 p-4 space-y-4">
         <div className="flex items-center justify-between p-4 rounded-xl bg-card/50 border border-border/50">
           <span className="text-foreground">主题切换</span>
@@ -46,6 +44,6 @@ export function SettingsPage({ onBack }: SettingsPageProps) {
 
         <SyncConfig />
       </div>
-    </div>
+    </PageLayout>
   );
 }
