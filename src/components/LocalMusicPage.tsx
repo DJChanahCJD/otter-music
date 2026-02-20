@@ -107,10 +107,10 @@ export function LocalMusicPage({
       onClick={handleRefresh}
       disabled={isLoading}
       className={cn(
-        "p-2 rounded-lg transition-colors",
+        "p-2 rounded-lg transition-all duration-200",
         isLoading
-          ? "text-muted-foreground/50 cursor-not-allowed"
-          : "text-muted-foreground hover:text-foreground hover:bg-muted/50",
+          ? "text-muted-foreground/30 cursor-not-allowed"
+          : "text-muted-foreground hover:text-foreground hover:bg-muted/50 active:scale-95",
       )}
     >
       <RefreshCw className={cn("h-5 w-5", isLoading && "animate-spin")} />
@@ -118,15 +118,15 @@ export function LocalMusicPage({
   );
 
   const scanModeSelector = (
-    <div className="flex gap-1 p-1 bg-muted/30 rounded-lg">
+    <div className="flex gap-1.5 p-1.5 bg-muted/40 rounded-xl">
       <button
         onClick={() => handleModeChange("quick")}
         disabled={isLoading}
         className={cn(
-          "flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-all",
+          "flex items-center gap-2 px-4 py-2 text-xs font-medium rounded-lg transition-all duration-200",
           scanMode === "quick"
-            ? "bg-background text-foreground shadow-sm"
-            : "text-muted-foreground hover:text-foreground",
+            ? "bg-background text-foreground shadow-sm ring-1 ring-border/50"
+            : "text-muted-foreground hover:text-foreground hover:bg-background/50",
           isLoading && "cursor-not-allowed opacity-50",
         )}
       >
@@ -137,10 +137,10 @@ export function LocalMusicPage({
         onClick={() => handleModeChange("full")}
         disabled={isLoading}
         className={cn(
-          "flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-all",
+          "flex items-center gap-2 px-4 py-2 text-xs font-medium rounded-lg transition-all duration-200",
           scanMode === "full"
-            ? "bg-background text-foreground shadow-sm"
-            : "text-muted-foreground hover:text-foreground",
+            ? "bg-background text-foreground shadow-sm ring-1 ring-border/50"
+            : "text-muted-foreground hover:text-foreground hover:bg-background/50",
           isLoading && "cursor-not-allowed opacity-50",
         )}
       >
@@ -153,18 +153,20 @@ export function LocalMusicPage({
   if (isLoading) {
     return (
       <PageLayout title="本地音乐" onBack={onBack} action={refreshAction}>
-        <div className="flex-1 flex flex-col items-center justify-center">
-          <RefreshCw className="h-8 w-8 text-primary animate-spin mb-3" />
-          <p className="text-muted-foreground text-sm">
-            {scanMode === "quick"
-              ? "正在扫描本地音乐..."
-              : "正在进行全盘扫描..."}
-          </p>
-          {scanMode === "full" && (
-            <p className="text-muted-foreground/60 text-xs mt-1">
-              全盘扫描可能需要较长时间
+        <div className="flex-1 flex flex-col items-center justify-center gap-4">
+          <RefreshCw className="h-10 w-10 text-primary/80 animate-spin" />
+          <div className="flex flex-col items-center gap-1">
+            <p className="text-foreground text-sm font-medium">
+              {scanMode === "quick"
+                ? "正在扫描本地音乐..."
+                : "正在进行全盘扫描..."}
             </p>
-          )}
+            {scanMode === "full" && (
+              <p className="text-muted-foreground/60 text-xs">
+                全盘扫描可能需要较长时间
+              </p>
+            )}
+          </div>
         </div>
       </PageLayout>
     );
@@ -174,20 +176,25 @@ export function LocalMusicPage({
     return (
       <PageLayout title="本地音乐" onBack={onBack} action={refreshAction}>
         <div className="flex-1 flex flex-col items-center justify-center px-6 text-center">
-          <Music className="h-12 w-12 text-muted-foreground/40 mb-3" />
-          <p className="text-muted-foreground text-sm mb-1">无法访问本地音乐</p>
-          <p className="text-muted-foreground/60 text-xs mb-4">{error}</p>
+
+          <div className="flex flex-col items-center gap-3 mb-4">
+            <Music className="h-14 w-14 text-muted-foreground/30" />
+            <div className="flex flex-col gap-1">
+              <p className="text-foreground text-sm font-medium">无法访问本地音乐</p>
+              <p className="text-muted-foreground/70 text-xs">{error}</p>
+            </div>
+          </div>
           {needManageStorage ? (
             <button
               onClick={handleOpenSettings}
-              className="px-4 py-2 text-sm bg-primary/10 text-primary rounded-lg hover:bg-primary/20 transition-colors"
+              className="px-5 py-2.5 text-sm font-medium bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-all active:scale-[0.98]"
             >
               打开设置授予权限
             </button>
           ) : (
             <button
               onClick={handleRefresh}
-              className="px-4 py-2 text-sm bg-primary/10 text-primary rounded-lg hover:bg-primary/20 transition-colors"
+              className="px-5 py-2.5 text-sm font-medium bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-all active:scale-[0.98]"
             >
               重试
             </button>
@@ -199,15 +206,13 @@ export function LocalMusicPage({
 
   return (
     <PageLayout title="本地音乐" onBack={onBack} action={refreshAction}>
-      <div className="px-4 pb-3">{scanModeSelector}</div>
+      <div className="px-4 pb-4">{scanModeSelector}</div>
       <MusicPlaylistView
         title="本地音乐"
         tracks={tracks}
         onPlay={handlePlay}
         currentTrackId={currentTrackId}
         isPlaying={isPlaying}
-        action={refreshAction}
-        description={`${tracks.length} 首歌曲`}
       />
     </PageLayout>
   );

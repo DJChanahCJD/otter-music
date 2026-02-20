@@ -13,7 +13,7 @@ const DOWNLOAD_DIR = "OtterMusic";
  */
 export async function downloadMusicTrack(track: MusicTrack, br = 192) {
   if (track.source === "local") {
-    toast.custom("本地音乐，无需下载", { icon: "ℹ️" });
+    toast("本地音乐，无需下载", { icon: "ℹ️" });
     return;
   }
 
@@ -106,7 +106,7 @@ async function browserBlobDownload(
     }
   }
 
-  const blob = new Blob(chunks, { type: "audio/mpeg" });
+  const blob = new Blob(chunks as BlobPart[], { type: "audio/mpeg" });
 
   triggerBlobDownload(blob, fileName);
 

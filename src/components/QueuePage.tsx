@@ -49,7 +49,6 @@ export function QueuePage({
       onRemove={onRemove}
       currentTrackId={currentTrackId}
       isPlaying={isPlaying}
-      description={`${queue.length} 首歌曲`}
     />
     </PageLayout>
   );
