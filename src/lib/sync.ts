@@ -49,7 +49,7 @@ function applySyncData(data: SyncData): void {
 
 type SyncResult = { success: boolean; error?: string; skipped?: boolean };
 
-const SYNC_DIFF_MS = 15 * 60 * 1000;
+const SYNC_DIFF_MS = 60 * 60 * 1000;
 
 /**
  * 执行同步检查并同步数据
@@ -68,7 +68,7 @@ export async function checkAndSync(): Promise<SyncResult> {
     const checkResult = await syncCheck(syncKey);
     const serverLastSyncTime = checkResult.lastSyncTime;
 
-    // 如果服务器和本地时间相同，且距离现在不到15分钟，跳过同步
+    // 如果服务器和本地时间相同，且距离现在不到60分钟，跳过同步
     if (serverLastSyncTime === localLastSyncTime && localLastSyncTime > 0) {
       const timeSinceSync = Date.now() - serverLastSyncTime;
       if (timeSinceSync < SYNC_DIFF_MS) {
