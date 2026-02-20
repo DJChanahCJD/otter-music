@@ -66,7 +66,7 @@ export const musicApi = {
 
   async search(
     query: string,
-    source: MusicSource = 'kuwo',
+    source: MusicSource = 'joox',
     page = 1,
     count = 20,
     signal?: AbortSignal
@@ -93,10 +93,9 @@ export const musicApi = {
     query: string,
     page = 1,
     count = 20,
-    signal?: AbortSignal
+    signal?: AbortSignal,
+    sources: MusicSource[] = ['joox', 'netease', 'bilibili']
   ): Promise<SearchPageResult<MergedMusicTrack>> {
-
-    const sources: MusicSource[] = ['kuwo', 'joox', 'netease'];
 
     const results = await Promise.all(
       sources.map(s => this.search(query, s, page, count, signal))

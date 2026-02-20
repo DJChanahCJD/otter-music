@@ -32,17 +32,20 @@ export const searchOptions: Record<string, string> = {
   all: "聚合搜索",
   joox: "Joox",
   netease: "网易云音乐",
+  bilibili: "B站",
   kuwo: "酷我音乐",
 };
 
 export const sourceLabels: Record<string, string> = {
   joox: "Joox",
   netease: "网易",
+  bilibili: "B站",
   kuwo: "酷我",
 };
 
 export const sourceBadgeStyles: Record<string, string> = {
   netease: "bg-red-50 text-red-600 border-red-200 hover:bg-red-100",
+  bilibili: "bg-pink-50 text-pink-600 border-pink-200 hover:bg-pink-100",
   kuwo: "bg-amber-50 text-amber-600 border-amber-200 hover:bg-amber-100",
   joox: "bg-green-50 text-green-600 border-green-200 hover:bg-green-100",
   default: "bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100",
@@ -56,7 +59,7 @@ export type MusicSource =
   | 'tencent'
   | 'kugou'
   | 'kuwo' //  🌟
-  | 'bilibili'
+  | 'bilibili' //  🌟
   | 'migu'
   | 'qq'
   | 'fivesing'

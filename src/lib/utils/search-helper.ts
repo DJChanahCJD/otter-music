@@ -3,9 +3,10 @@ import { normalizeText, normalizeArtists, getExactKey } from './music-key';
 
 /* 常量 */
 const SOURCE_WEIGHT: Record<string, number> = {
-  joox: 30,
-  netease: 25,
-  kuwo: 20,
+  joox: 30,     //  稳定但版本参差不齐，且为繁体
+  netease: 28,  //  稳定但周杰伦等版权缺失
+  bilibili: 22, //  稳定但质量不高
+  kuwo: 20,     //  酷我音源不稳定
 };
 
 const SOURCE_PRIORITY: MusicSource[] = Object.entries(SOURCE_WEIGHT)

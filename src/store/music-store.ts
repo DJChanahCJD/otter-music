@@ -110,6 +110,8 @@ interface MusicState {
   addToNextPlay: (track: MusicTrack) => void;
   /** Insert a track next to current and switch to it */
   playTrackAsNext: (track: MusicTrack) => void;
+  /** Skip to next track and start playing */
+  skipToNext: () => void;
 
   /** Remove a track from the current queue */
   removeFromQueue: (trackId: string) => void;
@@ -527,6 +529,16 @@ export const useMusicStore = create<MusicState>()(
             currentAudioTime: 0,
             isPlaying: true,
             hasUserGesture: true,
+          };
+        }),
+      skipToNext: () =>
+        set((state) => {
+          if (state.queue.length === 0) return {};
+          const nextIndex = (state.currentIndex + 1) % state.queue.length;
+          return {
+            currentIndex: nextIndex,
+            currentAudioTime: 0,
+            isPlaying: true,
           };
         }),
     }),

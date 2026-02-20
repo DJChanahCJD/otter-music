@@ -16,7 +16,7 @@ export function GlobalMusicPlayer() {
     isPlaying,
     setIsPlaying,
     setIsLoading,
-    playTrackAsNext,
+    skipToNext,
     setAudioCurrentTime,
     seekTargetTime,
     seekTimestamp,
@@ -152,7 +152,7 @@ export function GlobalMusicPlayer() {
         setCurrentAudioUrl(null);
 
         // Auto skip to next
-        playTrackAsNext(currentTrack);
+        skipToNext();
       } finally {
         // Only reset if we are still the active request
         if (requestId === requestIdRef.current) {
@@ -167,7 +167,7 @@ export function GlobalMusicPlayer() {
     return () => {
       cancelled = true;
     };
-  }, [hasUserGesture, currentTrack, currentTrackId, currentTrackSource, currentTrackUrlId, playTrackAsNext, quality, setCurrentAudioUrl, setIsLoading]);
+  }, [hasUserGesture, currentTrack, currentTrackId, currentTrackSource, currentTrackUrlId, skipToNext, quality, setCurrentAudioUrl, setIsLoading]);
 
   // Event Handlers
   useEffect(() => {
