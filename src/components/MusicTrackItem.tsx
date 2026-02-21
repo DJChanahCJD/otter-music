@@ -31,8 +31,8 @@ interface MusicTrackItemProps {
   hideAddToPlaylist?: boolean;
   // Custom actions to render (e.g. Delete button)
   onRemove?: () => void;
-  // Cache status
-  isCached?: boolean;
+  isDownloaded?: boolean;
+  quality?: string;
   className?: string;
   style?: React.CSSProperties;
 }
@@ -49,7 +49,8 @@ export function MusicTrackItem({
   hideLike,
   hideAddToPlaylist,
   onRemove,
-  isCached,
+  isDownloaded,
+  quality = "192",
   className,
   style,
 }: MusicTrackItemProps) {
@@ -58,14 +59,12 @@ export function MusicTrackItem({
     removeFromFavorites,
     isFavorite,
     addToNextPlay,
-    quality,
   } = useMusicStore(
     useShallow((state) => ({
       addToFavorites: state.addToFavorites,
       removeFromFavorites: state.removeFromFavorites,
       isFavorite: state.isFavorite,
       addToNextPlay: state.addToNextPlay,
-      quality: state.quality,
     })),
   );
 
@@ -139,10 +138,8 @@ export function MusicTrackItem({
             {sourceLabels[track.source] || track.source}
           </Badge>
 
-          {isCached && (
-            <span title="已缓存">
-              <DatabaseZap className="h-3.5 w-3.5 text-muted-foreground/60" />
-            </span>
+          {isDownloaded && (
+            <DatabaseZap className="h-3.5 w-3.5 text-muted-foreground/60" />
           )}
 
           <MusicTrackVariants variants={variants} />

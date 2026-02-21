@@ -107,19 +107,16 @@ export function MusicTrackMobileMenu({
                 {isFavorite ? "取消喜欢" : "喜欢"}
               </Button>
             )}
-
-            {onAddToNextPlay && (
-              <Button
-                variant="ghost"
-                className="justify-start w-full"
-                onClick={() => {
-                  onAddToNextPlay();
-                  onOpenChange(false);
-                }}
-              >
-                <CornerDownRight className="mr-2 h-4 w-4" /> 下一首播放
-              </Button>
-            )}
+            <Button
+              variant="ghost"
+              className="justify-start w-full"
+              onClick={() => {
+                onDownload();
+                onOpenChange(false);
+              }}
+            >
+              <Download className="mr-2 h-4 w-4" /> 下载
+            </Button>
 
             {!hideAddToPlaylist && (
               <Button
@@ -134,16 +131,18 @@ export function MusicTrackMobileMenu({
               </Button>
             )}
 
-            <Button
-              variant="ghost"
-              className="justify-start w-full"
-              onClick={() => {
-                onDownload();
-                onOpenChange(false);
-              }}
-            >
-              <Download className="mr-2 h-4 w-4" /> 下载
-            </Button>
+            {onAddToNextPlay && (
+              <Button
+                variant="ghost"
+                className="justify-start w-full"
+                onClick={() => {
+                  onAddToNextPlay();
+                  onOpenChange(false);
+                }}
+              >
+                <CornerDownRight className="mr-2 h-4 w-4" /> 下一首播放
+              </Button>
+            )}
 
             {onRemove && (
               <Button

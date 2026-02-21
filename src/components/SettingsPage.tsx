@@ -14,9 +14,8 @@ import {
 } from "./ui/select";
 import { Checkbox } from "./ui/checkbox";
 import { Slider } from "./ui/slider";
-import { useState, useEffect } from "react";
-import { ChevronRight, DatabaseZap, Trash2, Volume2, Music, Radio, Palette, Loader2 } from "lucide-react";
-import { cn, formatBytes } from "@/lib/utils";
+import { useState } from "react";
+import { ChevronRight, Volume2, Music, Radio, Palette } from "lucide-react";
 
 
 interface SettingsPageProps {
@@ -24,13 +23,8 @@ interface SettingsPageProps {
 }
 
 export function SettingsPage({ onBack }: SettingsPageProps) {
-  const { volume, setVolume, quality, setQuality, aggregatedSources, setAggregatedSources, cacheSize, cacheCount, updateCacheStats, clearCache } = useMusicStore();
+  const { volume, setVolume, quality, setQuality, aggregatedSources, setAggregatedSources } = useMusicStore();
   const [showSourcePicker, setShowSourcePicker] = useState(false);
-  const [isClearingCache, setIsClearingCache] = useState(false);
-
-  useEffect(() => {
-    updateCacheStats();
-  }, [updateCacheStats]);
 
   const toggleSource = (value: string) => {
     const current = aggregatedSources;
@@ -47,18 +41,6 @@ export function SettingsPage({ onBack }: SettingsPageProps) {
     .map(s => aggregatedSourceOptions.find(o => o.value === s)?.label)
     .filter(Boolean)
     .join('、');
-
-  const handleClearCache = async () => {
-    if (!confirm(`确定清空所有缓存？\n当前缓存：${formatBytes(cacheSize)} (${cacheCount} 首)`)) {
-      return;
-    }
-    setIsClearingCache(true);
-    try {
-      await clearCache();
-    } finally {
-      setIsClearingCache(false);
-    }
-  };
 
   return (
     <PageLayout title="系统设置" onBack={onBack}>
@@ -95,13 +77,13 @@ export function SettingsPage({ onBack }: SettingsPageProps) {
 
         <div className="flex items-center justify-between p-4 rounded-xl bg-card/50 border border-border/50 min-h-[60px]">
           <div className="flex items-center gap-3 flex-1">
-            <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+            <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
               <Music className="h-4 w-4 text-primary" />
             </div>
             <span className="text-foreground">音质设置</span>
           </div>
           <Select value={quality} onValueChange={setQuality}>
-            <SelectTrigger className="h-7 px-2 bg-transparent border-muted hover:bg-muted/20 w-32">
+            <SelectTrigger className="h-7 px-2 bg-transparent border-muted hover:bg-muted/20 w-36">
               <SelectValue placeholder="音质" />
             </SelectTrigger>
             <SelectContent>
@@ -145,45 +127,6 @@ export function SettingsPage({ onBack }: SettingsPageProps) {
                 </label>
               ))}
             </div>
-          </div>
-        </div>
-
-        <div className="p-4 rounded-xl bg-card/50 border border-border/50">
-          <div className="flex items-center gap-3 mb-3">
-            <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
-              <DatabaseZap className="h-5 w-5 text-primary" />
-            </div>
-            <div className="flex-1">
-              <p className="text-sm font-medium text-foreground">缓存管理</p>
-              <p className="text-xs text-muted-foreground">
-                {formatBytes(cacheSize)} · {cacheCount} 首
-              </p>
-            </div>
-          </div>
-          <button
-            onClick={handleClearCache}
-            disabled={cacheSize === 0 || isClearingCache}
-            className={cn(
-              "flex items-center justify-center gap-2 w-full px-4 py-2.5 text-sm font-medium rounded-lg transition-all min-h-[44px]",
-              cacheSize > 0 && !isClearingCache
-                ? "bg-destructive/10 text-destructive hover:bg-destructive/20"
-                : "bg-muted/50 text-muted-foreground cursor-not-allowed"
-            )}
-          >
-            {isClearingCache ? (
-              <>
-                <Loader2 className="h-4 w-4 animate-spin" />
-                清空中...
-              </>
-            ) : (
-              <>
-                <Trash2 className="h-4 w-4" />
-                {cacheSize > 0 ? "清空缓存" : "暂无缓存"}
-              </>
-            )}
-          </button>
-          <div className="text-xs text-muted-foreground/70 mt-3 px-1">
-            仅「我的喜欢」中的歌曲会自动缓存
           </div>
         </div>
 

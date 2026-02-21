@@ -4,6 +4,7 @@ import { mergeAndSortTracks } from "@/lib/utils/search-helper";
 import { getApiUrl } from "./api";
 import { retry } from "@/lib/utils";
 import { Capacitor } from "@capacitor/core";
+import { LocalMusicPlugin } from "@/plugins/local-music";
 
 const getApiBase = () => `${getApiUrl()}`;
 
@@ -115,6 +116,19 @@ export const musicApi = {
 
   async getUrl(id: string, source: MusicSource, br = 192): Promise<string | null> {
     if (source === 'local') {
+      if (Capacitor.isNativePlatform()) {
+        try {
+          const result = await LocalMusicPlugin.getLocalFileUrl({ localPath: id });
+          if (result.success && result.url) {
+            return result.url;
+          }
+          console.error('LocalMusicPlugin.getLocalFileUrl failed:', result.error);
+          return null;
+        } catch (e) {
+          console.error('LocalMusicPlugin.getLocalFileUrl error:', e);
+          return null;
+        }
+      }
       return Capacitor.convertFileSrc(id);
     }
 
@@ -137,20 +151,25 @@ export const musicApi = {
   /* ---------------- 封面 ---------------- */
 
   async getPic(id: string, source: MusicSource, size: number = 300): Promise<string | null> {
-    const key = `pic:${source}:${id}`;
+    try {
+      const key = `pic:${source}:${id}`;
 
-    const res = await cachedFetch<{ url: string }>(
-      key,
-      async () => {
-        const json = await requestJSON<{ url?: string }>(
-          buildUrl({ types: 'pic', id, size }, source)
-        );
-        return json?.url ? { url: json.url } : null;
-      },
-      TTL_LONG,
-    );
+      const res = await cachedFetch<{ url: string }>(
+        key,
+        async () => {
+          const json = await requestJSON<{ url?: string }>(
+            buildUrl({ types: 'pic', id, size }, source)
+          );
+          return json?.url ? { url: json.url } : null;
+        },
+        TTL_LONG,
+      );
 
-    return res?.url ?? null;
+      return res?.url ?? null;
+    } catch (e) {
+      console.error('getPic failed:', e);
+      return null;
+    }
   },
 
   /* ---------------- 歌词 ---------------- */

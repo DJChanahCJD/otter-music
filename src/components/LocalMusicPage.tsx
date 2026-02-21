@@ -30,7 +30,7 @@ export function LocalMusicPage({
   const [error, setError] = useState<string | null>(null);
   const [needManageStorage, setNeedManageStorage] = useState(false);
   const { queue, currentIndex, skipToNext } = useMusicStore();
-  const { setFiles: setCachedFiles, updateFiles: updateCachedFiles } = useLocalMusicStore();
+  const { setFiles: setCachedFiles, updateFiles: updateCachedFiles, setScanning } = useLocalMusicStore();
 
   const scanLocalMusic = async (type: "quick" | "full", silent = false) => {
     if (!silent) {
@@ -38,6 +38,12 @@ export function LocalMusicPage({
       setError(null);
     }
     setNeedManageStorage(false);
+
+    setScanning(true, type);
+
+    const toastId = type === "full"
+      ? toast.loading("全盘扫描中，请稍候...", { duration: Infinity })
+      : toast.loading("正在扫描本地音乐...", { duration: 10000 });
 
     try {
       const result =
@@ -51,27 +57,29 @@ export function LocalMusicPage({
 
         if (!silent) {
           if (result.files.length === 0) {
-            toast("未找到本地音乐文件", { icon: "📁" });
+            toast("未找到本地音乐文件", { id: toastId, icon: "📁" });
           } else {
-            toast.success(`找到 ${result.files.length} 首本地音乐`);
+            toast.success(`找到 ${result.files.length} 首本地音乐`, { id: toastId });
           }
         }
       } else {
         if (result.needManageStorage) {
           setNeedManageStorage(true);
           setError(result.error || '需要授予"允许管理所有文件"权限');
+          toast.error(result.error || "需要授予权限", { id: toastId });
         } else {
           const errorMsg = result.error || "扫描失败";
           setError(errorMsg);
-          if (!silent) toast.error(errorMsg);
+          if (!silent) toast.error(errorMsg, { id: toastId });
         }
       }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "扫描失败";
       setError(errorMessage);
-      if (!silent) toast.error(errorMessage);
+      if (!silent) toast.error(errorMessage, { id: toastId });
     } finally {
       setIsLoading(false);
+      setScanning(false);
     }
   };
 
@@ -92,7 +100,7 @@ export function LocalMusicPage({
 
   const handleFullScan = () => {
     if (!isLoading) {
-      toast.loading("全盘扫描中...");
+      toast.loading("全盘扫描中...", { duration: Infinity });
       scanLocalMusic("full", false);
     }
   };
