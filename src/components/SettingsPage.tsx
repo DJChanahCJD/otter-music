@@ -13,6 +13,7 @@ import {
   SelectValue,
 } from "./ui/select";
 import { Checkbox } from "./ui/checkbox";
+import { Slider } from "./ui/slider";
 import { useState } from "react";
 import { ChevronRight } from "lucide-react";
 
@@ -21,7 +22,7 @@ interface SettingsPageProps {
 }
 
 export function SettingsPage({ onBack }: SettingsPageProps) {
-  const { quality, setQuality, aggregatedSources, setAggregatedSources } = useMusicStore();
+  const { volume, setVolume, quality, setQuality, aggregatedSources, setAggregatedSources } = useMusicStore();
   const [showSourcePicker, setShowSourcePicker] = useState(false);
 
   const toggleSource = (value: string) => {
@@ -46,6 +47,21 @@ export function SettingsPage({ onBack }: SettingsPageProps) {
         <div className="flex items-center justify-between p-4 rounded-xl bg-card/50 border border-border/50">
           <span className="text-foreground">主题切换</span>
           <ThemeToggle />
+        </div>
+
+        <div className="flex items-center justify-between p-4 rounded-xl bg-card/50 border border-border/50">
+          <span className="text-foreground">音量调节</span>
+          <div className="flex items-center gap-3">
+            <span className="text-sm text-muted-foreground w-10 text-right">{Math.round(volume * 100)}%</span>
+            <Slider
+              value={[volume * 100]}
+              onValueChange={([value]) => setVolume(value / 100)}
+              min={0}
+              max={100}
+              step={1}
+              className="w-32"
+            />
+          </div>
         </div>
 
         <div className="flex items-center justify-between p-4 rounded-xl bg-card/50 border border-border/50">

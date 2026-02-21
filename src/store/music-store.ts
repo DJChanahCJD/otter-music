@@ -211,7 +211,7 @@ export const useMusicStore = create<MusicState>()(
         searchPage: 0
       }),
 
-      volume: 0.7,
+      volume: 1.0,
       isRepeat: false,
       isShuffle: false,
       currentAudioTime: 0,
@@ -382,10 +382,32 @@ export const useMusicStore = create<MusicState>()(
         let newOriginalQueue = state.originalQueue;
         if (state.isShuffle) {
           const oQueue = [...(state.originalQueue || [])];
-          // 如果不在 originalQueue 中，添加进去（这里策略可以是加到最后，或者加到当前原始位置之后？）
-          // 简单起见加到最后，因为随机模式下 originalQueue 的顺序不影响播放顺序（除了切回顺序播放时）
-          if (!oQueue.some(t => t.id === track.id)) {
-            oQueue.push(track);
+          const currentTrack = state.queue[state.currentIndex];
+          if (currentTrack) {
+            // 找到当前歌曲在 originalQueue 中的位置
+            const originalCurrentIndex = oQueue.findIndex(t => t.id === currentTrack.id);
+            // 如果不在 originalQueue 中，插入到当前位置之后
+            if (!oQueue.some(t => t.id === track.id)) {
+              if (originalCurrentIndex !== -1) {
+                oQueue.splice(originalCurrentIndex + 1, 0, track);
+              } else {
+                oQueue.push(track);
+              }
+            } else {
+              // 如果已存在，移除后插入到当前位置之后
+              const existingIndex = oQueue.findIndex(t => t.id === track.id);
+              oQueue.splice(existingIndex, 1);
+              if (originalCurrentIndex !== -1) {
+                oQueue.splice(originalCurrentIndex + 1, 0, track);
+              } else {
+                oQueue.push(track);
+              }
+            }
+          } else {
+            // 找不到当前歌曲，添加到末尾
+            if (!oQueue.some(t => t.id === track.id)) {
+              oQueue.push(track);
+            }
           }
           newOriginalQueue = oQueue;
         }
@@ -435,8 +457,32 @@ export const useMusicStore = create<MusicState>()(
         let newOriginalQueue = state.originalQueue;
         if (state.isShuffle) {
           const oQueue = [...(state.originalQueue || [])];
-          if (!oQueue.some(t => t.id === track.id)) {
-            oQueue.push(track);
+          const currentTrack = state.queue[state.currentIndex];
+          if (currentTrack) {
+            // 找到当前歌曲在 originalQueue 中的位置
+            const originalCurrentIndex = oQueue.findIndex(t => t.id === currentTrack.id);
+            // 如果不在 originalQueue 中，插入到当前位置之后
+            if (!oQueue.some(t => t.id === track.id)) {
+              if (originalCurrentIndex !== -1) {
+                oQueue.splice(originalCurrentIndex + 1, 0, track);
+              } else {
+                oQueue.push(track);
+              }
+            } else {
+              // 如果已存在，移除后插入到当前位置之后
+              const existingIndex = oQueue.findIndex(t => t.id === track.id);
+              oQueue.splice(existingIndex, 1);
+              if (originalCurrentIndex !== -1) {
+                oQueue.splice(originalCurrentIndex + 1, 0, track);
+              } else {
+                oQueue.push(track);
+              }
+            }
+          } else {
+            // 找不到当前歌曲，添加到末尾
+            if (!oQueue.some(t => t.id === track.id)) {
+              oQueue.push(track);
+            }
           }
           newOriginalQueue = oQueue;
         }
