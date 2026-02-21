@@ -15,6 +15,7 @@ import { MusicTrackMobileMenu } from "./MusicTrackMobileMenu";
 import { MusicTrackVariants } from "./MusicTrackVariants";
 import { Checkbox } from "./ui/checkbox";
 import { Badge } from "./ui/badge";
+import { DatabaseZap } from "lucide-react";
 
 interface MusicTrackItemProps {
   track: MusicTrack | MergedMusicTrack;
@@ -30,6 +31,8 @@ interface MusicTrackItemProps {
   hideAddToPlaylist?: boolean;
   // Custom actions to render (e.g. Delete button)
   onRemove?: () => void;
+  // Cache status
+  isCached?: boolean;
   className?: string;
   style?: React.CSSProperties;
 }
@@ -46,6 +49,7 @@ export function MusicTrackItem({
   hideLike,
   hideAddToPlaylist,
   onRemove,
+  isCached,
   className,
   style,
 }: MusicTrackItemProps) {
@@ -134,6 +138,12 @@ export function MusicTrackItem({
           >
             {sourceLabels[track.source] || track.source}
           </Badge>
+
+          {isCached && (
+            <span title="已缓存">
+              <DatabaseZap className="h-3.5 w-3.5 text-muted-foreground/60" />
+            </span>
+          )}
 
           <MusicTrackVariants variants={variants} />
         </div>

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
   ListChecks,
@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/popover";
 import { MusicTrackItem } from "./MusicTrackItem";
 import { downloadMusicTrack } from "@/lib/utils/download";
+import { getAudioCache } from "@/lib/utils/audio-cache";
 import { useMusicStore } from "@/store/music-store";
 import { MusicTrack } from "@/types/music";
 import toast from "react-hot-toast";
@@ -46,6 +47,7 @@ interface RowProps {
   isPlaying?: boolean;
   isSelectionMode: boolean;
   selectedIds: Set<string>;
+  cachedIds: Set<string>;
   onPlay: (track: MusicTrack) => void;
   onRemove?: (track: MusicTrack) => void;
   toggleSelect: (id: string) => void;
@@ -62,6 +64,7 @@ const Row = ({
   isPlaying,
   isSelectionMode,
   selectedIds,
+  cachedIds,
   onPlay,
   onRemove,
   toggleSelect,
@@ -85,6 +88,7 @@ const Row = ({
         showCheckbox={isSelectionMode}
         isSelected={selectedIds.has(track.id)}
         onSelect={() => toggleSelect(track.id)}
+        isCached={cachedIds.has(track.id)}
         onRemove={
           !isSelectionMode && onRemove ? () => onRemove(track) : undefined
         }
@@ -130,6 +134,7 @@ export function MusicTrackList({
 }: MusicTrackListProps) {
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [cachedIds, setCachedIds] = useState<Set<string>>(new Set());
   const {
     addToFavorites,
     playlists,
@@ -147,6 +152,31 @@ export function MusicTrackList({
       quality: state.quality
     })),
   );
+
+  // 检查缓存状态
+  useEffect(() => {
+    const checkCacheStatus = async () => {
+      const newCachedIds = new Set<string>();
+      const br = parseInt(quality, 10);
+
+      for (const track of tracks) {
+        if (track.source === 'local') continue;
+
+        try {
+          const cacheResult = await getAudioCache(track.source, track.id, br);
+          if (cacheResult.exists) {
+            newCachedIds.add(track.id);
+          }
+        } catch (e) {
+          // 忽略错误
+        }
+      }
+
+      setCachedIds(newCachedIds);
+    };
+
+    checkCacheStatus();
+  }, [tracks, quality]);
 
   const toggleSelect = (id: string) => {
     setSelectedIds((prev) => {
@@ -235,6 +265,7 @@ export function MusicTrackList({
     isPlaying,
     isSelectionMode,
     selectedIds,
+    cachedIds,
     onPlay,
     onRemove,
     toggleSelect,

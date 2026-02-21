@@ -4,6 +4,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { storeKey } from '.';
 import type { MusicTrack, MusicSource, MergedMusicTrack, Playlist } from '@/types/music';
 import toast from 'react-hot-toast';
+import { getCacheStats, clearAllCache } from '@/lib/utils/audio-cache';
 
 /**
  * 清理 MusicTrack，移除 variants 字段
@@ -96,6 +97,12 @@ interface MusicState {
   clearSeekTargetTime: () => void;
   setCurrentAudioUrl: (url: string | null) => void;
   setUserGesture: () => void;
+
+  // --- Cache State (Not Persisted) ---
+  cacheSize: number; // 缓存总大小（字节）
+  cacheCount: number; // 缓存文件数量
+  updateCacheStats: () => Promise<void>; // 更新缓存统计信息
+  clearCache: () => Promise<void>; // 清空所有缓存
 
   // --- Playback (Queue) ---
   queue: MusicTrack[];
@@ -292,6 +299,19 @@ export const useMusicStore = create<MusicState>()(
       clearSeekTargetTime: () => set({ seekTargetTime: -1 }),
       setCurrentAudioUrl: (url) => set({ currentAudioUrl: url }),
       setUserGesture: () => set({ hasUserGesture: true }),
+
+      // --- Cache State Defaults & Methods ---
+      cacheSize: 0,
+      cacheCount: 0,
+      updateCacheStats: async () => {
+        const stats = await getCacheStats();
+        set({ cacheSize: stats.totalSize, cacheCount: stats.totalCount });
+      },
+      clearCache: async () => {
+        await clearAllCache();
+        set({ cacheSize: 0, cacheCount: 0 });
+        toast("缓存已清空", { icon: "✅" });
+      },
 
       queue: [],
       originalQueue: [],
