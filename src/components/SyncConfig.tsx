@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Trash2 } from "lucide-react";
+import { Trash2, RefreshCw } from "lucide-react";
 import { Button } from "./ui/button";
 import {
   Dialog,
@@ -53,22 +53,25 @@ export function SyncConfig() {
   return (
     <>
       <div
-        className="flex flex-col p-4 rounded-xl bg-card/50 border border-border/50 cursor-pointer hover:bg-muted/20 transition-colors"
+        className="flex items-center justify-between p-4 rounded-xl bg-card/50 border border-border/50 cursor-pointer hover:bg-muted/20 transition-colors min-h-[60px]"
         onClick={() => setDialogOpen(true)}
       >
-        <div className="flex items-center justify-between mb-2">
-          <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3 flex-1">
+          <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+            <RefreshCw className="h-4 w-4 text-primary" />
+          </div>
+          <div className="flex-1">
             <span className="text-foreground">数据同步</span>
+            {syncKey && (
+              <div className="text-xs text-muted-foreground mt-0.5">
+                最后同步: {formatLastSyncTime(lastSyncTime)}
+              </div>
+            )}
           </div>
-          <span className="text-xs text-muted-foreground">
-            {syncKey ? maskKey(syncKey) : "未配置"}
-          </span>
         </div>
-        {syncKey && (
-          <div className="text-xs text-muted-foreground">
-            最后同步: {formatLastSyncTime(lastSyncTime)}
-          </div>
-        )}
+        <span className="text-xs text-muted-foreground">
+          {syncKey ? maskKey(syncKey) : "未配置"}
+        </span>
       </div>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
