@@ -79,12 +79,11 @@ export function FullScreenPlayer({
 
   useBackButton(onClose, isFullScreen);
 
-  const { queue, quality, currentIndex, setCurrentIndex, setIsPlaying, clearQueue, reshuffle, addToNextPlay, currentAudioUrl } = useMusicStore(
+  const { queue, quality, currentIndex, setCurrentIndexAndPlay, clearQueue, reshuffle, addToNextPlay, currentAudioUrl } = useMusicStore(
     useShallow((state) => ({
       queue: state.queue,
       currentIndex: state.currentIndex,
-      setCurrentIndex: state.setCurrentIndex,
-      setIsPlaying: state.setIsPlaying,
+      setCurrentIndexAndPlay: state.setCurrentIndexAndPlay,
       clearQueue: state.clearQueue,
       reshuffle: state.reshuffle,
       addToNextPlay: state.addToNextPlay,
@@ -94,8 +93,7 @@ export function FullScreenPlayer({
   );
 
   const playTrack = (index: number) => {
-    setCurrentIndex(index);
-    setIsPlaying(true);
+    setCurrentIndexAndPlay(index);
   };
 
   const handleClearQueue = () => {

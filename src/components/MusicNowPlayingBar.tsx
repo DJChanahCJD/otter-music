@@ -23,8 +23,7 @@ export function MusicNowPlayingBar({ onOpenFullScreen }: MusicNowPlayingBarProps
     queue,
     currentIndex,
     togglePlay,
-    setCurrentIndex,
-    setIsPlaying,
+    setCurrentIndexAndPlay,
     clearQueue,
     reshuffle,
   } = useMusicStore(
@@ -36,8 +35,7 @@ export function MusicNowPlayingBar({ onOpenFullScreen }: MusicNowPlayingBarProps
       queue: state.queue,
       currentIndex: state.currentIndex,
       togglePlay: state.togglePlay,
-      setCurrentIndex: state.setCurrentIndex,
-      setIsPlaying: state.setIsPlaying,
+      setCurrentIndexAndPlay: state.setCurrentIndexAndPlay,
       clearQueue: state.clearQueue,
       reshuffle: state.reshuffle,
     }))
@@ -48,10 +46,9 @@ export function MusicNowPlayingBar({ onOpenFullScreen }: MusicNowPlayingBarProps
 
   const playTrack = useCallback(
     (index: number) => {
-      setCurrentIndex(index);
-      setIsPlaying(true);
+      setCurrentIndexAndPlay(index);
     },
-    [setCurrentIndex, setIsPlaying]
+    [setCurrentIndexAndPlay]
   );
 
   const handleClearQueue = () => {

@@ -52,23 +52,6 @@ export function GlobalMusicPlayer() {
     }
   }, [volume]);
 
-  // Sync play/pause
-  useEffect(() => {
-    const audio = audioRef.current;
-    if (!audio) return;
-
-    if (isPlaying) {
-      // 切换曲目时跳过，等待 Load Track effect 处理播放
-      if (isSwitchingTrackRef.current) return;
-      
-      audio.play().catch((e) => {
-        console.error("Play failed:", e);
-      });
-    } else {
-      audio.pause();
-    }
-  }, [isPlaying]);
-
   // Handle Seek
   useEffect(() => {
     const audio = audioRef.current;
@@ -139,6 +122,7 @@ export function GlobalMusicPlayer() {
         // 新歌曲从 0 开始播放，不再使用旧的 currentAudioTime
         audio.currentTime = 0;
 
+        // 只有在用户意图是播放时才自动播放
         if (isPlaying) {
           const playPromise = audio.play();
           if (playPromise !== undefined) {
@@ -180,7 +164,25 @@ export function GlobalMusicPlayer() {
     return () => {
       cancelled = true;
     };
-  }, [hasUserGesture, currentTrack, currentTrackId, currentTrackSource, currentTrackUrlId, skipToNext, quality, setCurrentAudioUrl, setIsLoading]);
+  }, [hasUserGesture, currentTrack, currentTrackId, currentTrackSource, currentTrackUrlId, quality, setCurrentAudioUrl, setIsLoading]);
+
+  // 恢复播放控制（isPlaying 变化时触发，但不重新加载曲目）
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio || !audio.src) return;
+
+    // 如果正在切换曲目，忽略
+    if (isSwitchingTrackRef.current) return;
+
+    if (isPlaying && audio.paused) {
+      audio.play().catch((e) => {
+        console.error("Resume play failed:", e);
+        setIsPlaying(false);
+      });
+    } else if (!isPlaying && !audio.paused) {
+      audio.pause();
+    }
+  }, [isPlaying, setIsPlaying]);
 
   // Event Handlers
   useEffect(() => {

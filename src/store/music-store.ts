@@ -330,7 +330,6 @@ export const useMusicStore = create<MusicState>()(
             originalQueue,
             currentIndex: 0,
             currentAudioTime: 0,
-            isPlaying: true,
             hasUserGesture: true,
           };
         }
@@ -340,7 +339,6 @@ export const useMusicStore = create<MusicState>()(
           originalQueue,
           currentIndex: actualIndex,
           currentAudioTime: 0,
-          isPlaying: true,
           hasUserGesture: true,
         };
       }),
@@ -408,7 +406,6 @@ export const useMusicStore = create<MusicState>()(
             originalQueue: [track],
             currentIndex: 0,
             currentAudioTime: 0,
-            isPlaying: true,
           };
         }
 
@@ -531,7 +528,6 @@ export const useMusicStore = create<MusicState>()(
           return {
             currentIndex: Math.min(Math.max(index, 0), state.queue.length - 1),
             currentAudioTime: 0,
-            isPlaying: true,
             hasUserGesture: true,
           };
         }),
@@ -542,7 +538,6 @@ export const useMusicStore = create<MusicState>()(
           return {
             currentIndex: nextIndex,
             currentAudioTime: 0,
-            isPlaying: true,
           };
         }),
     }),
