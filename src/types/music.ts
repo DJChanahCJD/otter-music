@@ -32,27 +32,23 @@ export const searchOptions: Record<string, string> = {
   all: "聚合搜索",
   joox: "Joox",
   netease: "网易云音乐",
-  bilibili: "B站",
   kuwo: "酷我音乐",
 };
 
 export const sourceLabels: Record<string, string> = {
   joox: "Joox",
   netease: "网易",
-  bilibili: "B站",
   kuwo: "酷我",
 };
 
 export const aggregatedSourceOptions: { value: MusicSource; label: string }[] = [
   { value: 'joox', label: 'Joox' },
   { value: 'netease', label: '网易云音乐' },
-  { value: 'bilibili', label: 'B站' },
   { value: 'kuwo', label: '酷我音乐' },
 ];
 
 export const sourceBadgeStyles: Record<string, string> = {
   netease: "bg-red-50 text-red-600 border-red-200 hover:bg-red-100",
-  bilibili: "bg-pink-50 text-pink-600 border-pink-200 hover:bg-pink-100",
   kuwo: "bg-amber-50 text-amber-600 border-amber-200 hover:bg-amber-100",
   joox: "bg-green-50 text-green-600 border-green-200 hover:bg-green-100",
   default: "bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100",
@@ -63,10 +59,11 @@ export const sourceBadgeStyles: Record<string, string> = {
 // 音乐轨道信息
 export type MusicSource =
   | 'netease' //  🌟
+  | 'joox'   //  🌟
   | 'tencent'
   | 'kugou'
-  | 'kuwo' //  🌟
-  | 'bilibili' //  🌟
+  | 'kuwo'
+  | 'bilibili'
   | 'migu'
   | 'qq'
   | 'fivesing'
@@ -80,7 +77,7 @@ export type MusicSource =
   | 'qingting'
   | 'ximalaya'
   // Common sources mentioned in doc: netease, tencent, tidal, spotify, ytmusic, qobuz, joox, deezer, migu, kugou, kuwo, ximalaya, apple
-  | 'tidal' | 'spotify' | 'ytmusic' | 'qobuz' | 'joox' | 'deezer' | 'apple' | 'all' | 'local';
+  | 'tidal' | 'spotify' | 'ytmusic' | 'qobuz' | 'deezer' | 'apple' | 'all' | 'local';
 
 export interface MusicTrack {
   id: string;
