@@ -307,7 +307,6 @@ export default function MusicPage() {
     <>
       <MusicLayout
         hidePlayer={isFullScreenPlayer}
-        hasCurrentTrack={!!currentTrack}
         player={<MusicNowPlayingBar onOpenFullScreen={() => setIsFullScreenPlayer(true)} />}
         tabBar={
           <MusicTabBar

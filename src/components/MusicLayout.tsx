@@ -7,11 +7,11 @@ interface MusicLayoutProps {
   tabBar: ReactNode;
   header?: ReactNode;
   hidePlayer?: boolean;
-  hasCurrentTrack?: boolean;
   className?: string;
 }
 
-export function MusicLayout({ children, player, tabBar, header, hidePlayer, hasCurrentTrack, className }: MusicLayoutProps) {
+
+export function MusicLayout({ children, player, tabBar, header, hidePlayer, className }: MusicLayoutProps) {
   return (
     <div className={cn("relative flex flex-col h-dvh overflow-hidden bg-background pt-safe pt-11", className)}>
       {/* Header */}

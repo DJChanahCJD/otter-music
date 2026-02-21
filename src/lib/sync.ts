@@ -2,6 +2,8 @@ import { useSyncStore } from "@/store/sync-store";
 import { useMusicStore } from "@/store/music-store";
 import { syncCheck, syncPull, syncPush } from "@/lib/api/sync";
 import toast from "react-hot-toast";
+import { Network } from "@capacitor/network";
+import { Capacitor } from "@capacitor/core";
 
 type SyncData = {
   favorites: ReturnType<typeof useMusicStore.getState>["favorites"];
@@ -27,12 +29,19 @@ type SyncResult = { success: boolean; error?: string; skipped?: boolean };
 
 const SYNC_DIFF_MS = 60 * 60 * 1000;
 
-/**
- * 执行同步检查并同步数据
- * - 服务器更新时间 > 本地：拉取并覆盖本地
- * - 服务器更新时间 <= 本地：推送本地数据到服务器
- * - 时间相同且未超过1小时：跳过同步
- */
+async function isNetworkAvailable(): Promise<boolean> {
+  try {
+    if (Capacitor.isNativePlatform()) {
+      const status = await Network.getStatus();
+      return status.connected;
+    }
+    return navigator.onLine;
+  } catch (error) {
+    console.error("Failed to check network status:", error);
+    return navigator.onLine;
+  }
+}
+
 export async function checkAndSync(): Promise<SyncResult> {
   const { syncKey, lastSyncTime: localLastSyncTime } = useSyncStore.getState();
 
@@ -41,10 +50,14 @@ export async function checkAndSync(): Promise<SyncResult> {
   }
 
   try {
+    const online = await isNetworkAvailable();
+    if (!online) {
+      return { success: false, skipped: true };
+    }
+
     const checkResult = await syncCheck(syncKey);
     const serverLastSyncTime = checkResult.lastSyncTime;
 
-    // 如果服务器和本地时间相同，且距离现在不到60分钟，跳过同步
     if (serverLastSyncTime === localLastSyncTime && localLastSyncTime > 0) {
       const timeSinceSync = Date.now() - serverLastSyncTime;
       if (timeSinceSync < SYNC_DIFF_MS) {
@@ -76,6 +89,7 @@ export async function checkAndSync(): Promise<SyncResult> {
     }
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : "数据同步失败";
+    console.error("Sync error:", errorMessage);
     return { success: false, error: errorMessage };
   }
 }

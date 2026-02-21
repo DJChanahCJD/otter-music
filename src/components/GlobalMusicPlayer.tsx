@@ -1,6 +1,7 @@
 "use client";
 
 import { useMusicCover } from "@/hooks/useMusicCover";
+import { useNetwork } from "@/hooks/useNetwork";
 import { retry, throttle } from "@/lib/utils";
 import { musicApi } from "@/lib/music-api";
 import { useMusicStore } from "@/store/music-store";
@@ -13,6 +14,20 @@ import { MediaSession } from "@jofr/capacitor-media-session";
 import { Capacitor } from "@capacitor/core";
 import { buildDownloadKey } from "@/lib/utils/download";
 import type { MusicSource } from "@/types/music";
+import { Network } from "@capacitor/network";
+
+async function isNetworkAvailable(): Promise<boolean> {
+  try {
+    if (Capacitor.isNativePlatform()) {
+      const status = await Network.getStatus();
+      return status.connected;
+    }
+    return navigator.onLine;
+  } catch (error) {
+    console.error("Failed to check network status:", error);
+    return navigator.onLine;
+  }
+}
 
 async function resolveAudioUrl({
   trackId,
@@ -91,6 +106,7 @@ export function GlobalMusicPlayer() {
   const hasUserGesture = useMusicStore(s => s.hasUserGesture)
   const queue = useMusicStore(s => s.queue)
   const currentIndex = useMusicStore(s => s.currentIndex)
+  const { isOnline } = useNetwork();
 
   const audioRef = useRef<HTMLAudioElement>(null);
   const currentTrackId = currentTrack?.id;
@@ -191,17 +207,22 @@ export function GlobalMusicPlayer() {
 
         if (errorMessage === "LOCAL_FILE_NOT_ACCESSIBLE") {
           toast.error(`无法访问本地文件: ${currentTrack.name}`);
+        } else if (!isOnline && currentTrackSource !== 'local') {
+          toast.error("离线模式，无法播放网络音乐");
+          audio.src = "";
+          setCurrentAudioUrl(null);
+          setIsPlaying(false);
         } else {
           toast.error(`无法播放: ${currentTrack.name}`);
-        }
 
-        if (currentTrackSource) {
-          useSourceQualityStore.getState().recordFail(currentTrackSource);
-        }
+          if (currentTrackSource) {
+            useSourceQualityStore.getState().recordFail(currentTrackSource);
+          }
 
-        audio.src = "";
-        setCurrentAudioUrl(null);
-        skipToNext();
+          audio.src = "";
+          setCurrentAudioUrl(null);
+          skipToNext();
+        }
       } finally {
         if (requestId === requestIdRef.current) {
           isSwitchingTrackRef.current = false;
@@ -278,6 +299,8 @@ export function GlobalMusicPlayer() {
         useSourceQualityStore.getState().recordFail(currentTrack.source);
       }
 
+      const online = await isNetworkAvailable();
+
       if (Capacitor.isNativePlatform() && (currentTrackSource as string) !== 'local') {
         const downloadKey = buildDownloadKey(currentTrackSource, currentTrackId || '');
         const downloadUri = useDownloadStore.getState().getUri(downloadKey);
@@ -290,12 +313,29 @@ export function GlobalMusicPlayer() {
             await retryWithRemote(audio, currentTrackId || '', currentTrackSource, br);
           } catch (retryError) {
             console.error("Retry load failed:", retryError);
-            toast.error(`无法播放: ${currentTrack.name}`);
-            audio.src = "";
-            setCurrentAudioUrl(null);
-            skipToNext();
+            if (!online) {
+              toast.error("离线模式，无法播放网络音乐");
+              audio.src = "";
+              setCurrentAudioUrl(null);
+              setIsPlaying(false);
+            } else {
+              toast.error(`无法播放: ${currentTrack.name}`);
+              audio.src = "";
+              setCurrentAudioUrl(null);
+              skipToNext();
+            }
           }
+        } else if (!online) {
+          toast.error("离线模式，无法播放网络音乐");
+          audio.src = "";
+          setCurrentAudioUrl(null);
+          setIsPlaying(false);
         }
+      } else if (!online && currentTrackSource !== 'local') {
+        toast.error("离线模式，无法播放网络音乐");
+        audio.src = "";
+        setCurrentAudioUrl(null);
+        setIsPlaying(false);
       }
     };
 
