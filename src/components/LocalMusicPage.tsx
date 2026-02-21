@@ -47,7 +47,7 @@ export function LocalMusicPage({
 
       if (result.success) {
         setFiles(result.files);
-        setCachedFiles(result.files, type);
+        setCachedFiles(result.files);
 
         if (!silent) {
           if (result.files.length === 0) {
@@ -92,7 +92,7 @@ export function LocalMusicPage({
 
   const handleFullScan = () => {
     if (!isLoading) {
-      toast("全盘扫描中...", { icon: "🔍" });
+      toast.loading("全盘扫描中...");
       scanLocalMusic("full", false);
     }
   };
@@ -144,21 +144,6 @@ export function LocalMusicPage({
       }
     }
   };
-
-  const refreshAction = (
-    <button
-      onClick={handleRefresh}
-      disabled={isLoading}
-      className={cn(
-        "p-2 rounded-lg transition-all duration-200",
-        isLoading
-          ? "text-muted-foreground/30 cursor-not-allowed"
-          : "text-muted-foreground hover:text-foreground hover:bg-muted/50 active:scale-95"
-      )}
-    >
-      <RefreshCw className={cn("h-5 w-5", isLoading && "animate-spin")} />
-    </button>
-  );
 
   const fullScanAction = (
     <button
