@@ -1,7 +1,7 @@
-export enum storeKey {
-    MusicStore = "oh_music_store",
-    SyncStore = "oh_sync_store",
-    SourceQualityStore = "oh_source_quality_store",
-    LocalMusicStore = "oh_local_music_store",
-    HistoryStore = "oh_history_store",
-}
+export * from './store-keys';
+export * from './download-store';
+export * from './music-store';
+export * from './history-store';
+export * from './local-music-store';
+export * from './source-quality-store';
+export * from './sync-store';

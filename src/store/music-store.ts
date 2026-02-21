@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { v4 as uuidv4 } from 'uuid';
-import { storeKey } from '.';
+import { storeKey } from './store-keys';
 import type { MusicTrack, MusicSource, MergedMusicTrack, Playlist } from '@/types/music';
 import toast from 'react-hot-toast';
 

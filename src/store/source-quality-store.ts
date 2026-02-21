@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { storeKey } from '.';
+import { storeKey } from './store-keys';
 import type { MusicSource } from '@/types/music';
 
 interface SourceStats {

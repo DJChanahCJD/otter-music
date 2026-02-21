@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { storeKey } from '.';
+import { storeKey } from './store-keys';
 import type { MusicTrack } from '@/types/music';
 
 const MAX_HISTORY = 100;

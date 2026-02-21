@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { storeKey } from '.';
+import { storeKey } from './store-keys';
 
 interface SyncState {
   syncKey: string | null;
