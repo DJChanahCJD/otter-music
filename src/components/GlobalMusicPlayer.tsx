@@ -1,54 +1,105 @@
 "use client";
 
 import { useMusicCover } from "@/hooks/useMusicCover";
-import { retry } from "@/lib/utils";
+import { retry, throttle } from "@/lib/utils";
 import { musicApi } from "@/lib/music-api";
-import { getAudioCache, saveAudioCache } from "@/lib/utils/audio-cache";
 import { useMusicStore } from "@/store/music-store";
 import { useSourceQualityStore } from "@/store/source-quality-store";
 import { useHistoryStore } from "@/store/history-store";
+import { useDownloadStore } from "@/store/download-store";
 import { useRef, useEffect } from "react";
 import toast from "react-hot-toast";
 import { MediaSession } from "@jofr/capacitor-media-session";
 import { Capacitor } from "@capacitor/core";
+import { buildDownloadKey } from "@/lib/utils/download";
+import type { MusicSource } from "@/types/music";
+
+async function resolveAudioUrl({
+  trackId,
+  source,
+  quality,
+}: {
+  trackId: string
+  source: MusicSource
+  quality: number
+}): Promise<string> {
+  const isNative = Capacitor.isNativePlatform()
+  const isLocal = source === 'local'
+
+  if (isLocal) {
+    return retry(async () => {
+      const url = await musicApi.getUrl(trackId, source, quality)
+      if (!url) throw new Error('LOCAL_FILE_NOT_ACCESSIBLE')
+      return url
+    }, 2, 800)
+  }
+
+  if (isNative) {
+    const key = buildDownloadKey(source, trackId)
+    const uri = useDownloadStore.getState().getUri(key)
+    if (uri) {
+      return Capacitor.convertFileSrc(uri)
+    }
+  }
+
+  return retry(async () => {
+    const url = await musicApi.getUrl(trackId, source, quality)
+    if (!url) throw new Error('EMPTY_URL')
+    return url
+  }, 2, 800)
+}
+
+async function retryWithRemote(
+  audio: HTMLAudioElement,
+  trackId: string,
+  source: MusicSource,
+  quality: number
+): Promise<void> {
+  const remoteUrl = await retry(
+    async () => {
+      const result = await musicApi.getUrl(trackId, source, quality)
+      if (!result) throw new Error("EMPTY_URL")
+      return result
+    },
+    2,
+    800,
+  )
+
+  if (audio.src !== remoteUrl) {
+    audio.src = remoteUrl
+    audio.load()
+    await audio.play()
+  }
+}
+
 export function GlobalMusicPlayer() {
-  const {
-    queue,
-    currentIndex,
-    volume,
-    isRepeat,
-    isPlaying,
-    setIsPlaying,
-    setIsLoading,
-    skipToNext,
-    setAudioCurrentTime,
-    seekTargetTime,
-    seekTimestamp,
-    clearSeekTargetTime,
-    quality,
-    setDuration,
-    setCurrentAudioUrl,
-    hasUserGesture,
-    isFavorite,
-  } = useMusicStore();
+  const currentTrack = useMusicStore(s => s.queue[s.currentIndex])
+  const isPlaying = useMusicStore(s => s.isPlaying)
+  const quality = useMusicStore(s => s.quality)
+  const volume = useMusicStore(s => s.volume)
+  const isRepeat = useMusicStore(s => s.isRepeat)
+  const setIsPlaying = useMusicStore(s => s.setIsPlaying)
+  const setIsLoading = useMusicStore(s => s.setIsLoading)
+  const skipToNext = useMusicStore(s => s.skipToNext)
+  const setAudioCurrentTime = useMusicStore(s => s.setAudioCurrentTime)
+  const seekTargetTime = useMusicStore(s => s.seekTargetTime)
+  const seekTimestamp = useMusicStore(s => s.seekTimestamp)
+  const clearSeekTargetTime = useMusicStore(s => s.clearSeekTargetTime)
+  const setDuration = useMusicStore(s => s.setDuration)
+  const setCurrentAudioUrl = useMusicStore(s => s.setCurrentAudioUrl)
+  const hasUserGesture = useMusicStore(s => s.hasUserGesture)
+  const queue = useMusicStore(s => s.queue)
+  const currentIndex = useMusicStore(s => s.currentIndex)
 
   const audioRef = useRef<HTMLAudioElement>(null);
-  const currentTrack = queue[currentIndex];
   const currentTrackId = currentTrack?.id;
   const currentTrackSource = currentTrack?.source;
   const currentTrackUrlId = currentTrack?.url_id;
   const coverUrl = useMusicCover(currentTrack);
 
-  // Ref to track current request to avoid race conditions
   const requestIdRef = useRef(0);
-  // Ref to throttle time updates
-  const lastSaveTimeRef = useRef(0);
-  // Ref to track if we are switching tracks (to avoid triggering pause event logic)
   const isSwitchingTrackRef = useRef(false);
-  // Ref to track if we have already recorded success/history for current track
   const hasRecordedRef = useRef(false);
-  // Ref to track current Blob URL (Web platform only)
-  const currentBlobUrlRef = useRef<string | null>(null);
 
   // Sync volume
   useEffect(() => {
@@ -81,169 +132,79 @@ export function GlobalMusicPlayer() {
       return;
 
     const requestId = ++requestIdRef.current;
-    let cancelled = false;
+    const currentRequestId = requestId;
 
     const load = async () => {
       const audio = audioRef.current!;
       setIsLoading(true);
 
-      // Mark as switching so pause events are ignored
       isSwitchingTrackRef.current = true;
-      // 重置记录状态，以便新曲目可以正确记录
       hasRecordedRef.current = false;
 
       try {
-        // Pause current
         audio.pause();
 
-        // 本地音乐使用 url_id（本地文件路径），在线音乐使用 id
-        const urlId = currentTrackSource === 'local' ? currentTrackUrlId : currentTrackId;
+        const urlId = (currentTrackSource as string) === 'local' ? currentTrackUrlId : currentTrackId;
         const br = parseInt(quality, 10);
 
-        // 释放旧的 Blob URL（Web 平台）
-        if (!Capacitor.isNativePlatform() && currentBlobUrlRef.current) {
-          URL.revokeObjectURL(currentBlobUrlRef.current);
-          currentBlobUrlRef.current = null;
-        }
+        const toastId = toast.loading("加载中...", { id: `download-${requestId}` });
 
-        let audioUrl: string;
-
-        // 检查是否为喜欢的歌曲（仅喜欢的歌曲才缓存）
-        const shouldCache = currentTrackSource !== 'local' && isFavorite(currentTrackId);
-
-        if (!shouldCache) {
-          // 非喜欢歌曲：直接使用远程 URL（浏览器自动缓存）
-          const toastId = toast.loading("加载中...", { id: `cache-${requestId}` });
-
-          try {
-            const remoteUrl = await retry(
-              async () => {
-                const result = await musicApi.getUrl(urlId || '', currentTrackSource, br);
-                if (!result) throw new Error("EMPTY_URL");
-                return result;
-              },
-              2,
-              800,
-            );
-
-            if (cancelled || requestId !== requestIdRef.current) {
-              toast.dismiss(toastId);
-              return;
-            }
-
-            audioUrl = remoteUrl;
-            toast.success("加载完成", { id: toastId });
-          } catch (downloadError) {
-            toast.dismiss(toastId);
-            throw downloadError;
-          }
-        } else {
-          // 喜欢歌曲：使用缓存或下载并缓存
-          const cacheResult = await getAudioCache(currentTrackSource, urlId || '', br);
-
-          if (cacheResult.exists) {
-            // 使用缓存
-            if (Capacitor.isNativePlatform()) {
-              audioUrl = cacheResult.path!;
-            } else {
-              audioUrl = cacheResult.blobUrl!;
-              currentBlobUrlRef.current = audioUrl;
-            }
-          } else {
-            // 缓存不存在，下载音频
-            const toastId = toast.loading("正在缓存...", { id: `cache-${requestId}` });
-
-            try {
-              // 获取远程 URL
-              const remoteUrl = await retry(
-                async () => {
-                  const result = await musicApi.getUrl(urlId || '', currentTrackSource, br);
-                  if (!result) throw new Error("EMPTY_URL");
-                  return result;
-                },
-                2,
-                800,
-              );
-
-              if (cancelled || requestId !== requestIdRef.current) {
-                toast.dismiss(toastId);
-                return;
-              }
-
-              // 下载音频数据
-              const response = await fetch(remoteUrl);
-              if (!response.ok) {
-                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-              }
-
-              const arrayBuffer = await response.arrayBuffer();
-              const size = arrayBuffer.byteLength;
-
-              // 保存到缓存
-              await saveAudioCache(currentTrackSource, urlId || '', br, arrayBuffer, size);
-
-              // 创建 Blob URL（Web 平台）或使用文件路径（原生平台）
-              if (Capacitor.isNativePlatform()) {
-                const savedCache = await getAudioCache(currentTrackSource, urlId || '', br);
-                audioUrl = savedCache.path!;
-              } else {
-                const blob = new Blob([arrayBuffer], { type: 'audio/mpeg' });
-                audioUrl = URL.createObjectURL(blob);
-                currentBlobUrlRef.current = audioUrl;
-              }
-
-              toast.success("缓存完成", { id: toastId });
-            } catch (downloadError) {
-              toast.dismiss(toastId);
-              throw downloadError;
-            }
-          }
-        }
-
-        if (cancelled || requestId !== requestIdRef.current) return;
-
-        // 保存当前音频 URL 到 store
-        setCurrentAudioUrl(audioUrl);
-
-        // Set Source
-        if (audio.src !== audioUrl) {
-          audio.src = audioUrl;
-          audio.load();
-        }
-
-        // 新歌曲从 0 开始播放，不再使用旧的 currentAudioTime
-        audio.currentTime = 0;
-
-        const playPromise = audio.play();
-        if (playPromise !== undefined) {
-          playPromise.catch((error) => {
-            console.error("Auto-play failed:", error);
-            setIsPlaying(false);
+        try {
+          const audioUrl = await resolveAudioUrl({
+            trackId: urlId || '',
+            source: currentTrackSource,
+            quality: br,
           });
+
+          if (requestId !== requestIdRef.current) {
+            toast.dismiss(toastId);
+            return;
+          }
+
+          setCurrentAudioUrl(audioUrl);
+
+          if (audio.src !== audioUrl) {
+            audio.src = audioUrl;
+            audio.load();
+          }
+
+          audio.currentTime = 0;
+
+          const playPromise = audio.play();
+          if (playPromise !== undefined) {
+            playPromise.catch((error) => {
+              console.error("Auto-play failed:", error);
+              setIsPlaying(false);
+            });
+          }
+
+          toast.success("加载完成", { id: toastId });
+        } catch (err: unknown) {
+          toast.dismiss(toastId);
+          throw err;
         }
       } catch (err: unknown) {
-        if (cancelled || requestId !== requestIdRef.current) return;
+        if (requestId !== requestIdRef.current) return;
         const errorMessage = err instanceof Error ? err.message : String(err);
         console.error("Audio load failed:", errorMessage);
-        toast.error(`无法播放: ${currentTrack.name}`);
 
-        // 记录播放失败
+        if (errorMessage === "LOCAL_FILE_NOT_ACCESSIBLE") {
+          toast.error(`无法访问本地文件: ${currentTrack.name}`);
+        } else {
+          toast.error(`无法播放: ${currentTrack.name}`);
+        }
+
         if (currentTrackSource) {
           useSourceQualityStore.getState().recordFail(currentTrackSource);
         }
 
-        // Clear audio source to prevent playing previous track
         audio.src = "";
-        audio.load();
         setCurrentAudioUrl(null);
-
-        // Auto skip to next
         skipToNext();
       } finally {
-        // Only reset if we are still the active request
         if (requestId === requestIdRef.current) {
           isSwitchingTrackRef.current = false;
-          if (!cancelled) setIsLoading(false);
+          setIsLoading(false);
         }
       }
     };
@@ -251,9 +212,11 @@ export function GlobalMusicPlayer() {
     load();
 
     return () => {
-      cancelled = true;
+      if (currentRequestId === requestIdRef.current) {
+        requestIdRef.current++;
+      }
     };
-  }, [hasUserGesture, currentTrack, currentTrackId, currentTrackSource, currentTrackUrlId, quality, setCurrentAudioUrl, setIsLoading, isFavorite]);
+  }, [currentTrack?.id, currentTrack?.source, quality, hasUserGesture, currentTrack, currentTrackId, currentTrackSource, currentTrackUrlId, setCurrentAudioUrl, setIsLoading, setIsPlaying, skipToNext]);
 
   // 恢复播放控制（isPlaying 变化时触发，但不重新加载曲目）
   useEffect(() => {
@@ -278,17 +241,16 @@ export function GlobalMusicPlayer() {
     const audio = audioRef.current;
     if (!audio) return;
 
-    const onTimeUpdate = () => {
-      // Prevent store pollution during track switching
+    const onTimeUpdate = throttle(() => {
       if (isSwitchingTrackRef.current) return;
+      setAudioCurrentTime(audio.currentTime);
 
-      const now = Date.now();
-      // Throttle store updates to every 1s
-      if (now - lastSaveTimeRef.current > 1000) {
-        setAudioCurrentTime(audio.currentTime);
-        lastSaveTimeRef.current = now;
-      }
-    };
+      MediaSession.setPositionState({
+        duration: audio.duration || 0,
+        playbackRate: audio.playbackRate,
+        position: audio.currentTime,
+      }).catch(e => console.error('MediaSession position error:', e));
+    }, 1000);
 
     const onDurationChange = () => {
       setDuration(audio.duration || 0);
@@ -307,12 +269,32 @@ export function GlobalMusicPlayer() {
       }
     };
 
-    const onError = (e: Event) => {
+    const onError = async (e: Event) => {
       console.error("Audio Error Event:", e);
       setIsLoading(false);
-      // 记录播放失败
+
       if (currentTrack?.source) {
         useSourceQualityStore.getState().recordFail(currentTrack.source);
+      }
+
+      if (Capacitor.isNativePlatform() && (currentTrackSource as string) !== 'local') {
+        const downloadKey = buildDownloadKey(currentTrackSource, currentTrackId || '');
+        const downloadUri = useDownloadStore.getState().getUri(downloadKey);
+
+        if (downloadUri && audio.src.startsWith('file://')) {
+          useDownloadStore.getState().removeRecord(downloadKey);
+
+          try {
+            const br = parseInt(quality, 10);
+            await retryWithRemote(audio, currentTrackId || '', currentTrackSource, br);
+          } catch (retryError) {
+            console.error("Retry load failed:", retryError);
+            toast.error(`无法播放: ${currentTrack.name}`);
+            audio.src = "";
+            setCurrentAudioUrl(null);
+            skipToNext();
+          }
+        }
       }
     };
 
@@ -363,28 +345,20 @@ export function GlobalMusicPlayer() {
       audio.removeEventListener("pause", onPause);
       audio.removeEventListener("play", onPlay);
     };
-  }, [
-    isRepeat,
-    currentTrack,
-    isPlaying,
-    setIsPlaying,
-    setAudioCurrentTime,
-    setDuration,
-    queue.length,
-    currentIndex,
-    setIsLoading,
-  ]);
+  }, [isRepeat, currentTrack?.source, currentTrack?.name, currentTrack, isPlaying, setIsPlaying, setAudioCurrentTime, setDuration, queue.length, currentIndex, setIsLoading, currentTrackSource, currentTrackUrlId, currentTrackId, quality, setCurrentAudioUrl, skipToNext]);
 
   // Media Session Integration
   useEffect(() => {
     const updateMetadata = async () => {
       if (!currentTrack) return;
       try {
+        const safeArtwork = coverUrl ? [{ src: coverUrl }] : [];
+
         await MediaSession.setMetadata({
           title: currentTrack.name || "Unknown Track",
           artist: currentTrack.artist?.join("/") || "Unknown Artist",
           album: currentTrack.album || "",
-          artwork: coverUrl ? [{ src: coverUrl }] : [],
+          artwork: safeArtwork,
         });
       } catch (e) {
         console.error("MediaSession metadata error:", e);
@@ -414,15 +388,15 @@ export function GlobalMusicPlayer() {
       }],
       ["pause", () => setIsPlaying(false)],
       ["previoustrack", () => {
-        const { queue, currentIndex } = useMusicStore.getState();
-        const prevIndex = currentIndex - 1;
-        useMusicStore.getState().setCurrentIndexAndPlay(prevIndex < 0 ? queue.length - 1 : prevIndex);
+        const musicStore = useMusicStore.getState();
+        const prevIndex = musicStore.currentIndex - 1;
+        musicStore.setCurrentIndexAndPlay(prevIndex < 0 ? musicStore.queue.length - 1 : prevIndex);
       }],
       ["nexttrack", () => {
-        const { queue, currentIndex } = useMusicStore.getState();
-        if (queue.length > 0) {
-          const nextIndex = (currentIndex + 1) % queue.length;
-          useMusicStore.getState().setCurrentIndexAndPlay(nextIndex);
+        const musicStore = useMusicStore.getState();
+        if (musicStore.queue.length > 0) {
+          const nextIndex = (musicStore.currentIndex + 1) % musicStore.queue.length;
+          musicStore.setCurrentIndexAndPlay(nextIndex);
         }
       }],
       ["seekto", (details) => {
@@ -434,30 +408,12 @@ export function GlobalMusicPlayer() {
 
     for (const [action, handler] of actionHandlers) {
       try {
-        MediaSession.setActionHandler(action as any, handler);
+        MediaSession.setActionHandler({ action: action as 'play' | 'pause' | 'previoustrack' | 'nexttrack' | 'seekto' }, handler);
       } catch (e) {
         console.error(`Failed to set action handler for ${action}`, e);
       }
     }
   }, [setIsPlaying]);
-
-  // Sync Position State
-  useEffect(() => {
-    const updatePosition = async () => {
-      if (!audioRef.current) return;
-      try {
-        await MediaSession.setPositionState({
-          duration: audioRef.current.duration || 0,
-          playbackRate: audioRef.current.playbackRate,
-          position: audioRef.current.currentTime,
-        });
-      } catch (e) {
-        console.error(`Failed to set position state`, e);
-      }
-    };
-
-    updatePosition();
-  }, [isPlaying, seekTargetTime, seekTimestamp]);
 
   return (
     <audio

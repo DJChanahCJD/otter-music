@@ -75,6 +75,25 @@ export async function processBatchIO<T>(
 const nextFrame = () => new Promise(resolve => requestAnimationFrame(resolve));
 
 /**
+ * 节流函数
+ * @param fn 要节流的函数
+ * @param delay 节流间隔(ms)
+ */
+export function throttle<T extends (...args: unknown[]) => unknown>(
+  fn: T,
+  delay: number
+): (...args: Parameters<T>) => void {
+  let lastCall = 0;
+  return function (this: unknown, ...args: Parameters<T>) {
+    const now = Date.now();
+    if (now - lastCall >= delay) {
+      lastCall = now;
+      fn.apply(this, args);
+    }
+  };
+}
+
+/**
  * CPU 密集型分帧处理器
  * @param items 数据项
  * @param worker 执行器
