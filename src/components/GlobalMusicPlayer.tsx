@@ -78,6 +78,7 @@ export function GlobalMusicPlayer() {
   const quality = useMusicStore(s => s.quality)
   const volume = useMusicStore(s => s.volume)
   const isRepeat = useMusicStore(s => s.isRepeat)
+  const currentAudioTime = useMusicStore(s => s.currentAudioTime)
   const setIsPlaying = useMusicStore(s => s.setIsPlaying)
   const setIsLoading = useMusicStore(s => s.setIsLoading)
   const skipToNext = useMusicStore(s => s.skipToNext)
@@ -168,7 +169,7 @@ export function GlobalMusicPlayer() {
             audio.load();
           }
 
-          audio.currentTime = 0;
+          audio.currentTime = currentAudioTime;
 
           const playPromise = audio.play();
           if (playPromise !== undefined) {
@@ -216,7 +217,7 @@ export function GlobalMusicPlayer() {
         requestIdRef.current++;
       }
     };
-  }, [currentTrack?.id, currentTrack?.source, quality, hasUserGesture, currentTrack, currentTrackId, currentTrackSource, currentTrackUrlId, setCurrentAudioUrl, setIsLoading, setIsPlaying, skipToNext]);
+  }, [currentTrack.id, currentTrack.source, quality, hasUserGesture, currentTrack, currentTrackId, currentTrackSource, currentTrackUrlId, setCurrentAudioUrl, setIsLoading, setIsPlaying, skipToNext]);
 
   // 恢复播放控制（isPlaying 变化时触发，但不重新加载曲目）
   useEffect(() => {
