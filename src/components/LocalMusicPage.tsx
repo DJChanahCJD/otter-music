@@ -14,7 +14,7 @@ import { useLocalMusicStore } from "@/store/local-music-store";
 
 interface LocalMusicPageProps {
   onBack: () => void;
-  onPlay: (track: MusicTrack, list: MusicTrack[]) => void;
+  onPlay: (track: MusicTrack, list: MusicTrack[], contextId?: string) => void;
   currentTrackId?: string;
   isPlaying: boolean;
 }
@@ -135,12 +135,12 @@ export function LocalMusicPage({
 
   const handlePlay = (track: MusicTrack | null, index?: number) => {
     if (track) {
-      onPlay(track, tracks);
+      onPlay(track, tracks, "local");
     } else if (index !== undefined) {
-      onPlay(tracks[index], tracks);
+      onPlay(tracks[index], tracks, "local");
     } else {
       if (tracks.length > 0) {
-        onPlay(tracks[0], tracks);
+        onPlay(tracks[0], tracks, "local");
       }
     }
   };

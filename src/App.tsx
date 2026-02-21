@@ -76,7 +76,7 @@ export default function MusicPage() {
   const coverUrl = useMusicCover(currentTrack);
   const { history, removeFromHistory, clearHistory } = useHistoryStore();
 
-  const handlePlayContext = (track: MusicTrack, list: MusicTrack[]) => {
+  const handlePlayContext = (track: MusicTrack, list: MusicTrack[], contextId?: string) => {
     if (currentTrack?.id === track.id) {
       togglePlay();
       return;
@@ -85,14 +85,7 @@ export default function MusicPage() {
     const index = list.findIndex((t) => t.id === track.id);
     if (index === -1) return;
 
-    const isSameContext =
-      queue.length === list.length && queue[0]?.id === list[0]?.id;
-
-    if (isSameContext) {
-      setCurrentIndexAndPlay(index);
-    } else {
-      playContext(list, index);
-    }
+    playContext(list, index, contextId);
   };
 
   const handlePlayInPlaylist = (track: MusicTrack | null, index?: number) => {
@@ -106,7 +99,11 @@ export default function MusicPage() {
         ? favorites
         : playlists.find((p) => p.id === activePlaylistId)?.tracks || [];
 
-    playContext(list, index);
+    const contextId = currentTab === "favorites"
+      ? "favorites"
+      : activePlaylistId ? `playlist-${activePlaylistId}` : undefined;
+
+    playContext(list, index, contextId);
   };
 
   const handlePlayInQueue = (track: MusicTrack | null, index?: number) => {
@@ -114,7 +111,7 @@ export default function MusicPage() {
       togglePlay();
       return;
     }
-    playContext(queue, index);
+    playContext(queue, index, "queue");
   };
 
   const handlePlayInHistory = (track: MusicTrack | null, index?: number) => {
@@ -122,7 +119,7 @@ export default function MusicPage() {
       togglePlay();
       return;
     }
-    playContext(history, index);
+    playContext(history, index, "history");
   };
 
   const handleToggleFavorite = () => {
@@ -171,7 +168,7 @@ export default function MusicPage() {
       return;
     }
     const nextIndex = Math.min(currentIndex, newQueue.length - 1);
-    playContext(newQueue, nextIndex);
+    playContext(newQueue, nextIndex, "queue");
   };
 
   const renderContent = () => {

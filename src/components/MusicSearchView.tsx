@@ -13,7 +13,7 @@ import { Button } from "./ui/button";
 import { SelectTrigger, SelectValue, SelectContent, SelectItem } from "./ui/select";
 
 interface MusicSearchViewProps {
-  onPlay: (track: MusicTrack, list: MusicTrack[]) => void;
+  onPlay: (track: MusicTrack, list: MusicTrack[], contextId?: string) => void;
   currentTrackId?: string;
   isPlaying?: boolean;
 }
@@ -145,7 +145,7 @@ export function MusicSearchView({ onPlay, currentTrackId, isPlaying }: MusicSear
       <div className="flex-1 min-h-0">
         <MusicTrackList
           tracks={searchResults}
-          onPlay={(track) => onPlay(track, searchResults)}
+          onPlay={(track) => onPlay(track, searchResults, "search")}
           currentTrackId={currentTrackId}
           isPlaying={isPlaying}
           loading={searchLoading}

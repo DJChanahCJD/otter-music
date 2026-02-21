@@ -4,7 +4,6 @@ import { v4 as uuidv4 } from 'uuid';
 import { storeKey } from '.';
 import type { MusicTrack, MusicSource, MergedMusicTrack, Playlist } from '@/types/music';
 import toast from 'react-hot-toast';
-import { getCacheStats, clearAllCache } from '@/lib/utils/audio-cache';
 
 /**
  * 清理 MusicTrack，移除 variants 字段
@@ -98,22 +97,18 @@ interface MusicState {
   setCurrentAudioUrl: (url: string | null) => void;
   setUserGesture: () => void;
 
-  // --- Cache State (Not Persisted) ---
-  cacheSize: number; // 缓存总大小（字节）
-  cacheCount: number; // 缓存文件数量
-  updateCacheStats: () => Promise<void>; // 更新缓存统计信息
-  clearCache: () => Promise<void>; // 清空所有缓存
-
   // --- Playback (Queue) ---
   queue: MusicTrack[];
   originalQueue: MusicTrack[];
   currentIndex: number;
+  contextId: string | null;
 
   /** 
    * Play a context (list of tracks). 
    * Replaces the current queue with this list and starts playing from startIndex.
+   * contextId is used to identify the same context for shuffle mode optimization.
    */
-  playContext: (tracks: MusicTrack[], startIndex?: number) => void;
+  playContext: (tracks: MusicTrack[], startIndex?: number, contextId?: string) => void;
 
   /** 添加到下一首播放 */
   addToNextPlay: (track: MusicTrack) => void;
@@ -300,24 +295,12 @@ export const useMusicStore = create<MusicState>()(
       setCurrentAudioUrl: (url) => set({ currentAudioUrl: url }),
       setUserGesture: () => set({ hasUserGesture: true }),
 
-      // --- Cache State Defaults & Methods ---
-      cacheSize: 0,
-      cacheCount: 0,
-      updateCacheStats: async () => {
-        const stats = await getCacheStats();
-        set({ cacheSize: stats.totalSize, cacheCount: stats.totalCount });
-      },
-      clearCache: async () => {
-        await clearAllCache();
-        set({ cacheSize: 0, cacheCount: 0 });
-        toast("缓存已清空", { icon: "✅" });
-      },
-
       queue: [],
       originalQueue: [],
       currentIndex: 0,
+      contextId: null,
 
-      playContext: (tracks, startIndex) => set((state) => {
+      playContext: (tracks, startIndex, contextId) => set((state) => {
         if (tracks.length === 0) {
           return {
             queue: [],
@@ -327,6 +310,7 @@ export const useMusicStore = create<MusicState>()(
             isPlaying: false,
             isLoading: false,
             duration: 0,
+            contextId: null,
           };
         }
 
@@ -336,6 +320,21 @@ export const useMusicStore = create<MusicState>()(
         const originalQueue = tracks;
 
         if (state.isShuffle && tracks.length > 0) {
+          // 使用 contextId 判断是否是相同上下文（O(1) 比较）
+          if (contextId && state.contextId === contextId && startIndex !== undefined) {
+            const targetTrack = tracks[startIndex];
+            const targetIndex = state.queue.findIndex((t) => t.id === targetTrack.id);
+
+            if (targetIndex !== -1) {
+              return {
+                currentIndex: targetIndex,
+                currentAudioTime: 0,
+                hasUserGesture: true,
+              };
+            }
+          }
+
+          // 不同上下文或未指定索引：重新打乱
           if (startIndex === undefined) {
             actualIndex = Math.floor(Math.random() * tracks.length);
           }
@@ -351,6 +350,7 @@ export const useMusicStore = create<MusicState>()(
             currentIndex: 0,
             currentAudioTime: 0,
             hasUserGesture: true,
+            contextId: contextId ?? null,
           };
         }
 
@@ -360,6 +360,7 @@ export const useMusicStore = create<MusicState>()(
           currentIndex: actualIndex,
           currentAudioTime: 0,
           hasUserGesture: true,
+          contextId: contextId ?? null,
         };
       }),
 
@@ -559,6 +560,7 @@ export const useMusicStore = create<MusicState>()(
           isPlaying: false,
           isLoading: false,
           duration: 0,
+          contextId: null,
         }),
       reshuffle: () => set((state) => {
         if (!state.isShuffle || state.queue.length <= 1) return state;
