@@ -187,7 +187,7 @@ export const useMusicStore = create<MusicState>()(
 
       quality: "192",
       searchSource: "all",
-      aggregatedSources: ['joox', 'netease', 'bilibili'],
+      aggregatedSources: ['joox', 'netease'],
       setQuality: (quality) => set({ quality }),
       setSearchSource: (searchSource) => set({ searchSource }),
       setAggregatedSources: (aggregatedSources) => set({ aggregatedSources }),

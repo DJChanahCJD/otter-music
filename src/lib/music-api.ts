@@ -94,7 +94,7 @@ export const musicApi = {
     page = 1,
     count = 20,
     signal?: AbortSignal,
-    sources: MusicSource[] = ['joox', 'netease', 'bilibili']
+    sources: MusicSource[] = ['joox', 'netease']
   ): Promise<SearchPageResult<MergedMusicTrack>> {
 
     const results = await Promise.all(
