@@ -5,6 +5,7 @@ import { retry } from "@/lib/utils";
 import { musicApi } from "@/lib/music-api";
 import { useMusicStore } from "@/store/music-store";
 import { useSourceQualityStore } from "@/store/source-quality-store";
+import { useHistoryStore } from "@/store/history-store";
 import { useRef, useEffect } from "react";
 import toast from "react-hot-toast";
 import { MediaSession } from "@jofr/capacitor-media-session";
@@ -41,6 +42,8 @@ export function GlobalMusicPlayer() {
   const lastSaveTimeRef = useRef(0);
   // Ref to track if we are switching tracks (to avoid triggering pause event logic)
   const isSwitchingTrackRef = useRef(false);
+  // Ref to track if we have already recorded success/history for current track
+  const hasRecordedRef = useRef(false);
 
   // Sync volume
   useEffect(() => {
@@ -55,9 +58,11 @@ export function GlobalMusicPlayer() {
     if (!audio) return;
 
     if (isPlaying) {
+      // 切换曲目时跳过，等待 Load Track effect 处理播放
+      if (isSwitchingTrackRef.current) return;
+      
       audio.play().catch((e) => {
         console.error("Play failed:", e);
-        // Don't setIsPlaying(false) here immediately, as it might be loading
       });
     } else {
       audio.pause();
@@ -96,6 +101,8 @@ export function GlobalMusicPlayer() {
 
       // Mark as switching so pause events are ignored
       isSwitchingTrackRef.current = true;
+      // 重置记录状态，以便新曲目可以正确记录
+      hasRecordedRef.current = false;
 
       try {
         // Pause current
@@ -228,12 +235,25 @@ export function GlobalMusicPlayer() {
     };
 
     const onPlay = () => {
+      // 使用 audio 的实际 paused 状态判断是否真正开始播放
+      if (audio.paused) return;
+      
+      // 避免重复记录
+      if (hasRecordedRef.current) return;
+      hasRecordedRef.current = true;
+
+      // 同步 UI 状态
       if (!isPlaying) {
         setIsPlaying(true);
-        // 记录播放成功
-        if (currentTrack?.source) {
-          useSourceQualityStore.getState().recordSuccess(currentTrack.source);
-        }
+      }
+      
+      // 记录播放成功
+      if (currentTrack?.source) {
+        useSourceQualityStore.getState().recordSuccess(currentTrack.source);
+      }
+      // 记录播放历史
+      if (currentTrack) {
+        useHistoryStore.getState().addToHistory(currentTrack);
       }
     };
 

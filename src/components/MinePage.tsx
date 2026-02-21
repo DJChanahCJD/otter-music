@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ListVideo, Settings, ListMusic, SquarePlus, MoreHorizontal, Trash2, Pencil, HardDriveDownload } from "lucide-react";
+import { ListVideo, Settings, ListMusic, SquarePlus, MoreHorizontal, Trash2, Pencil, HardDriveDownload, History } from "lucide-react";
 import { useMusicStore } from "@/store/music-store";
 import { useShallow } from "zustand/react/shallow";
 import { Button } from "./ui/button";
@@ -24,13 +24,14 @@ import {
 } from "./ui/dropdown-menu";
 
 interface MinePageProps {
+  onOpenHistory: () => void;
   onOpenQueue: () => void;
   onOpenSettings: () => void;
   onOpenLocalMusic: () => void;
   onSelectPlaylist: (playlistId: string) => void;
 }
 
-export function MinePage({ onOpenQueue, onOpenSettings, onOpenLocalMusic, onSelectPlaylist }: MinePageProps) {
+export function MinePage({ onOpenHistory, onOpenQueue, onOpenSettings, onOpenLocalMusic, onSelectPlaylist }: MinePageProps) {
   const { playlists, createPlaylist, renamePlaylist, deletePlaylist } = useMusicStore(
     useShallow((state) => ({
       playlists: state.playlists,
@@ -77,6 +78,16 @@ export function MinePage({ onOpenQueue, onOpenSettings, onOpenLocalMusic, onSele
   return (
     <div className="p-5">
       <div className="flex gap-2 mb-6">
+        <button
+          onClick={onOpenHistory}
+          className="flex-1 flex flex-col items-center justify-center gap-2 p-4 rounded-2xl bg-card/70 hover:bg-card transition-all duration-300"
+        >
+          <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
+            <History className="h-6 w-6 text-primary" />
+          </div>
+          <span className="text-sm font-medium text-foreground">历史</span>
+        </button>
+
         <button
           onClick={onOpenQueue}
           className="flex-1 flex flex-col items-center justify-center gap-2 p-4 rounded-2xl bg-card/70 hover:bg-card transition-all duration-300"

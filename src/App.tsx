@@ -11,9 +11,11 @@ import { MusicSearchView } from "./components/MusicSearchView";
 import { FullScreenPlayer } from "./components/FullScreenPlayer";
 import { MinePage } from "./components/MinePage";
 import { QueuePage } from "./components/QueuePage";
+import { HistoryPage } from "./components/HistoryPage";
 import { SettingsPage } from "./components/SettingsPage";
 import { LocalMusicPage } from "./components/LocalMusicPage";
 import { useMusicStore } from "./store/music-store";
+import { useHistoryStore } from "./store/history-store";
 import { useSyncStore } from "./store/sync-store";
 import { useMusicCover } from "./hooks/useMusicCover";
 import { checkAndSync } from "./lib/sync";
@@ -66,11 +68,13 @@ export default function MusicPage() {
   const [activePlaylistId, setActivePlaylistId] = useState<string>();
   const [isFullScreenPlayer, setIsFullScreenPlayer] = useState(false);
   const [isQueuePage, setIsQueuePage] = useState(false);
+  const [isHistoryPage, setIsHistoryPage] = useState(false);
   const [isSettingsPage, setIsSettingsPage] = useState(false);
   const [isLocalMusicPage, setIsLocalMusicPage] = useState(false);
 
   const currentTrack = queue[currentIndex];
   const coverUrl = useMusicCover(currentTrack);
+  const { history, removeFromHistory, clearHistory } = useHistoryStore();
 
   const handlePlayContext = (track: MusicTrack, list: MusicTrack[]) => {
     if (currentTrack?.id === track.id) {
@@ -111,6 +115,14 @@ export default function MusicPage() {
       return;
     }
     playContext(queue, index);
+  };
+
+  const handlePlayInHistory = (track: MusicTrack | null, index?: number) => {
+    if (track && index !== undefined && currentTrack?.id === track.id) {
+      togglePlay();
+      return;
+    }
+    playContext(history, index);
   };
 
   const handleToggleFavorite = () => {
@@ -196,6 +208,20 @@ export default function MusicPage() {
       );
     }
 
+    if (isHistoryPage) {
+      return (
+        <HistoryPage
+          history={history}
+          currentTrackId={currentTrack?.id}
+          isPlaying={isPlaying}
+          onPlay={handlePlayInHistory}
+          onRemove={(track) => removeFromHistory(track.id)}
+          onClear={clearHistory}
+          onBack={() => setIsHistoryPage(false)}
+        />
+      );
+    }
+
     if (activePlaylistId) {
       const playlist = playlists.find((p) => p.id === activePlaylistId);
       return (
@@ -244,6 +270,7 @@ export default function MusicPage() {
     if (currentTab === "mine") {
       return (
         <MinePage
+          onOpenHistory={() => setIsHistoryPage(true)}
           onOpenQueue={() => setIsQueuePage(true)}
           onOpenSettings={() => setIsSettingsPage(true)}
           onOpenLocalMusic={() => setIsLocalMusicPage(true)}
@@ -268,6 +295,7 @@ export default function MusicPage() {
               setCurrentTab(tab);
               setActivePlaylistId(undefined);
               setIsQueuePage(false);
+              setIsHistoryPage(false);
               setIsSettingsPage(false);
               setIsLocalMusicPage(false);
             }}
