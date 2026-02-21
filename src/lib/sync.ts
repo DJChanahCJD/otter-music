@@ -6,14 +6,6 @@ import toast from "react-hot-toast";
 type SyncData = {
   favorites: ReturnType<typeof useMusicStore.getState>["favorites"];
   playlists: ReturnType<typeof useMusicStore.getState>["playlists"];
-  queue: ReturnType<typeof useMusicStore.getState>["queue"];
-  currentIndex: ReturnType<typeof useMusicStore.getState>["currentIndex"];
-  volume: ReturnType<typeof useMusicStore.getState>["volume"];
-  isRepeat: ReturnType<typeof useMusicStore.getState>["isRepeat"];
-  isShuffle: ReturnType<typeof useMusicStore.getState>["isShuffle"];
-  currentAudioTime: ReturnType<typeof useMusicStore.getState>["currentAudioTime"];
-  quality: ReturnType<typeof useMusicStore.getState>["quality"];
-  searchSource: ReturnType<typeof useMusicStore.getState>["searchSource"];
 };
 
 function getSyncData(): SyncData {
@@ -21,14 +13,6 @@ function getSyncData(): SyncData {
   return {
     favorites: state.favorites,
     playlists: state.playlists,
-    queue: state.queue,
-    currentIndex: state.currentIndex,
-    volume: state.volume,
-    isRepeat: state.isRepeat,
-    isShuffle: state.isShuffle,
-    currentAudioTime: state.currentAudioTime,
-    quality: state.quality,
-    searchSource: state.searchSource,
   };
 }
 
@@ -36,14 +20,6 @@ function applySyncData(data: SyncData): void {
   useMusicStore.setState({
     favorites: data.favorites,
     playlists: data.playlists,
-    queue: data.queue,
-    currentIndex: data.currentIndex,
-    volume: data.volume,
-    isRepeat: data.isRepeat,
-    isShuffle: data.isShuffle,
-    currentAudioTime: data.currentAudioTime,
-    quality: data.quality,
-    searchSource: data.searchSource,
   });
 }
 
