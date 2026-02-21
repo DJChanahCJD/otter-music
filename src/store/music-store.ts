@@ -2,16 +2,9 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { v4 as uuidv4 } from 'uuid';
 import { storeKey } from './store-keys';
-import type { MusicTrack, MusicSource, MergedMusicTrack, Playlist } from '@/types/music';
+import type { MusicTrack, MusicSource, Playlist } from '@/types/music';
 import toast from 'react-hot-toast';
-
-/**
- * 清理 MusicTrack，移除 variants 字段
- */
-function cleanTrack(track: MusicTrack | MergedMusicTrack): MusicTrack {
-  const { variants, ...rest } = track as MergedMusicTrack;
-  return rest;
-}
+import { cleanTrack } from '@/lib/utils/music';
 
 /**
  * 清理 Playlist，移除 tracks 中的 variants

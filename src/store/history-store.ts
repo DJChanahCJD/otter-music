@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { storeKey } from './store-keys';
 import type { MusicTrack } from '@/types/music';
+import { cleanTrack } from '@/lib/utils/music';
 
 const MAX_HISTORY = 100;
 
@@ -31,6 +32,9 @@ export const useHistoryStore = create<HistoryState>()(
     }),
     {
       name: storeKey.HistoryStore,
+      partialize: (state) => ({
+        history: state.history.map(cleanTrack),
+      }),
     }
   )
 );

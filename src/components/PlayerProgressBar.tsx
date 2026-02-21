@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { cn } from "@/lib/utils";
-import { formatMediaTime } from "@/lib/utils/audio";
+import { formatMediaTime } from "@/lib/utils/music";
 
 interface PlayerProgressBarProps {
   currentTime: number;
