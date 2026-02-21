@@ -214,15 +214,12 @@ export function GlobalMusicPlayer() {
         // 新歌曲从 0 开始播放，不再使用旧的 currentAudioTime
         audio.currentTime = 0;
 
-        // 只有在用户意图是播放时才自动播放
-        if (isPlaying) {
-          const playPromise = audio.play();
-          if (playPromise !== undefined) {
-            playPromise.catch((error) => {
-              console.error("Auto-play failed:", error);
-              setIsPlaying(false);
-            });
-          }
+        const playPromise = audio.play();
+        if (playPromise !== undefined) {
+          playPromise.catch((error) => {
+            console.error("Auto-play failed:", error);
+            setIsPlaying(false);
+          });
         }
       } catch (err: unknown) {
         if (cancelled || requestId !== requestIdRef.current) return;

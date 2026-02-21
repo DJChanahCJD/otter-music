@@ -595,6 +595,7 @@ export const useMusicStore = create<MusicState>()(
             currentIndex: Math.min(Math.max(index, 0), state.queue.length - 1),
             currentAudioTime: 0,
             hasUserGesture: true,
+            isPlaying: true,
           };
         }),
       skipToNext: () =>
