@@ -1,19 +1,12 @@
 "use client";
 
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback, useEffect, useRef, lazy, Suspense } from "react";
 import { format } from "date-fns";
 import { GlobalMusicPlayer } from "./components/GlobalMusicPlayer";
 import { MusicLayout } from "./components/MusicLayout";
 import { MusicTabBar, TabId } from "./components/MusicTabBar";
 import { MusicNowPlayingBar } from "./components/MusicNowPlayingBar";
-import { MusicPlaylistView } from "./components/MusicPlaylistView";
-import { MusicSearchView } from "./components/MusicSearchView";
 import { FullScreenPlayer } from "./components/FullScreenPlayer";
-import { MinePage } from "./components/MinePage";
-import { QueuePage } from "./components/QueuePage";
-import { HistoryPage } from "./components/HistoryPage";
-import { SettingsPage } from "./components/SettingsPage";
-import { LocalMusicPage } from "./components/LocalMusicPage";
 import { useMusicStore } from "./store/music-store";
 import { useHistoryStore } from "./store/history-store";
 import { useSyncStore } from "./store/sync-store";
@@ -21,7 +14,21 @@ import { useMusicCover } from "./hooks/useMusicCover";
 import { checkAndSync } from "./lib/sync";
 import type { MusicTrack } from "./types/music";
 
+const MusicPlaylistView = lazy(() => import("./components/MusicPlaylistView").then(m => ({ default: m.MusicPlaylistView })));
+const MusicSearchView = lazy(() => import("./components/MusicSearchView").then(m => ({ default: m.MusicSearchView })));
+const MinePage = lazy(() => import("./components/MinePage").then(m => ({ default: m.MinePage })));
+const QueuePage = lazy(() => import("./components/QueuePage").then(m => ({ default: m.QueuePage })));
+const HistoryPage = lazy(() => import("./components/HistoryPage").then(m => ({ default: m.HistoryPage })));
+const SettingsPage = lazy(() => import("./components/SettingsPage").then(m => ({ default: m.SettingsPage })));
+const LocalMusicPage = lazy(() => import("./components/LocalMusicPage").then(m => ({ default: m.LocalMusicPage })));
 
+function PageLoader() {
+  return (
+    <div className="flex items-center justify-center h-full">
+      <div className="animate-spin rounded-full h-12 w-12 border-4 border-t-transparent border-primary shadow-lg bg-primary/10"></div>
+    </div>
+  );
+}
 
 export default function MusicPage() {
   const {
@@ -63,6 +70,7 @@ export default function MusicPage() {
       });
     }
   }, [syncKey]);
+
 
   const [currentTab, setCurrentTab] = useState<TabId>("search");
   const [activePlaylistId, setActivePlaylistId] = useState<string>();
@@ -174,105 +182,121 @@ export default function MusicPage() {
   const renderContent = () => {
     if (isLocalMusicPage) {
       return (
-        <LocalMusicPage
-          onBack={() => setIsLocalMusicPage(false)}
-          onPlay={handlePlayContext}
-          currentTrackId={currentTrack?.id}
-          isPlaying={isPlaying}
-        />
+        <Suspense fallback={<PageLoader />}>
+          <LocalMusicPage
+            onBack={() => setIsLocalMusicPage(false)}
+            onPlay={handlePlayContext}
+            currentTrackId={currentTrack?.id}
+            isPlaying={isPlaying}
+          />
+        </Suspense>
       );
     }
 
     if (isSettingsPage) {
       return (
-        <SettingsPage
-          onBack={() => setIsSettingsPage(false)}
-        />
+        <Suspense fallback={<PageLoader />}>
+          <SettingsPage
+            onBack={() => setIsSettingsPage(false)}
+          />
+        </Suspense>
       );
     }
 
     if (isQueuePage) {
       return (
-        <QueuePage
-          queue={queue}
-          currentTrackId={currentTrack?.id}
-          isPlaying={isPlaying}
-          onPlay={handlePlayInQueue}
-          onRemove={handleRemoveFromQueue}
-          onClear={handleClearQueue}
-          onBack={() => setIsQueuePage(false)}
-        />
+        <Suspense fallback={<PageLoader />}>
+          <QueuePage
+            queue={queue}
+            currentTrackId={currentTrack?.id}
+            isPlaying={isPlaying}
+            onPlay={handlePlayInQueue}
+            onRemove={handleRemoveFromQueue}
+            onClear={handleClearQueue}
+            onBack={() => setIsQueuePage(false)}
+          />
+        </Suspense>
       );
     }
 
     if (isHistoryPage) {
       return (
-        <HistoryPage
-          history={history}
-          currentTrackId={currentTrack?.id}
-          isPlaying={isPlaying}
-          onPlay={handlePlayInHistory}
-          onRemove={(track) => removeFromHistory(track.id)}
-          onClear={clearHistory}
-          onBack={() => setIsHistoryPage(false)}
-        />
+        <Suspense fallback={<PageLoader />}>
+          <HistoryPage
+            history={history}
+            currentTrackId={currentTrack?.id}
+            isPlaying={isPlaying}
+            onPlay={handlePlayInHistory}
+            onRemove={(track: MusicTrack) => removeFromHistory(track.id)}
+            onClear={clearHistory}
+            onBack={() => setIsHistoryPage(false)}
+          />
+        </Suspense>
       );
     }
 
     if (activePlaylistId) {
       const playlist = playlists.find((p) => p.id === activePlaylistId);
       return (
-        <MusicPlaylistView
-          title={playlist?.name || "歌单"}
-          description={`创建于 ${format(playlist?.createdAt || 0, "yyyy-MM-dd")}`}
-          tracks={playlist?.tracks || []}
-          playlistId={activePlaylistId}
-          onPlay={handlePlayInPlaylist}
-          onRemove={(t) => removeFromPlaylist(activePlaylistId, t.id)}
-          onRename={renamePlaylist}
-          onDelete={(id) => {
-            deletePlaylist(id);
-            handleBackFromPlaylist();
-          }}
-          onBack={handleBackFromPlaylist}
-          currentTrackId={currentTrack?.id}
-          isPlaying={isPlaying}
-        />
+        <Suspense fallback={<PageLoader />}>
+          <MusicPlaylistView
+            title={playlist?.name || "歌单"}
+            description={`创建于 ${format(playlist?.createdAt || 0, "yyyy-MM-dd")}`}
+            tracks={playlist?.tracks || []}
+            playlistId={activePlaylistId}
+            onPlay={handlePlayInPlaylist}
+            onRemove={(t: MusicTrack) => removeFromPlaylist(activePlaylistId, t.id)}
+            onRename={renamePlaylist}
+            onDelete={(id: string) => {
+              deletePlaylist(id);
+              handleBackFromPlaylist();
+            }}
+            onBack={handleBackFromPlaylist}
+            currentTrackId={currentTrack?.id}
+            isPlaying={isPlaying}
+          />
+        </Suspense>
       );
     }
 
     if (currentTab === "search") {
       return (
-        <MusicSearchView
-          onPlay={handlePlayContext}
-          currentTrackId={currentTrack?.id}
-          isPlaying={isPlaying}
-        />
+        <Suspense fallback={<PageLoader />}>
+          <MusicSearchView
+            onPlay={handlePlayContext}
+            currentTrackId={currentTrack?.id}
+            isPlaying={isPlaying}
+          />
+        </Suspense>
       );
     }
 
     if (currentTab === "favorites") {
       return (
-        <MusicPlaylistView
-          title="我的喜欢"
-          tracks={favorites}
-          onPlay={handlePlayInPlaylist}
-          onRemove={(t) => removeFromFavorites(t.id)}
-          currentTrackId={currentTrack?.id}
-          isPlaying={isPlaying}
-        />
+        <Suspense fallback={<PageLoader />}>
+          <MusicPlaylistView
+            title="我的喜欢"
+            tracks={favorites}
+            onPlay={handlePlayInPlaylist}
+            onRemove={(t: MusicTrack) => removeFromFavorites(t.id)}
+            currentTrackId={currentTrack?.id}
+            isPlaying={isPlaying}
+          />
+        </Suspense>
       );
     }
 
     if (currentTab === "mine") {
       return (
-        <MinePage
-          onOpenHistory={() => setIsHistoryPage(true)}
-          onOpenQueue={() => setIsQueuePage(true)}
-          onOpenSettings={() => setIsSettingsPage(true)}
-          onOpenLocalMusic={() => setIsLocalMusicPage(true)}
-          onSelectPlaylist={handleSelectPlaylist}
-        />
+        <Suspense fallback={<PageLoader />}>
+          <MinePage
+            onOpenHistory={() => setIsHistoryPage(true)}
+            onOpenQueue={() => setIsQueuePage(true)}
+            onOpenSettings={() => setIsSettingsPage(true)}
+            onOpenLocalMusic={() => setIsLocalMusicPage(true)}
+            onSelectPlaylist={handleSelectPlaylist}
+          />
+        </Suspense>
       );
     }
 

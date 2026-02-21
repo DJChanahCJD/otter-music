@@ -10,22 +10,35 @@ export default defineConfig({
       '@': fileURLToPath(new URL('./src', import.meta.url)),
     },
   },
+  optimizeDeps: {
+    include: [
+      'react',
+      'react-dom',
+      'zustand',
+      'lucide-react',
+      'date-fns',
+    ],
+  },
   build: {
+    minify: 'esbuild',
+    target: 'es2018',
+    cssMinify: true,
+    cssCodeSplit: true,
     rollupOptions: {
       output: {
-        manualChunks: {
-          react: ['react', 'react-dom'],
-          zustand: ['zustand'],
-          radix: ['radix-ui'],
-          lucide: ['lucide-react'],
-          swr: ['swr'],
-          vaul: ['vaul'],
-          dateFns: ['date-fns'],
-          uuid: ['uuid'],
-          reactWindow: ['react-window', 'react-virtualized-auto-sizer'],
-          toast: ['react-hot-toast'],
-          cva: ['class-variance-authority', 'clsx', 'tailwind-merge'],
-        },
+        chunkFileNames: 'assets/[name]-[hash].js',
+        entryFileNames: 'assets/[name]-[hash].js',
+        assetFileNames: 'assets/[name]-[hash].[ext]',
+        manualChunks: (id) => {
+        if (id.includes('node_modules')) {
+          if (id.includes('react') || id.includes('react-dom')) {
+            return 'react-vendor'
+          }
+          if (id.includes('zustand') || id.includes('lucide-react') || id.includes('date-fns')) {
+            return 'vendor'
+          }
+        }
+      },
       },
     },
   },
