@@ -120,7 +120,7 @@ export const musicApi = {
         try {
           const result = await LocalMusicPlugin.getLocalFileUrl({ localPath: id });
           if (result.success && result.url) {
-            return result.url;
+            return Capacitor.convertFileSrc(result.url);
           }
           console.error('LocalMusicPlugin.getLocalFileUrl failed:', result.error);
           return null;
