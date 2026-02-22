@@ -76,6 +76,8 @@ interface MusicState {
   duration: number;
   currentAudioUrl: string | null; // Current audio source URL
   hasUserGesture: boolean; // 标记用户是否有过真正的交互（阻止自动播放）
+  consecutiveFailures: number; // 连续加载失败计数
+  maxConsecutiveFailures: number; // 最大允许连续失败次数
 
   setVolume: (volume: number) => void;
   toggleRepeat: () => void;
@@ -89,6 +91,8 @@ interface MusicState {
   clearSeekTargetTime: () => void;
   setCurrentAudioUrl: (url: string | null) => void;
   setUserGesture: () => void;
+  incrementFailures: () => number;
+  resetFailures: () => void;
 
   // --- Playback (Queue) ---
   queue: MusicTrack[];
@@ -217,6 +221,8 @@ export const useMusicStore = create<MusicState>()(
       duration: 0,
       currentAudioUrl: null,
       hasUserGesture: false,
+      consecutiveFailures: 0,
+      maxConsecutiveFailures: 3,
 
       setVolume: (volume) => set({ volume }),
       toggleRepeat: () => set((state) => ({ isRepeat: !state.isRepeat })),
@@ -287,6 +293,12 @@ export const useMusicStore = create<MusicState>()(
       clearSeekTargetTime: () => set({ seekTargetTime: -1 }),
       setCurrentAudioUrl: (url) => set({ currentAudioUrl: url }),
       setUserGesture: () => set({ hasUserGesture: true }),
+      incrementFailures: () => {
+        const current = get().consecutiveFailures + 1;
+        set({ consecutiveFailures: current });
+        return current;
+      },
+      resetFailures: () => set({ consecutiveFailures: 0 }),
 
       queue: [],
       originalQueue: [],

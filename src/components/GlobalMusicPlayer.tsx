@@ -1,7 +1,6 @@
 "use client";
 
 import { useMusicCover } from "@/hooks/useMusicCover";
-import { useNetwork } from "@/hooks/useNetwork";
 import { retry, throttle } from "@/lib/utils";
 import { musicApi } from "@/lib/music-api";
 import { useMusicStore } from "@/store/music-store";
@@ -14,20 +13,6 @@ import { MediaSession } from "@jofr/capacitor-media-session";
 import { Capacitor } from "@capacitor/core";
 import { buildDownloadKey } from "@/lib/utils/download";
 import type { MusicSource } from "@/types/music";
-import { Network } from "@capacitor/network";
-
-async function isNetworkAvailable(): Promise<boolean> {
-  try {
-    if (Capacitor.isNativePlatform()) {
-      const status = await Network.getStatus();
-      return status.connected;
-    }
-    return navigator.onLine;
-  } catch (error) {
-    console.error("Failed to check network status:", error);
-    return navigator.onLine;
-  }
-}
 
 async function resolveAudioUrl({
   trackId,
@@ -106,7 +91,8 @@ export function GlobalMusicPlayer() {
   const hasUserGesture = useMusicStore(s => s.hasUserGesture)
   const queue = useMusicStore(s => s.queue)
   const currentIndex = useMusicStore(s => s.currentIndex)
-  const { isOnline } = useNetwork();
+  const incrementFailures = useMusicStore(s => s.incrementFailures)
+  const maxConsecutiveFailures = useMusicStore(s => s.maxConsecutiveFailures)
 
   const audioRef = useRef<HTMLAudioElement>(null);
   const currentTrackId = currentTrack?.id;
@@ -161,6 +147,18 @@ export function GlobalMusicPlayer() {
       try {
         audio.pause();
 
+        // 网络状态检测：检查是否可以播放
+        const isLocal = (currentTrackSource as string) === 'local';
+        const hasDownload = Capacitor.isNativePlatform()
+          ? useDownloadStore.getState().hasRecord(buildDownloadKey(currentTrackSource, currentTrackId || ''))
+          : false;
+
+        if (!isLocal && !hasDownload && !navigator.onLine) {
+          toast.error("网络不可用，请检查网络连接");
+          setIsPlaying(false);
+          return;
+        }
+
         const urlId = (currentTrackSource as string) === 'local' ? currentTrackUrlId : currentTrackId;
         const br = parseInt(quality, 10);
 
@@ -207,20 +205,23 @@ export function GlobalMusicPlayer() {
 
         if (errorMessage === "LOCAL_FILE_NOT_ACCESSIBLE") {
           toast.error(`无法访问本地文件: ${currentTrack.name}`);
-        } else if (!isOnline && currentTrackSource !== 'local') {
-          toast.error("离线模式，无法播放网络音乐");
-          audio.src = "";
-          setCurrentAudioUrl(null);
-          setIsPlaying(false);
         } else {
           toast.error(`无法播放: ${currentTrack.name}`);
+        }
 
-          if (currentTrackSource) {
-            useSourceQualityStore.getState().recordFail(currentTrackSource);
-          }
+        if (currentTrackSource) {
+          useSourceQualityStore.getState().recordFail(currentTrackSource);
+        }
 
-          audio.src = "";
-          setCurrentAudioUrl(null);
+        audio.src = "";
+        setCurrentAudioUrl(null);
+
+        // 连续失败计数：超过阈值时停止跳下一首
+        const failures = incrementFailures();
+        if (failures >= maxConsecutiveFailures) {
+          toast.error("多次加载失败，已停止播放");
+          setIsPlaying(false);
+        } else {
           skipToNext();
         }
       } finally {
@@ -238,7 +239,7 @@ export function GlobalMusicPlayer() {
         requestIdRef.current++;
       }
     };
-  }, [currentTrack.id, currentTrack.source, quality, hasUserGesture, currentTrack, currentTrackId, currentTrackSource, currentTrackUrlId, setCurrentAudioUrl, setIsLoading, setIsPlaying, skipToNext]);
+  }, [currentTrack.id, currentTrack.source, quality, hasUserGesture, currentTrack, currentTrackId, currentTrackSource, currentTrackUrlId, setCurrentAudioUrl, setIsLoading, setIsPlaying, skipToNext, incrementFailures, maxConsecutiveFailures]);
 
   // 恢复播放控制（isPlaying 变化时触发，但不重新加载曲目）
   useEffect(() => {
@@ -299,8 +300,6 @@ export function GlobalMusicPlayer() {
         useSourceQualityStore.getState().recordFail(currentTrack.source);
       }
 
-      const online = await isNetworkAvailable();
-
       if (Capacitor.isNativePlatform() && (currentTrackSource as string) !== 'local') {
         const downloadKey = buildDownloadKey(currentTrackSource, currentTrackId || '');
         const downloadUri = useDownloadStore.getState().getUri(downloadKey);
@@ -313,29 +312,12 @@ export function GlobalMusicPlayer() {
             await retryWithRemote(audio, currentTrackId || '', currentTrackSource, br);
           } catch (retryError) {
             console.error("Retry load failed:", retryError);
-            if (!online) {
-              toast.error("离线模式，无法播放网络音乐");
-              audio.src = "";
-              setCurrentAudioUrl(null);
-              setIsPlaying(false);
-            } else {
-              toast.error(`无法播放: ${currentTrack.name}`);
-              audio.src = "";
-              setCurrentAudioUrl(null);
-              skipToNext();
-            }
+            toast.error(`无法播放: ${currentTrack.name}`);
+            audio.src = "";
+            setCurrentAudioUrl(null);
+            skipToNext();
           }
-        } else if (!online) {
-          toast.error("离线模式，无法播放网络音乐");
-          audio.src = "";
-          setCurrentAudioUrl(null);
-          setIsPlaying(false);
         }
-      } else if (!online && currentTrackSource !== 'local') {
-        toast.error("离线模式，无法播放网络音乐");
-        audio.src = "";
-        setCurrentAudioUrl(null);
-        setIsPlaying(false);
       }
     };
 
@@ -360,6 +342,9 @@ export function GlobalMusicPlayer() {
       if (!isPlaying) {
         setIsPlaying(true);
       }
+      
+      // 播放成功，重置失败计数
+      useMusicStore.getState().resetFailures();
       
       // 记录播放成功
       if (currentTrack?.source) {
@@ -392,8 +377,14 @@ export function GlobalMusicPlayer() {
   useEffect(() => {
     const updateMetadata = async () => {
       if (!currentTrack) return;
+
       try {
-        const safeArtwork = coverUrl ? [{ src: coverUrl }] : [];
+        const isOnline = navigator.onLine;
+
+        const safeArtwork =
+          isOnline && coverUrl
+            ? [{ src: coverUrl }]
+            : [];
 
         await MediaSession.setMetadata({
           title: currentTrack.name || "Unknown Track",

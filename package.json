@@ -26,7 +26,6 @@
     "@capacitor/core": "^8.1.0",
     "@capacitor/file-transfer": "^2.0.4",
     "@capacitor/filesystem": "^8.1.2",
-    "@capacitor/network": "^8.0.1",
     "@jofr/capacitor-media-session": "^4.0.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
