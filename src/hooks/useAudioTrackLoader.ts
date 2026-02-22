@@ -9,6 +9,44 @@ import { buildDownloadKey } from "@/lib/utils/download";
 import type { MusicSource } from "@/types/music";
 import toast from "react-hot-toast";
 
+function isTrackPlayable(
+  track: { source: MusicSource; id: string } | null,
+  isOnline: boolean
+): boolean {
+  if (!track) return false;
+
+  const isLocal = track.source === 'local';
+
+  if (isLocal) return true;
+
+  if (!isOnline) {
+    if (Capacitor.isNativePlatform()) {
+      const downloadKey = buildDownloadKey(track.source, track.id);
+      return useDownloadStore.getState().hasRecord(downloadKey);
+    }
+    return false;
+  }
+
+  return true;
+}
+
+function findNextPlayableTrack(
+  queue: { source: MusicSource; id: string }[],
+  startIndex: number,
+  isOnline: boolean
+): number | null {
+  if (queue.length === 0) return null;
+
+  for (let i = 0; i < queue.length; i++) {
+    const index = (startIndex + i) % queue.length;
+    if (isTrackPlayable(queue[index], isOnline)) {
+      return index;
+    }
+  }
+
+  return null;
+}
+
 async function resolveAudioUrl({
   trackId,
   source,
@@ -62,6 +100,8 @@ export function useAudioTrackLoader(
   const setCurrentAudioUrl = useMusicStore(s => s.setCurrentAudioUrl);
   const incrementFailures = useMusicStore(s => s.incrementFailures);
   const maxConsecutiveFailures = useMusicStore(s => s.maxConsecutiveFailures);
+  const queue = useMusicStore(s => s.queue);
+  const currentIndex = useMusicStore(s => s.currentIndex);
 
   const requestIdRef = useRef(0);
 
@@ -93,10 +133,20 @@ export function useAudioTrackLoader(
           ? useDownloadStore.getState().hasRecord(buildDownloadKey(currentTrackSource, currentTrackId || ''))
           : false;
 
-        if (!isLocal && !hasDownload && !navigator.onLine) {
-          toast.error("网络不可用，请检查网络连接");
-          setIsPlaying(false);
-          return;
+        const isOnline = navigator.onLine;
+
+        if (!isLocal && !hasDownload && !isOnline) {
+          const nextPlayableIndex = findNextPlayableTrack(queue, currentIndex, isOnline);
+
+          if (nextPlayableIndex !== null && nextPlayableIndex !== currentIndex) {
+            toast.error("网络不可用，切换到本地音乐");
+            useMusicStore.getState().setCurrentIndexAndPlay(nextPlayableIndex);
+            return;
+          } else {
+            toast.error("网络不可用且无可播放曲目");
+            setIsPlaying(false);
+            return;
+          }
         }
 
         const urlId = (currentTrackSource as string) === 'local' ? currentTrackUrlId : currentTrackId;
@@ -179,5 +229,5 @@ export function useAudioTrackLoader(
         requestIdRef.current++;
       }
     };
-  }, [currentTrack.id, currentTrack.source, quality, hasUserGesture, currentTrack, currentTrackId, currentTrackSource, currentTrackUrlId, setCurrentAudioUrl, setIsLoading, setIsPlaying, skipToNext, incrementFailures, maxConsecutiveFailures]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [currentTrack.id, currentTrack.source, quality, hasUserGesture, currentTrack, currentTrackId, currentTrackSource, currentTrackUrlId, setCurrentAudioUrl, setIsLoading, setIsPlaying, skipToNext, incrementFailures, maxConsecutiveFailures, queue, currentIndex]); // eslint-disable-line react-hooks/exhaustive-deps
 }
