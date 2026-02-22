@@ -11,6 +11,7 @@ import toast from "react-hot-toast";
 import { convertToMusicTrack } from "@/lib/utils/download";
 import { useMusicStore } from "@/store/music-store";
 import { useLocalMusicStore } from "@/store/local-music-store";
+import { LocalMusicPermissionDialog } from "./LocalMusicPermissionDialog";
 
 interface LocalMusicPageProps {
   onBack: () => void;
@@ -28,7 +29,7 @@ export function LocalMusicPage({
   const [files, setFiles] = useState<LocalMusicFile[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [needManageStorage, setNeedManageStorage] = useState(false);
+  const [showPermissionDialog, setShowPermissionDialog] = useState(false);
   const { queue, currentIndex, skipToNext } = useMusicStore();
   const { setFiles: setCachedFiles, updateFiles: updateCachedFiles, setScanning } = useLocalMusicStore();
 
@@ -37,7 +38,6 @@ export function LocalMusicPage({
       setIsLoading(true);
       setError(null);
     }
-    setNeedManageStorage(false);
 
     setScanning(true, type);
 
@@ -64,9 +64,8 @@ export function LocalMusicPage({
         }
       } else {
         if (result.needManageStorage) {
-          setNeedManageStorage(true);
+          setShowPermissionDialog(true);
           setError(result.error || '需要授予"允许管理所有文件"权限');
-          toast.error(result.error || "需要授予权限", { id: toastId });
         } else {
           const errorMsg = result.error || "扫描失败";
           setError(errorMsg);
@@ -103,10 +102,6 @@ export function LocalMusicPage({
       toast.loading("全盘扫描中...", { duration: Infinity });
       scanLocalMusic("full", false);
     }
-  };
-
-  const handleOpenSettings = async () => {
-    await LocalMusicPlugin.openManageStorageSettings();
   };
 
   const handleDeleteTrack = async (track: MusicTrack) => {
@@ -190,21 +185,12 @@ export function LocalMusicPage({
               <p className="text-muted-foreground/70 text-xs">{error}</p>
             </div>
           </div>
-          {needManageStorage ? (
-            <button
-              onClick={handleOpenSettings}
-              className="px-5 py-2.5 text-sm font-medium bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-all active:scale-[0.98]"
-            >
-              打开设置授予权限
-            </button>
-          ) : (
-            <button
-              onClick={handleRefresh}
-              className="px-5 py-2.5 text-sm font-medium bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-all active:scale-[0.98]"
-            >
-              重试
-            </button>
-          )}
+          <button
+            onClick={handleRefresh}
+            className="px-5 py-2.5 text-sm font-medium bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-all active:scale-[0.98]"
+          >
+            重试
+          </button>
         </div>
       </PageLayout>
     );
@@ -223,6 +209,10 @@ export function LocalMusicPage({
         currentTrackId={currentTrackId}
         isPlaying={isPlaying}
         onRemove={handleDeleteTrack}
+      />
+      <LocalMusicPermissionDialog
+        open={showPermissionDialog}
+        onOpenChange={setShowPermissionDialog}
       />
     </PageLayout>
   );
