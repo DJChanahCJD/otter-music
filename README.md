@@ -2,6 +2,7 @@
 
 移动端音乐播放器，支持多音源聚合搜索。
 > API 来自GD音乐台(https://music.gdstudio.xyz)
+> 依赖主项目(https://github.com/DJChanahCJD/otterhub)
 
 ## 功能
 
@@ -34,7 +35,7 @@ npm run build
 # 添加 Android 平台
 npm run cap:add:android
 
-# 同步并构建
+# 同步并构建 Debug 版本
 npm run build:android:debug
 ```
 
