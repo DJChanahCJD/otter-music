@@ -21,7 +21,7 @@ export function LocalMusicPermissionDialog({ open, onOpenChange }: LocalMusicPer
         </DialogHeader>
 
         <DialogDescription>
-          访问本地音乐需要授予"允许管理所有文件"权限。请在系统设置中开启此权限后返回。
+          请在系统设置中开启「授权管理所有文件的权限」后返回。
         </DialogDescription>
 
         <DialogFooter>

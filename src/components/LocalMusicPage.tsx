@@ -42,7 +42,7 @@ export function LocalMusicPage({
     setScanning(true, type);
 
     const toastId = type === "full"
-      ? toast.loading("全盘扫描中，请稍候...", { duration: Infinity })
+      ? toast.loading("全盘扫描中，请稍候...", { duration: 10000 })
       : toast.loading("正在扫描本地音乐...", { duration: 10000 });
 
     try {
@@ -99,7 +99,7 @@ export function LocalMusicPage({
 
   const handleFullScan = () => {
     if (!isLoading) {
-      toast.loading("全盘扫描中...", { duration: Infinity });
+      toast.loading("全盘扫描中...", { duration: 10000 });
       scanLocalMusic("full", false);
     }
   };
