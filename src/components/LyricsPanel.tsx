@@ -20,7 +20,7 @@ interface LyricLine {
 const TIME_EXP = /\[(\d{2}):(\d{2})\.(\d{2,3})]/;
 const LYRIC_OFFSET = -0.5;
 const MATCH_TOLERANCE = 0.5;
-const AUTO_SCROLL_DELAY = 3000;
+const AUTO_SCROLL_DELAY = 2000;
 const PADDING_LINES = 2;
 
 function formatTime(seconds: number): string {
