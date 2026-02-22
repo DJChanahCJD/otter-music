@@ -132,15 +132,19 @@ export const useMusicStore = create<MusicState>()(
 
       addToFavorites: (track) => set((state) => {
         if (track.source === 'local') {
-          toast("本地音乐不支持喜欢", {icon: "ℹ️"});
+          toast("本地音乐不支持喜欢");
           return state;
         }
-        if (state.favorites.some(t => t.id === track.id)) return state;
+        if (state.favorites.some(t => t.id === track.id)) {
+          toast("已在「我的喜欢」中");
+          return state;
+        }
+        toast.success("已喜欢");
         return { favorites: [track, ...state.favorites] };
       }),
-      removeFromFavorites: (trackId) => set((state) => ({
-        favorites: state.favorites.filter(t => t.id !== trackId)
-      })),
+      removeFromFavorites: (trackId) => set((state) => {
+        return { favorites: state.favorites.filter(t => t.id !== trackId) };
+      }),
       isFavorite: (trackId) => get().favorites.some(t => t.id === trackId),
 
       createPlaylist: (name) => {
@@ -165,7 +169,7 @@ export const useMusicStore = create<MusicState>()(
       })),
       addToPlaylist: (pid, track) => set((state) => {
         if (track.source === 'local') {
-          toast("本地音乐不支持添加歌单", {icon: "ℹ️"});
+          toast("本地音乐不支持添加歌单");
           return state;
         }
         return {

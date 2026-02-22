@@ -186,7 +186,7 @@ export function MusicTrackList({
     }
   };
 
-  const handleBatch = async (fn: (t: MusicTrack) => void, tip: string) => {
+  const handleBatch = async (fn: (t: MusicTrack) => void, tip?: string) => {
     const selectedTracks = tracks.filter((t) => selectedIds.has(t.id));
 
     const toastId = toast.loading(`正在处理 0/${selectedTracks.length}...`);
@@ -195,7 +195,11 @@ export function MusicTrackList({
       toast.loading(`正在处理 ${current}/${total}...`, { id: toastId });
     });
 
-    toast.success(`${tip} ${selectedTracks.length} 首`, { id: toastId });
+    if (tip) {
+      toast.success(`${tip} ${selectedTracks.length} 首`, { id: toastId });
+    } else {
+      toast.dismiss(toastId);
+    }
     setIsSelectionMode(false);
     setSelectedIds(new Set());
   };
@@ -332,7 +336,7 @@ export function MusicTrackList({
                       </div>
                       <div
                         className="flex items-center px-2 py-2 text-sm rounded-sm hover:bg-accent cursor-pointer"
-                        onClick={() => handleBatch(addToFavorites, "已喜欢")}
+                        onClick={() => handleBatch(addToFavorites)}
                       >
                         <Heart className="mr-2 h-4 w-4" /> 喜欢
                       </div>
