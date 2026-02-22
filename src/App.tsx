@@ -64,10 +64,10 @@ export default function MusicPage() {
 
   useEffect(() => {
     if (syncKey && !syncInProgress.current) {
-      syncInProgress.current = true;
-      checkAndSync().finally(() => {
-        syncInProgress.current = false;
-      });
+    syncInProgress.current = true;
+    checkAndSync().finally(() => {
+      syncInProgress.current = false;
+    });
     }
   }, [syncKey]);
 
@@ -80,7 +80,7 @@ export default function MusicPage() {
   const [isSettingsPage, setIsSettingsPage] = useState(false);
   const [isLocalMusicPage, setIsLocalMusicPage] = useState(false);
 
-  const currentTrack = queue[currentIndex];
+  const currentTrack = queue[currentIndex] || null;
   const coverUrl = useMusicCover(currentTrack);
   const { history, removeFromHistory, clearHistory } = useHistoryStore();
 

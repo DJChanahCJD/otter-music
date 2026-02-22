@@ -68,7 +68,7 @@ async function downloadNative(
     if (!p.contentLength) return;
 
     const percent = Math.round((p.bytes / p.contentLength) * 100);
-    toast.loading(`下载 ${percent}%`, { id: toastId, duration: 10 * 1000 });
+    toast.loading(`下载 ${percent}%`, { id: toastId, duration: Infinity });
   });
 
   await FileTransfer.downloadFile({

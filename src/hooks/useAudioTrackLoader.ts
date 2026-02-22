@@ -87,7 +87,7 @@ export function useAudioTrackLoader(
   isSwitchingTrackRef: React.MutableRefObject<boolean>,
   hasRecordedRef: React.MutableRefObject<boolean>
 ) {
-  const currentTrack = useMusicStore(s => s.queue[s.currentIndex]);
+  const currentTrack = useMusicStore(s => s.queue[s.currentIndex]) || null;
   const currentTrackId = currentTrack?.id;
   const currentTrackSource = currentTrack?.source;
   const currentTrackUrlId = currentTrack?.url_id;
@@ -229,5 +229,5 @@ export function useAudioTrackLoader(
         requestIdRef.current++;
       }
     };
-  }, [currentTrack.id, currentTrack.source, quality, hasUserGesture, currentTrack, currentTrackId, currentTrackSource, currentTrackUrlId, setCurrentAudioUrl, setIsLoading, setIsPlaying, skipToNext, incrementFailures, maxConsecutiveFailures, queue, currentIndex]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [currentTrack?.id, currentTrack?.source, quality, hasUserGesture, currentTrack, currentTrackId, currentTrackSource, currentTrackUrlId, setCurrentAudioUrl, setIsLoading, setIsPlaying, skipToNext, incrementFailures, maxConsecutiveFailures, queue, currentIndex]); // eslint-disable-line react-hooks/exhaustive-deps
 }

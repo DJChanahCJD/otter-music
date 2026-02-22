@@ -42,8 +42,8 @@ export function LocalMusicPage({
     setScanning(true, type);
 
     const toastId = type === "full"
-      ? toast.loading("全盘扫描中，请稍候...", { duration: 10000 })
-      : toast.loading("正在扫描本地音乐...", { duration: 10000 });
+      ? toast.loading("全盘扫描中，请稍候...", { duration: Infinity })
+      : toast.loading("正在扫描本地音乐...", { duration: Infinity });
 
     try {
       const result =
@@ -99,7 +99,6 @@ export function LocalMusicPage({
 
   const handleFullScan = () => {
     if (!isLoading) {
-      toast.loading("全盘扫描中...", { duration: 10000 });
       scanLocalMusic("full", false);
     }
   };
@@ -121,7 +120,7 @@ export function LocalMusicPage({
         updateCachedFiles((files) => files.filter((f) => f.localPath !== localPath));
         toast.success("删除成功");
 
-        const currentTrack = queue[currentIndex];
+        const currentTrack = queue[currentIndex] || null;
         if (currentTrack && currentTrack.id === track.id) {
           skipToNext();
         }
