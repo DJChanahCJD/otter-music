@@ -87,6 +87,9 @@ src/
 └── lib/utils/      # 工具函数
 ```
 
+## TODO
+1. 设置页面添加单独的「负载均衡」选项，允许自部署后端 API。（允许删除GD Studio API, 但是必须提供至少1个API_URL）
+2. 研究 GD Studio API 的原理，如何实现自搭建后端 API。
 
 
 ## License
