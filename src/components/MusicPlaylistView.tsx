@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { Play, MoreHorizontal, Search, ChevronLeft } from "lucide-react";
+import { Play, MoreHorizontal, Search } from "lucide-react";
 import { MusicTrackList } from "./MusicTrackList";
 import { Input } from "@/components/ui/input";
 import { useState, useMemo } from "react";
@@ -12,7 +12,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { MusicTrack } from "@/types/music";
-import { useNavigate } from "react-router-dom";
 
 interface MusicPlaylistViewProps {
   title: string;
@@ -32,7 +31,6 @@ interface MusicPlaylistViewProps {
   isPlaying?: boolean;
   action?: React.ReactNode;
   coverUrl?: string;
-  showBack?: boolean;
 }
 
 export function MusicPlaylistView({
@@ -48,10 +46,8 @@ export function MusicPlaylistView({
   isPlaying,
   action,
   coverUrl,
-  showBack = false
 }: MusicPlaylistViewProps) {
   const [searchQuery, setSearchQuery] = useState("");
-  const navigate = useNavigate();
 
   const filteredTracks = useMemo(() => {
     if (!searchQuery.trim()) return tracks;
@@ -68,18 +64,7 @@ export function MusicPlaylistView({
       {/* Header */}
       <div className={cn(
         "p-4 border-b flex items-end gap-4 bg-muted/10 relative",
-        showBack && "pt-[calc(1rem+env(safe-area-inset-top))]"
       )}>
-        {showBack && (
-          <Button
-            variant="ghost"
-            size="icon"
-            className="absolute top-2 left-2 h-8 w-8 rounded-full bg-background/50 hover:bg-background/80 backdrop-blur-sm z-10"
-            onClick={() => navigate(-1)}
-          >
-            <ChevronLeft className="h-5 w-5" />
-          </Button>
-        )}
         <div className="h-20 w-20 bg-primary/10 rounded-lg flex items-center justify-center shadow-sm border overflow-hidden shrink-0">
           <MusicCover
             src={coverUrl}

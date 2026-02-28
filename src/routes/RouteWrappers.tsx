@@ -5,6 +5,7 @@ import { useHistoryStore } from "@/store/history-store";
 import { usePlayHelper } from "@/hooks/usePlayHelper";
 import { PageLoader } from "@/components/PageLoader";
 import { MusicTrack } from "@/types/music";
+import { PageLayout } from "@/components/PageLayout";
 
 // Lazy load components
 const MusicSearchView = lazy(() => import("@/components/MusicSearchView").then(m => ({ default: m.MusicSearchView })));
@@ -52,7 +53,6 @@ export function FavoritesRoute() {
         onRemove={(t) => removeFromFavorites(t.id)}
         currentTrackId={currentTrack?.id}
         isPlaying={isPlaying}
-        showBack={false} // Tab 页不显示返回按钮
       />
     </Suspense>
   );
@@ -90,7 +90,8 @@ export function PlaylistDetailRoute() {
 
   return (
     <Suspense fallback={<PageLoader />}>
-      <MusicPlaylistView
+      <PageLayout title={playlist.name}>
+        <MusicPlaylistView
         title={playlist.name}
         description={`创建于 ${new Date(playlist.createdAt).toLocaleDateString()}`}
         tracks={playlist.tracks}
@@ -104,16 +105,17 @@ export function PlaylistDetailRoute() {
         }}
         currentTrackId={currentTrack?.id}
         isPlaying={isPlaying}
-        showBack={true}
       />
+      </PageLayout>
     </Suspense>
   );
 }
 
 export function MineRoute() {
+    const navigate = useNavigate();
     return (
         <Suspense fallback={<PageLoader />}>
-            <MinePage onSelectPlaylist={(id) => { /* handled by Link in MinePage or navigate */ }} />
+            <MinePage onSelectPlaylist={(id) => navigate(`/playlist/${id}`)} />
         </Suspense>
     );
 }
