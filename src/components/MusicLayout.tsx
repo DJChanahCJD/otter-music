@@ -8,12 +8,17 @@ interface MusicLayoutProps {
   header?: ReactNode;
   hidePlayer?: boolean;
   className?: string;
+  isTab?: boolean;
 }
 
 
-export function MusicLayout({ children, player, tabBar, header, hidePlayer, className }: MusicLayoutProps) {
+export function MusicLayout({ children, player, tabBar, header, hidePlayer, className, isTab = true }: MusicLayoutProps) {
   return (
-    <div className={cn("relative flex flex-col h-dvh overflow-hidden bg-background pt-safe pt-11", className)}>
+    <div className={cn(
+      "relative flex flex-col h-dvh overflow-hidden bg-background",
+      isTab && "pt-safe pt-11",
+      className
+    )}>
       {/* Header */}
       {header && (
         <div className="shrink-0 px-5 pb-3">
@@ -32,7 +37,10 @@ export function MusicLayout({ children, player, tabBar, header, hidePlayer, clas
 
       {/* Now Playing Bar (Floating Island) */}
       {!hidePlayer && (
-        <div className="flex-none z-50 absolute bottom-16 left-0 right-0">
+        <div className={cn(
+          "flex-none z-50 absolute left-0 right-0",
+          isTab ? "bottom-16" : "bottom-6 pb-safe"
+        )}>
           {player}
         </div>
       )}
