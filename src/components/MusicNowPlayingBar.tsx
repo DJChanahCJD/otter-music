@@ -1,7 +1,6 @@
 "use client";
 
 import { ListVideo, Pause, Play } from "lucide-react";
-import { cn } from "@/lib/utils";
 import { useMusicStore } from "@/store/music-store";
 import { useShallow } from "zustand/react/shallow";
 import { useMusicCover } from "@/hooks/useMusicCover";

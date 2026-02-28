@@ -92,7 +92,8 @@ function RootLayout() {
     }
   }, [syncKey]);
 
-
+  const isTab = ["/search", "/favorites", "/mine"].includes(location.pathname) || location.pathname === "/";
+  
   // Handlers
   const handlePrev = () => {
     if (queue.length === 0) return;
@@ -121,6 +122,7 @@ function RootLayout() {
     <>
       <MusicLayout
         hidePlayer={isFullScreenPlayer}
+        isTab={isTab}
         player={
           <MusicNowPlayingBar 
             onOpenFullScreen={() => setStoreFullScreen(true)} 
