@@ -100,8 +100,6 @@ export function useAudioTrackLoader(
   const setCurrentAudioUrl = useMusicStore(s => s.setCurrentAudioUrl);
   const incrementFailures = useMusicStore(s => s.incrementFailures);
   const maxConsecutiveFailures = useMusicStore(s => s.maxConsecutiveFailures);
-  const queue = useMusicStore(s => s.queue);
-  const currentIndex = useMusicStore(s => s.currentIndex);
 
   const requestIdRef = useRef(0);
 
@@ -136,6 +134,7 @@ export function useAudioTrackLoader(
         const isOnline = navigator.onLine;
 
         if (!isLocal && !hasDownload && !isOnline) {
+          const { queue, currentIndex } = useMusicStore.getState();
           const nextPlayableIndex = findNextPlayableTrack(queue, currentIndex, isOnline);
 
           if (nextPlayableIndex !== null && nextPlayableIndex !== currentIndex) {
@@ -183,7 +182,7 @@ export function useAudioTrackLoader(
             });
           }
 
-          toast.success("加载完成", { id: toastId });
+          toast.success("加载成功", { id: toastId });
         } catch (err: unknown) {
           toast.dismiss(toastId);
           throw err;
@@ -229,5 +228,5 @@ export function useAudioTrackLoader(
         requestIdRef.current++;
       }
     };
-  }, [currentTrack?.id, currentTrack?.source, quality, hasUserGesture, currentTrack, currentTrackId, currentTrackSource, currentTrackUrlId, setCurrentAudioUrl, setIsLoading, setIsPlaying, skipToNext, incrementFailures, maxConsecutiveFailures, queue, currentIndex]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [currentTrack?.id, currentTrack?.source, currentTrack?.url_id, quality, hasUserGesture]); // eslint-disable-line react-hooks/exhaustive-deps
 }

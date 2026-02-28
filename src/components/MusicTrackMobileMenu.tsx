@@ -15,7 +15,7 @@ import {
   Trash2,
   CornerDownRight,
 } from "lucide-react";
-import React, { ReactNode } from "react";
+import { ReactNode } from "react";
 import { MusicCover } from "./MusicCover";
 import { useMusicCover } from "@/hooks/useMusicCover";
 import { MusicTrack } from "@/types/music";
@@ -70,8 +70,7 @@ export function MusicTrackMobileMenu({
           </Button>
         </DrawerTrigger>
         <DrawerContent
-          onPointerDownCapture={(e: React.PointerEvent) => e.stopPropagation()}
-          onClickCapture={(e: React.MouseEvent) => e.stopPropagation()}
+          onClick={(e) => e.stopPropagation()}
         >
           <DrawerTitle>
             {/* Header with Cover and Info */}
