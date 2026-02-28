@@ -30,6 +30,7 @@ interface MusicTrackMobileMenuProps {
   onToggleLike?: () => void;
   isFavorite?: boolean;
   onRemove?: () => void;
+  removeLabel?: string;
   customActions?: ReactNode;
   triggerClassName?: string;
 }
@@ -44,6 +45,7 @@ export function MusicTrackMobileMenu({
   onToggleLike,
   isFavorite,
   onRemove,
+  removeLabel = "移除",
   customActions,
   triggerClassName,
 }: MusicTrackMobileMenuProps) {
@@ -148,12 +150,12 @@ export function MusicTrackMobileMenu({
                 className="justify-start w-full text-destructive hover:text-destructive"
                 onClick={() => {
                   onOpenChange(false);
-                  if (window.confirm(`确定移除歌曲「${track.name}」吗？`)) {
+                  if (window.confirm(`确定${removeLabel}歌曲「${track.name}」吗？`)) {
                     onRemove();
                   }
                 }}
               >
-                <Trash2 className="mr-2 h-4 w-4" /> 移除
+                <Trash2 className="mr-2 h-4 w-4" /> {removeLabel}
               </Button>
             )}
 

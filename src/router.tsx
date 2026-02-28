@@ -109,7 +109,7 @@ function RootLayout() {
     seek(value[0]);
   };
 
-  const handleToggleFavorite = () => {
+  const handleToggleLike = () => {
     if (!currentTrack) return;
     if (isFavorite(currentTrack.id)) {
       removeFromFavorites(currentTrack.id);
@@ -143,7 +143,7 @@ function RootLayout() {
         duration={duration}
         coverUrl={coverUrl}
         isFavorite={currentTrack ? isFavorite(currentTrack.id) : false}
-        onToggleFavorite={handleToggleFavorite}
+        onToggleLike={handleToggleLike}
         isPlaying={isPlaying}
         isLoading={isLoading}
         isRepeat={isRepeat}

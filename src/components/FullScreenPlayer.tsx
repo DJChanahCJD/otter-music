@@ -38,7 +38,7 @@ interface FullScreenPlayerProps {
   duration: number;
   coverUrl: string | null;
   isFavorite?: boolean;
-  onToggleFavorite?: () => void;
+  onToggleLike?: () => void;
   isPlaying: boolean;
   isLoading: boolean;
   isRepeat: boolean;
@@ -59,7 +59,7 @@ export function FullScreenPlayer({
   duration,
   coverUrl,
   isFavorite = false,
-  onToggleFavorite,
+  onToggleLike,
   isPlaying,
   isLoading,
   isRepeat,
@@ -76,14 +76,13 @@ export function FullScreenPlayer({
   const [moreDrawerOpen, setMoreDrawerOpen] = useState(false);
   const [isAddToPlaylistOpen, setIsAddToPlaylistOpen] = useState(false);
 
-  const { queue, quality, currentIndex, setCurrentIndexAndPlay, clearQueue, reshuffle, addToNextPlay, currentAudioUrl } = useMusicStore(
+  const { queue, quality, currentIndex, setCurrentIndexAndPlay, clearQueue, reshuffle, currentAudioUrl } = useMusicStore(
     useShallow((state) => ({
       queue: state.queue,
       currentIndex: state.currentIndex,
       setCurrentIndexAndPlay: state.setCurrentIndexAndPlay,
       clearQueue: state.clearQueue,
       reshuffle: state.reshuffle,
-      addToNextPlay: state.addToNextPlay,
       currentAudioUrl: state.currentAudioUrl,
       quality: state.quality,
     }))
@@ -233,7 +232,7 @@ export function FullScreenPlayer({
               variant="ghost"
               size="icon"
               className="h-10 w-10 text-muted-foreground hover:bg-muted/40 hover:text-foreground"
-              onClick={onToggleFavorite}
+              onClick={onToggleLike}
             >
               <Heart
                 className={cn(
@@ -250,7 +249,8 @@ export function FullScreenPlayer({
                   onOpenChange={setMoreDrawerOpen}
                   onAddToPlaylist={() => setIsAddToPlaylistOpen(true)}
                   onDownload={() => downloadMusicTrack(currentTrack, parseInt(quality))}
-                  onToggleLike={() => onToggleFavorite?.()}
+                  isFavorite={isFavorite}
+                  onToggleLike={onToggleLike}
                   triggerClassName="h-10 w-10 text-muted-foreground hover:bg-muted/40 hover:text-foreground"
                 />
                 <AddToPlaylistDialog

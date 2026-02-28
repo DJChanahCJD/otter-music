@@ -27,6 +27,7 @@ interface MusicTrackItemProps {
   showCheckbox?: boolean;
   onPlay: () => void;
   onRemove?: () => void;
+  removeLabel?: string;
   isDownloaded?: boolean;
   quality?: string;
   className?: string;
@@ -43,6 +44,7 @@ export function MusicTrackItem({
   showCheckbox,
   onPlay,
   onRemove,
+  removeLabel,
   isDownloaded,
   quality = "192",
   className,
@@ -170,7 +172,7 @@ export function MusicTrackItem({
             }}
             isFavorite={isFavorite(track.id)}
             onRemove={onRemove}
-
+            removeLabel={removeLabel}
           />
 
           <AddToPlaylistDialog

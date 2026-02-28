@@ -23,7 +23,7 @@ interface MusicPlaylistViewProps {
    * - 不传 index：播放全部（由上层/Store 决定起始点，如随机播放）
    */
   onPlay: (track: MusicTrack | null, index?: number) => void;
-  onRemove?: (track: MusicTrack) => void;
+  onRemove?: (track: MusicTrack, silent?: boolean) => void | Promise<void>;
   onRename?: (playlistId: string, newName: string) => void;
   onDelete?: (playlistId: string) => void;
   description?: string;
@@ -31,6 +31,7 @@ interface MusicPlaylistViewProps {
   isPlaying?: boolean;
   action?: React.ReactNode;
   coverUrl?: string;
+  removeLabel?: string;
 }
 
 export function MusicPlaylistView({
@@ -46,6 +47,7 @@ export function MusicPlaylistView({
   isPlaying,
   action,
   coverUrl,
+  removeLabel,
 }: MusicPlaylistViewProps) {
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -149,6 +151,7 @@ export function MusicPlaylistView({
           currentTrackId={currentTrackId}
           isPlaying={isPlaying}
           onRemove={onRemove}
+          removeLabel={removeLabel}
         />
       </div>
     </div>

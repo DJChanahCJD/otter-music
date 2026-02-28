@@ -34,11 +34,12 @@ interface MusicTrackListProps {
   onPlay: (track: MusicTrack) => void;
   currentTrackId?: string;
   isPlaying?: boolean;
-  onRemove?: (track: MusicTrack) => void;
+  onRemove?: (track: MusicTrack, silent?: boolean) => void | Promise<void>;
   onLoadMore?: () => void;
   hasMore?: boolean;
   loading?: boolean;
   emptyMessage?: string;
+  removeLabel?: string;
 }
 
 interface RowProps {
@@ -50,7 +51,8 @@ interface RowProps {
   downloadedStatusMap: Map<string, boolean>;
   quality: string;
   onPlay: (track: MusicTrack) => void;
-  onRemove?: (track: MusicTrack) => void;
+  onRemove?: (track: MusicTrack, silent?: boolean) => void | Promise<void>;
+  removeLabel?: string;
   toggleSelect: (id: string) => void;
   onLoadMore?: () => void;
   hasMore?: boolean;
@@ -69,6 +71,7 @@ const Row = ({
   quality,
   onPlay,
   onRemove,
+  removeLabel,
   toggleSelect,
   onLoadMore,
   hasMore,
@@ -93,6 +96,7 @@ const Row = ({
         onRemove={
           !isSelectionMode && onRemove ? () => onRemove(track) : undefined
         }
+        removeLabel={removeLabel}
         isDownloaded={downloadedStatusMap.get(track.id) ?? false}
         quality={quality}
       />
@@ -134,6 +138,7 @@ export function MusicTrackList({
   hasMore,
   loading,
   emptyMessage = "暂无歌曲",
+  removeLabel,
 }: MusicTrackListProps) {
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -207,15 +212,16 @@ export function MusicTrackList({
   const handleBatchRemove = async () => {
     if (!onRemove) return;
     const count = selectedIds.size;
-    if (confirm(`确定移除选中的 ${count} 首歌曲吗？`)) {
+    const label = removeLabel || "移除";
+    if (confirm(`确定${label}选中的 ${count} 首歌曲吗？`)) {
       const selectedTracks = tracks.filter((t) => selectedIds.has(t.id));
 
-      const toastId = toast.loading(`正在移除 0/${count}...`);
-      await processBatchCPU(selectedTracks, onRemove, (current, total) => {
-        toast.loading(`正在移除 ${current}/${total}...`, { id: toastId });
+      const toastId = toast.loading(`正在${label} 0/${count}...`);
+      await processBatchCPU(selectedTracks, (t) => onRemove(t, true), (current, total) => {
+        toast.loading(`正在${label} ${current}/${total}...`, { id: toastId });
       });
 
-      toast.success(`已移除 ${count} 首歌曲`, { id: toastId });
+      toast.success(`已${label} ${count} 首歌曲`, { id: toastId });
       setIsSelectionMode(false);
       setSelectedIds(new Set());
     }
@@ -261,6 +267,7 @@ export function MusicTrackList({
     quality,
     onPlay,
     onRemove,
+    removeLabel,
     toggleSelect,
     onLoadMore,
     hasMore,
@@ -391,7 +398,7 @@ export function MusicTrackList({
                             className="flex items-center px-2 py-2 text-sm rounded-sm hover:bg-accent cursor-pointer text-destructive"
                             onClick={handleBatchRemove}
                           >
-                            <Trash2 className="mr-2 h-4 w-4" /> 移除
+                            <Trash2 className="mr-2 h-4 w-4" /> {removeLabel || "移除"}
                           </div>
                         </>
                       )}

@@ -13,7 +13,7 @@ interface PlayerTrackInfoProps {
   isFullScreen: boolean;
   isFavorite?: boolean;
   onToggleFullScreen?: () => void;
-  onToggleFavorite?: () => void;
+  onToggleLike?: () => void;
   onDownload?: () => void;
 }
 
@@ -23,7 +23,7 @@ export function PlayerTrackInfo({
   isFullScreen,
   isFavorite = false,
   onToggleFullScreen,
-  onToggleFavorite,
+  onToggleLike,
   onDownload,
 }: PlayerTrackInfoProps) {
   const isMobile = useIsMobile();
@@ -84,12 +84,12 @@ export function PlayerTrackInfo({
           className="flex items-center gap-1 ml-2 shrink-0"
           onClick={(e) => e.stopPropagation()}
         >
-          {onToggleFavorite && (
+          {onToggleLike && (
             <Button
               variant="ghost"
               size="icon"
               className="h-8 w-8 text-muted-foreground hover:bg-muted/40 hover:text-foreground"
-              onClick={onToggleFavorite}
+              onClick={onToggleLike}
               title="喜欢"
             >
               <Heart

@@ -112,7 +112,6 @@ export function MusicTrackVariants({ variants }: MusicTrackVariantsProps) {
                               toast.success("已取消喜欢");
                           } else {
                               addToFavorites(variant);
-                              toast.success("已喜欢");
                           }
                       }}
                       isFavorite={isFavorite(variant.id)}

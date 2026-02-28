@@ -135,35 +135,36 @@ export function LocalMusicPage({
   /* =========================
      删除
   ========================= */
-  const handleDeleteTrack = async (track: MusicTrack) => {
-
-    if (!confirm(`确认删除「${track.name}」？`)) return;
-
+  const handleDeleteTrack = async (track: MusicTrack, silent = false) => {
     const localPath = track.url_id;
     if (!localPath) {
-      toast.error("缺少文件路径");
-      return;
+      if (!silent) toast.error("缺少文件路径");
+      throw new Error("缺少文件路径");
+    }
+
+    const promise = (async () => {
+      const result = await LocalMusicPlugin.deleteLocalMusic({ localPath });
+
+      if (!result.success) {
+        throw new Error(result.error || "删除失败");
+      }
+
+      updateFiles((prev) =>
+        prev.filter((f) => f.localPath !== localPath)
+      );
+
+      const currentTrack = queue[currentIndex];
+      if (currentTrack?.id === track.id) {
+        skipToNext();
+      }
+    })();
+
+    if (silent) {
+      return promise;
     }
 
     toast.promise(
-      (async () => {
-
-        const result = await LocalMusicPlugin.deleteLocalMusic({ localPath });
-
-        if (!result.success) {
-          throw new Error(result.error || "删除失败");
-        }
-
-        updateFiles((prev) =>
-          prev.filter((f) => f.localPath !== localPath)
-        );
-
-        const currentTrack = queue[currentIndex];
-        if (currentTrack?.id === track.id) {
-          skipToNext();
-        }
-
-      })(),
+      promise,
       {
         loading: "正在删除...",
         success: "删除成功",
@@ -254,6 +255,7 @@ export function LocalMusicPage({
         currentTrackId={currentTrackId}
         isPlaying={isPlaying}
         onRemove={handleDeleteTrack}
+        removeLabel="删除"
       />
 
       <LocalMusicPermissionDialog
