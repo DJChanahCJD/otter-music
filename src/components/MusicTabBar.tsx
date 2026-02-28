@@ -24,9 +24,26 @@ export function MusicTabBar() {
   
   // Determine active tab based on current path
   const getActiveTab = (pathname: string): TabId => {
-    if (pathname.startsWith("/search")) return "search";
-    if (pathname.startsWith("/favorites")) return "favorites";
-    if (pathname.startsWith("/mine")) return "mine";
+    // 发现 (Search) - 默认 Tab
+    if (pathname.startsWith("/search")) {
+      return "search";
+    }
+    
+    // 喜欢 (Favorites)
+    if (pathname.startsWith("/favorites")) {
+      return "favorites";
+    }
+    
+    // 我的 (Mine)
+    if (pathname.startsWith("/mine") ||
+        pathname.startsWith("/local") ||
+        pathname.startsWith("/settings") ||
+        pathname.startsWith("/playlist/") ||
+        pathname.startsWith("/queue") ||
+        pathname.startsWith("/history")) {
+      return "mine";
+    }
+    
     return "search"; // Default
   };
 
