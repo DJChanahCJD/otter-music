@@ -23,11 +23,6 @@ dist-ssr
 *.sln
 *.sw?
 
-# trae
-.trae/documents
-.trae/skills
-.trae/specs
-
 # Android
 android/app/build
 android/.gradle/
