@@ -43,7 +43,7 @@ export async function downloadMusicTrack(track: MusicTrack, br = 192) {
     }
   } catch (err) {
     console.error(err);
-    toast.error("下载失败", { id: toastId });
+    toast.error(`下载失败: ${err}`, { id: toastId });
   }
 }
 
@@ -56,6 +56,19 @@ async function downloadNative(
   toastId: string
 ) {
   const dirPath = `Download/${DOWNLOAD_DIR}`;
+
+  try {
+    const permStatus = await Filesystem.checkPermissions();
+    if (permStatus.publicStorage !== "granted") {
+      const requestStatus = await Filesystem.requestPermissions();
+      if (requestStatus.publicStorage !== "granted") {
+        toast.error("需要存储权限才能下载音乐", { id: toastId });
+        return;
+      }
+    }
+  } catch (e) {
+    console.error("权限检查失败", e);
+  }
 
   await ensureDownloadDir(DOWNLOAD_DIR);
 
