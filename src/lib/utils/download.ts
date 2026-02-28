@@ -158,14 +158,20 @@ function triggerBlobDownload(blob: Blob, filename: string) {
 }
 
 async function ensureDownloadDir(name: string) {
+  const path = `Download/${name}`;
+
   try {
-    await Filesystem.mkdir({
+    await Filesystem.stat({
       directory: Directory.ExternalStorage,
-      path: `Download/${name}`,
-      recursive: true,
+      path,
     });
   } catch {
-    console.log("目录已存在或创建失败");
+    // 目录不存在时尝试创建，若失败则抛出错误让上层处理
+    await Filesystem.mkdir({
+      directory: Directory.ExternalStorage,
+      path,
+      recursive: true,
+    });
   }
 }
 
