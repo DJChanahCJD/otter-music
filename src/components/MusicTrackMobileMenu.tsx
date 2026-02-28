@@ -24,14 +24,12 @@ interface MusicTrackMobileMenuProps {
   track: MusicTrack;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onAddToNextPlay: () => void;
-  onAddToPlaylistTrigger: () => void;
-  onDownload: () => void;
-  onToggleLike: () => void;
+  onAddToNextPlay?: () => void;
+  onAddToPlaylist: () => void;
+  onDownload?: () => void;
+  onToggleLike?: () => void;
   isFavorite?: boolean;
   onRemove?: () => void;
-  hideLike?: boolean;
-  hideAddToPlaylist?: boolean;
   customActions?: ReactNode;
   triggerClassName?: string;
 }
@@ -41,13 +39,11 @@ export function MusicTrackMobileMenu({
   open,
   onOpenChange,
   onAddToNextPlay,
-  onAddToPlaylistTrigger,
+  onAddToPlaylist,
   onDownload,
   onToggleLike,
   isFavorite,
   onRemove,
-  hideLike,
-  hideAddToPlaylist,
   customActions,
   triggerClassName,
 }: MusicTrackMobileMenuProps) {
@@ -69,9 +65,7 @@ export function MusicTrackMobileMenu({
             <MoreVertical className="h-4 w-4" />
           </Button>
         </DrawerTrigger>
-        <DrawerContent
-          onClick={(e) => e.stopPropagation()}
-        >
+        <DrawerContent onClick={(e) => e.stopPropagation()}>
           <DrawerTitle>
             {/* Header with Cover and Info */}
             <div className="flex items-center gap-4 px-6 py-4">
@@ -91,7 +85,7 @@ export function MusicTrackMobileMenu({
             </div>
           </DrawerTitle>
           <div className="p-4 flex flex-col gap-2">
-            {!hideLike && (
+            {onToggleLike && (
               <Button
                 variant="ghost"
                 className="justify-start w-full"
@@ -109,24 +103,26 @@ export function MusicTrackMobileMenu({
                 {isFavorite ? "取消喜欢" : "喜欢"}
               </Button>
             )}
-            <Button
-              variant="ghost"
-              className="justify-start w-full"
-              onClick={() => {
-                onDownload();
-                onOpenChange(false);
-              }}
-            >
-              <Download className="mr-2 h-4 w-4" /> 下载
-            </Button>
+            {onDownload && (
+              <Button
+                variant="ghost"
+                className="justify-start w-full"
+                onClick={() => {
+                  onDownload();
+                  onOpenChange(false);
+                }}
+              >
+                <Download className="mr-2 h-4 w-4" /> 下载
+              </Button>
+            )}
 
-            {!hideAddToPlaylist && (
+            {onAddToPlaylist && (
               <Button
                 variant="ghost"
                 className="justify-start w-full"
                 onClick={() => {
                   onOpenChange(false);
-                  onAddToPlaylistTrigger();
+                  onAddToPlaylist();
                 }}
               >
                 <ListPlus className="mr-2 h-4 w-4" /> 添加到歌单

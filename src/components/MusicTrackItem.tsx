@@ -26,10 +26,6 @@ interface MusicTrackItemProps {
   onSelect?: () => void;
   showCheckbox?: boolean;
   onPlay: () => void;
-  // Optional overrides or disabling default actions
-  hideLike?: boolean;
-  hideAddToPlaylist?: boolean;
-  // Custom actions to render (e.g. Delete button)
   onRemove?: () => void;
   isDownloaded?: boolean;
   quality?: string;
@@ -46,8 +42,6 @@ export function MusicTrackItem({
   onSelect,
   showCheckbox,
   onPlay,
-  hideLike,
-  hideAddToPlaylist,
   onRemove,
   isDownloaded,
   quality = "192",
@@ -162,7 +156,7 @@ export function MusicTrackItem({
               addToNextPlay(track);
               toast.success("已添加到下一首播放");
             }}
-            onAddToPlaylistTrigger={() => {
+            onAddToPlaylist={() => {
               setIsAddToPlaylistOpen(true);
             }}
             onDownload={() => downloadMusicTrack(track, parseInt(quality))}
@@ -172,13 +166,11 @@ export function MusicTrackItem({
                 toast.success("已取消喜欢");
               } else {
                 addToFavorites(track);
-                toast.success("已喜欢");
               }
             }}
             isFavorite={isFavorite(track.id)}
             onRemove={onRemove}
-            hideLike={hideLike}
-            hideAddToPlaylist={hideAddToPlaylist}
+
           />
 
           <AddToPlaylistDialog

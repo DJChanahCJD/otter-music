@@ -50,7 +50,6 @@ export function FavoritesRoute() {
         title="我的喜欢"
         tracks={favorites}
         onPlay={handlePlayInPlaylist}
-        onRemove={(t) => removeFromFavorites(t.id)}
         currentTrackId={currentTrack?.id}
         isPlaying={isPlaying}
       />

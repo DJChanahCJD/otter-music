@@ -97,7 +97,7 @@ export function MusicTrackVariants({ variants }: MusicTrackVariantsProps) {
                       track={variant}
                       open={mobileMenuOpenId === `${variant.source}-${variant.id}`}
                       onOpenChange={(open) => setMobileMenuOpenId(open ? `${variant.source}-${variant.id}` : null)}
-                      onAddToPlaylistTrigger={() => {
+                      onAddToPlaylist={() => {
                           setActiveTrack(variant);
                           setIsAddToPlaylistOpen(true);
                       }}

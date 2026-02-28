@@ -248,14 +248,9 @@ export function FullScreenPlayer({
                   track={currentTrack}
                   open={moreDrawerOpen}
                   onOpenChange={setMoreDrawerOpen}
-                  onAddToNextPlay={() => {
-                    addToNextPlay(currentTrack);
-                    toast.success("已添加到下一首播放");
-                  }}
-                  onAddToPlaylistTrigger={() => setIsAddToPlaylistOpen(true)}
+                  onAddToPlaylist={() => setIsAddToPlaylistOpen(true)}
                   onDownload={() => downloadMusicTrack(currentTrack, parseInt(quality))}
                   onToggleLike={() => onToggleFavorite?.()}
-                  hideLike={true}
                   triggerClassName="h-10 w-10 text-muted-foreground hover:bg-muted/40 hover:text-foreground"
                 />
                 <AddToPlaylistDialog
