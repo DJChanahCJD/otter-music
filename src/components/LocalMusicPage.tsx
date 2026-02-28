@@ -14,7 +14,7 @@ import { useLocalMusicStore } from "@/store/local-music-store";
 import { LocalMusicPermissionDialog } from "./LocalMusicPermissionDialog";
 
 interface LocalMusicPageProps {
-  onBack: () => void;
+  onBack?: () => void;
   onPlay: (track: MusicTrack, list: MusicTrack[], contextId?: string) => void;
   currentTrackId?: string;
   isPlaying: boolean;

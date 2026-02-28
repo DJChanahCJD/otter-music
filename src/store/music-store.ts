@@ -64,6 +64,10 @@ interface MusicState {
   setSearchPage: (page: number) => void;
   resetSearch: () => void;
 
+  // --- UI State (Not Persisted) ---
+  isFullScreenPlayer: boolean;
+  setIsFullScreenPlayer: (isFullScreen: boolean) => void;
+
   // --- Playback State (Persisted) ---
   volume: number;
   isRepeat: boolean;
@@ -213,6 +217,10 @@ export const useMusicStore = create<MusicState>()(
         searchHasMore: false,
         searchPage: 0
       }),
+
+      // --- UI State ---
+      isFullScreenPlayer: false,
+      setIsFullScreenPlayer: (isFullScreen) => set({ isFullScreenPlayer: isFullScreen }),
 
       volume: 1.0,
       isRepeat: false,

@@ -19,7 +19,7 @@ import { ChevronRight, Volume2, Music, Radio, Palette } from "lucide-react";
 
 
 interface SettingsPageProps {
-  onBack: () => void;
+  onBack?: () => void;
 }
 
 export function SettingsPage({ onBack }: SettingsPageProps) {
@@ -47,7 +47,7 @@ export function SettingsPage({ onBack }: SettingsPageProps) {
       <div className="flex-1 p-4 space-y-3 pb-28">
         <div className="flex items-center justify-between p-4 rounded-xl bg-card/50 border border-border/50 min-h-[60px]">
           <div className="flex items-center gap-3 flex-1">
-            <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+            <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
               <Palette className="h-4 w-4 text-primary" />
             </div>
             <span className="text-foreground">主题切换</span>
@@ -57,7 +57,7 @@ export function SettingsPage({ onBack }: SettingsPageProps) {
 
         <div className="flex items-center justify-between p-4 rounded-xl bg-card/50 border border-border/50 min-h-[60px]">
           <div className="flex items-center gap-3 flex-1">
-            <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+            <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
               <Volume2 className="h-4 w-4 text-primary" />
             </div>
             <span className="text-foreground">音量调节</span>
@@ -101,7 +101,7 @@ export function SettingsPage({ onBack }: SettingsPageProps) {
         >
           <div className="flex items-center justify-between min-h-[60px]">
             <div className="flex items-center gap-3 flex-1">
-              <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+              <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
                 <Radio className="h-4 w-4 text-primary" />
               </div>
               <span className="text-foreground">聚合音源</span>

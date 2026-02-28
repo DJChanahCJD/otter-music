@@ -36,6 +36,7 @@
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-hot-toast": "^2.6.0",
+    "react-router-dom": "^7.13.1",
     "react-virtualized-auto-sizer": "^2.0.2",
     "react-window": "^2.2.6",
     "swr": "^2.4.0",

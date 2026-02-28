@@ -11,7 +11,6 @@ import { MusicTrack } from "@/types/music";
 import { ChevronDown, Heart, ListVideo, Shuffle, Repeat, Repeat1, SkipBack, SkipForward, Play, Pause, SquareArrowOutUpRight } from "lucide-react";
 import { Spinner } from "@/components/ui/spinner";
 import { useMounted } from "@/hooks/use-mounted";
-import { useBackButton } from "@/hooks/use-back-button";
 import { PlayerQueuePopover } from "./PlayerQueuePopover";
 import { MusicTrackMobileMenu } from "./MusicTrackMobileMenu";
 import { AddToPlaylistDialog } from "./AddToPlaylistDialog";
@@ -76,8 +75,6 @@ export function FullScreenPlayer({
   const [showLyrics, setShowLyrics] = useState(false);
   const [moreDrawerOpen, setMoreDrawerOpen] = useState(false);
   const [isAddToPlaylistOpen, setIsAddToPlaylistOpen] = useState(false);
-
-  useBackButton(onClose, isFullScreen);
 
   const { queue, quality, currentIndex, setCurrentIndexAndPlay, clearQueue, reshuffle, addToNextPlay, currentAudioUrl } = useMusicStore(
     useShallow((state) => ({

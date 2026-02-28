@@ -23,15 +23,14 @@ import {
   DropdownMenuTrigger,
 } from "./ui/dropdown-menu";
 
+import { useNavigate } from "react-router-dom";
+
 interface MinePageProps {
-  onOpenHistory: () => void;
-  onOpenQueue: () => void;
-  onOpenSettings: () => void;
-  onOpenLocalMusic: () => void;
   onSelectPlaylist: (playlistId: string) => void;
 }
 
-export function MinePage({ onOpenHistory, onOpenQueue, onOpenSettings, onOpenLocalMusic, onSelectPlaylist }: MinePageProps) {
+export function MinePage({ onSelectPlaylist }: MinePageProps) {
+  const navigate = useNavigate();
   const { playlists, createPlaylist, renamePlaylist, deletePlaylist } = useMusicStore(
     useShallow((state) => ({
       playlists: state.playlists,
@@ -79,7 +78,7 @@ export function MinePage({ onOpenHistory, onOpenQueue, onOpenSettings, onOpenLoc
     <div className="p-5">
       <div className="flex gap-2 mb-6">
         <button
-          onClick={onOpenHistory}
+          onClick={() => navigate('/history')}
           className="flex-1 flex flex-col items-center justify-center gap-2 p-4 rounded-2xl bg-card/70 hover:bg-card transition-all duration-300"
         >
           <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
@@ -89,7 +88,7 @@ export function MinePage({ onOpenHistory, onOpenQueue, onOpenSettings, onOpenLoc
         </button>
 
         <button
-          onClick={onOpenQueue}
+          onClick={() => navigate('/queue')}
           className="flex-1 flex flex-col items-center justify-center gap-2 p-4 rounded-2xl bg-card/70 hover:bg-card transition-all duration-300"
         >
           <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
@@ -99,7 +98,7 @@ export function MinePage({ onOpenHistory, onOpenQueue, onOpenSettings, onOpenLoc
         </button>
 
         <button
-          onClick={onOpenLocalMusic}
+          onClick={() => navigate('/local')}
           className="flex-1 flex flex-col items-center justify-center gap-2 p-4 rounded-2xl bg-card/70 hover:bg-card transition-all duration-300"
         >
           <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
@@ -109,7 +108,7 @@ export function MinePage({ onOpenHistory, onOpenQueue, onOpenSettings, onOpenLoc
         </button>
 
         <button
-          onClick={onOpenSettings}
+          onClick={() => navigate('/settings')}
           className="flex-1 flex flex-col items-center justify-center gap-2 p-4 rounded-2xl bg-card/70 hover:bg-card transition-all duration-300"
         >
           <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">

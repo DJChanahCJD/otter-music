@@ -13,7 +13,7 @@ interface HistoryPageProps {
   onPlay: (track: MusicTrack | null, index?: number) => void;
   onRemove: (track: MusicTrack) => void;
   onClear: () => void;
-  onBack: () => void;
+  onBack?: () => void;
 }
 
 export function HistoryPage({

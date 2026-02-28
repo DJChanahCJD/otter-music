@@ -1,12 +1,12 @@
 "use client";
 
 import { PageHeader } from "./PageHeader";
-import { useBackButton } from "@/hooks/use-back-button";
 import { cn } from "@/lib/utils";
+import { useNavigate } from "react-router-dom";
 
 interface PageLayoutProps {
   title: string;
-  onBack: () => void;
+  onBack?: () => void;
   subtitle?: string;
   action?: React.ReactNode;
   children: React.ReactNode;
@@ -14,11 +14,19 @@ interface PageLayoutProps {
 }
 
 export function PageLayout({ title, onBack, subtitle, action, children, className }: PageLayoutProps) {
-  useBackButton(onBack);
+  const navigate = useNavigate();
+  
+  const handleBack = () => {
+    if (onBack) {
+      onBack();
+    } else {
+      navigate(-1);
+    }
+  };
 
   return (
     <div className={cn("flex flex-col h-full", className)}>
-      <PageHeader title={title} onBack={onBack} subtitle={subtitle} action={action} />
+      <PageHeader title={title} onBack={handleBack} subtitle={subtitle} action={action} />
       {children}
     </div>
   );
