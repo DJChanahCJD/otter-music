@@ -103,6 +103,8 @@ export function useAudioTrackLoader(
 
   const requestIdRef = useRef(0);
 
+  const prevTrackRef = useRef<{ id?: string; source?: string } | null>(null);
+
   useEffect(() => {
     if (!hasUserGesture) return;
     if (
@@ -118,12 +120,17 @@ export function useAudioTrackLoader(
 
     const load = async () => {
       const audio = audioRef.current!;
-      setIsLoading(true);
-
-      isSwitchingTrackRef.current = true;
-      hasRecordedRef.current = false;
 
       try {
+        setIsLoading(true);
+
+        if (prevTrackRef.current?.id === currentTrackId && prevTrackRef.current?.source === currentTrackSource) {
+          return;
+        }
+
+        isSwitchingTrackRef.current = true;
+        hasRecordedRef.current = false;
+
         audio.pause();
 
         const isLocal = (currentTrackSource as string) === 'local';
@@ -221,6 +228,11 @@ export function useAudioTrackLoader(
     };
 
     load();
+
+    prevTrackRef.current = {
+      id: currentTrackId,
+      source: currentTrackSource,
+    };
 
     return () => {
       if (currentRequestId === requestIdRef.current) {
