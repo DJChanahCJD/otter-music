@@ -20,7 +20,7 @@ interface AppActions {
 }
 
 const initialState: AppState = {
-  currentVersion: "v0.0.0",
+  currentVersion: "0.0.0",
   lastCheckTime: 0,
   latestVersionInfo: null,
   hasNewVersion: false,
@@ -45,7 +45,7 @@ const getCurrentVersion = async (): Promise<string> => {
   } catch (e) {
     console.error("Failed to get app info", e);
   }
-  return "v0.0.0"; // Web fallback
+  return "0.0.0"; // Web fallback
 };
 
 export const useAppStore = create<AppState & AppActions>()(

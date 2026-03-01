@@ -40,8 +40,8 @@ export async function exportPlaylist(name: string, tracks: MusicTrack[]) {
         recursive: true, // 自动创建目录
       });
 
-      toastUtils.success(`导出成功！\n已保存至：\n${exportPath}`, {
-        duration: 5000,
+      toastUtils.success(`导出成功：\n${exportPath}`, {
+        duration: 4000,
       });
     } catch (error) {
       console.error("Export failed:", error);
