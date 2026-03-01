@@ -645,6 +645,7 @@ export const useMusicStore = create<MusicState>()(
         isRepeat: state.isRepeat,
         isShuffle: state.isShuffle,
         currentAudioTime: state.currentAudioTime,
+        duration: state.duration,
         quality: state.quality,
         searchSource: state.searchSource,
         aggregatedSources: state.aggregatedSources,

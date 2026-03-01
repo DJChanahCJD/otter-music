@@ -16,11 +16,6 @@
 - **文件**: [package.json](file:///c:/Users/DJCHAN/SE/2_GithubProject/otter-music/package.json)
 - **修改内容**: 更新 `"version"` 字段（例如从 "0.0.0" 改为 "1.1.0"）。
 
-### 3. 修改 Cordova 兼容配置 (可选)
-某些插件或构建工具可能会读取此文件。
-- **文件**: [config.xml](file:///c:/Users/DJCHAN/SE/2_GithubProject/otter-music/android/app/src/main/res/xml/config.xml)
-- **修改内容**: 更新 `<widget version="1.0.0">` 中的版本号。
-
 ## 验证方法
 1. 修改上述文件后，运行 `npx cap sync android` 同步配置。
 2. 重新构建 APK/Bundle 并在 Android 设备上查看安装时的版本信息。
