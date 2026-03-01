@@ -4,6 +4,7 @@ import { useMusicStore } from "@/store/music-store";
 import { MusicTrack, sourceBadgeStyles, sourceLabels } from "@/types/music";
 import { Layers, Play } from "lucide-react";
 import { useState } from "react";
+import { toastUtils } from "@/lib/utils/toast";
 import toast from "react-hot-toast";
 import { useShallow } from "zustand/react/shallow";
 import { AddToPlaylistDialog } from "./AddToPlaylistDialog";
@@ -111,7 +112,12 @@ export function MusicTrackVariants({ variants }: MusicTrackVariantsProps) {
                               removeFromFavorites(variant.id);
                               toast.success("已取消喜欢");
                           } else {
-                              addToFavorites(variant);
+                              const error = addToFavorites(variant);
+                              if (error) {
+                                toastUtils.info(error);
+                              } else {
+                                toast.success("已喜欢");
+                              }
                           }
                       }}
                       isFavorite={isFavorite(variant.id)}

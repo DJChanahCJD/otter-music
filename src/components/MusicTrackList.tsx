@@ -343,7 +343,7 @@ export function MusicTrackList({
                       </div>
                       <div
                         className="flex items-center px-2 py-2 text-sm rounded-sm hover:bg-accent cursor-pointer"
-                        onClick={() => handleBatch(addToFavorites)}
+                        onClick={() => handleBatch((t) => addToFavorites(t), "已添加到喜欢")}
                       >
                         <Heart className="mr-2 h-4 w-4" /> 喜欢
                       </div>

@@ -8,6 +8,7 @@ import {
   sourceLabels,
 } from "@/types/music";
 import { useState } from "react";
+import { toastUtils } from "@/lib/utils/toast";
 import toast from "react-hot-toast";
 import { useShallow } from "zustand/react/shallow";
 import { AddToPlaylistDialog } from "./AddToPlaylistDialog";
@@ -167,7 +168,12 @@ export function MusicTrackItem({
                 removeFromFavorites(track.id);
                 toast.success("已取消喜欢");
               } else {
-                addToFavorites(track);
+                const error = addToFavorites(track);
+                if (error) {
+                  toastUtils.info(error);
+                } else {
+                  toast.success("已喜欢");
+                }
               }
             }}
             isFavorite={isFavorite(track.id)}

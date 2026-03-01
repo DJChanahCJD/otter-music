@@ -12,6 +12,12 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { MusicTrack } from "@/types/music";
+import { useMusicStore } from "@/store/music-store";
+import { useDownloadStore } from "@/store/download-store";
+import { buildDownloadKey } from "@/lib/utils/download";
+import toast from "react-hot-toast";
+import { deduplicateTracks } from "@/lib/utils/music";
+import { toastUtils } from "@/lib/utils/toast";
 
 interface MusicPlaylistViewProps {
   title: string;
@@ -60,6 +66,40 @@ export function MusicPlaylistView({
       t.album?.toLowerCase().includes(lower)
     );
   }, [tracks, searchQuery]);
+
+  const handleDeduplicate = () => {
+    if (!playlistId) return;
+
+    if (!confirm("确定要对当前歌单进行去重吗？\n\n规则：\n1. 繁简体转换后歌名、歌手完全相同的视为重复\n2. 保留优先级：已下载 > 已喜欢 > 序号较大\n3. 自动合并「已喜欢」状态")) {
+      return;
+    }
+
+    const musicStore = useMusicStore.getState();
+    const downloadStore = useDownloadStore.getState();
+
+    const result = deduplicateTracks(
+      tracks,
+      (id) => musicStore.isFavorite(id),
+      (track) => downloadStore.hasRecord(buildDownloadKey(track.source, track.id))
+    );
+
+    if (result.removedCount === 0) {
+      toastUtils.info("没有发现重复歌曲");
+      return;
+    }
+
+    // 1. Update Favorites (Merge logic)
+    if (result.tracksToLike.length > 0) {
+      result.tracksToLike.forEach(track => {
+        musicStore.addToFavorites(track);
+      });
+      toast.success(`已合并 ${result.tracksToLike.length} 首歌曲的喜欢状态`);
+    }
+
+    // 2. Update Playlist
+    musicStore.setPlaylistTracks(playlistId, result.tracks);
+    toast.success(`已移除 ${result.removedCount} 首重复歌曲`);
+  };
 
   return (
     <div className="flex flex-col h-full">
@@ -117,6 +157,9 @@ export function MusicPlaylistView({
                        重命名
                      </DropdownMenuItem>
                    )}
+                   <DropdownMenuItem onClick={handleDeduplicate}>
+                     歌单去重
+                   </DropdownMenuItem>
                    {onDelete && (
                      <DropdownMenuItem onClick={() => {
                        if (confirm(`确定删除歌单「${title}」吗？`)) {

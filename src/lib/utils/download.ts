@@ -6,6 +6,7 @@ import { MusicSource, MusicTrack } from "@/types/music";
 import toast from "react-hot-toast";
 import { LocalMusicFile } from "@/plugins/local-music";
 import { useDownloadStore } from "@/store/download-store";
+import { toastUtils } from "./toast";
 
 const DOWNLOAD_DIR = "OtterMusic";
 export function buildDownloadKey(trackSource: MusicSource, trackId: string) {
@@ -14,7 +15,7 @@ export function buildDownloadKey(trackSource: MusicSource, trackId: string) {
 
 export async function downloadMusicTrack(track: MusicTrack, br = 192) {
   if (track.source === "local") {
-    toast("本地音乐，无需下载", { icon: "ℹ️" });
+    toastUtils.info("本地音乐，无需下载");
     return;
   }
 
@@ -28,7 +29,7 @@ export async function downloadMusicTrack(track: MusicTrack, br = 192) {
     if (Capacitor.isNativePlatform()) {
       const downloadKey = buildDownloadKey(track.source, track.id);
       if (useDownloadStore.getState().hasRecord(downloadKey)) {
-        toast("文件已存在", { id: toastId, icon: "ℹ️" });
+        toastUtils.info("文件已存在", { id: toastId });
         return;
       }
     }

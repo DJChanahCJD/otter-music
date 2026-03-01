@@ -3,8 +3,8 @@ import { persist } from 'zustand/middleware';
 import { v4 as uuidv4 } from 'uuid';
 import { storeKey } from './store-keys';
 import type { MusicTrack, MusicSource, Playlist } from '@/types/music';
-import toast from 'react-hot-toast';
 import { cleanTrack } from '@/lib/utils/music';
+import { toastUtils } from '@/lib/utils/toast';
 
 /**
  * 清理 Playlist，移除 tracks 中的 variants
@@ -33,7 +33,7 @@ interface MusicState {
   favorites: MusicTrack[];
   playlists: Playlist[];
 
-  addToFavorites: (track: MusicTrack) => void;
+  addToFavorites: (track: MusicTrack) => string | null;
   removeFromFavorites: (trackId: string) => void;
   isFavorite: (trackId: string) => boolean;
 
@@ -42,6 +42,7 @@ interface MusicState {
   renamePlaylist: (id: string, name: string) => void;
   addToPlaylist: (playlistId: string, track: MusicTrack) => void;
   removeFromPlaylist: (playlistId: string, trackId: string) => void;
+  setPlaylistTracks: (playlistId: string, tracks: MusicTrack[]) => void;
 
   // --- Settings (Persisted) ---
   quality: string;
@@ -134,18 +135,17 @@ export const useMusicStore = create<MusicState>()(
       favorites: [],
       playlists: [],
 
-      addToFavorites: (track) => set((state) => {
+      addToFavorites: (track) => {
+        const { favorites } = get();
         if (track.source === 'local') {
-          toast("本地音乐不支持喜欢");
-          return state;
+          return "本地音乐不支持喜欢";
         }
-        if (state.favorites.some(t => t.id === track.id)) {
-          toast("已在「我的喜欢」中");
-          return state;
+        if (favorites.some((t) => t.id === track.id)) {
+          return "已在「我的喜欢」中";
         }
-        toast.success("已喜欢");
-        return { favorites: [track, ...state.favorites] };
-      }),
+        set({ favorites: [track, ...favorites] });
+        return null;
+      },
       removeFromFavorites: (trackId) => set((state) => {
         return { favorites: state.favorites.filter(t => t.id !== trackId) };
       }),
@@ -173,7 +173,7 @@ export const useMusicStore = create<MusicState>()(
       })),
       addToPlaylist: (pid, track) => set((state) => {
         if (track.source === 'local') {
-          toast("本地音乐不支持添加歌单");
+          toastUtils.info("本地音乐不支持添加歌单");
           return state;
         }
         return {
@@ -188,6 +188,13 @@ export const useMusicStore = create<MusicState>()(
         playlists: state.playlists.map(p =>
           p.id === pid
             ? { ...p, tracks: p.tracks.filter(t => t.id !== tid) }
+            : p
+        )
+      })),
+      setPlaylistTracks: (pid, tracks) => set((state) => ({
+        playlists: state.playlists.map(p =>
+          p.id === pid
+            ? { ...p, tracks }
             : p
         )
       })),
