@@ -1,4 +1,5 @@
 # Otter Music
+[网页端](https://github.com/DJChanahCJD/otter-music-web)
 
 <p align="center">
   <img width="100" alt="Otter Music icon" src="public/favicon.svg">
