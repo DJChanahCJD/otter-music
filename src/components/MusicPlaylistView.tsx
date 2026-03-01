@@ -38,6 +38,7 @@ interface MusicPlaylistViewProps {
   action?: React.ReactNode;
   coverUrl?: string;
   removeLabel?: string;
+  icon?: React.ReactNode;
 }
 
 export function MusicPlaylistView({
@@ -54,6 +55,7 @@ export function MusicPlaylistView({
   action,
   coverUrl,
   removeLabel,
+  icon,
 }: MusicPlaylistViewProps) {
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -107,12 +109,13 @@ export function MusicPlaylistView({
       <div className={cn(
         "p-4 border-b flex items-end gap-4 bg-muted/10 relative",
       )}>
-        <div className="h-20 w-20 bg-primary/10 rounded-lg flex items-center justify-center shadow-sm border overflow-hidden shrink-0">
+        <div className="h-22 w-22 bg-primary/10 rounded-lg flex items-center justify-center shadow-sm border overflow-hidden shrink-0">
           <MusicCover
             src={coverUrl}
             alt={title}
             className="h-full w-full"
-            iconClassName="h-8 w-8 text-primary/40"
+            iconClassName="h-8 w-8 text-primary/80"
+            fallbackIcon={icon}
           />
         </div>
         <div className="flex-1 space-y-1">

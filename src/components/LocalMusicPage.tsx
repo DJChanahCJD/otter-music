@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo, useCallback } from "react";
-import { RefreshCw, Music, HardDrive } from "lucide-react";
+import { RefreshCw, Music, HardDrive, HardDriveDownload } from "lucide-react";
 import { LocalMusicPlugin } from "@/plugins/local-music";
 import { MusicTrack } from "@/types/music";
 import { MusicPlaylistView } from "./MusicPlaylistView";
@@ -251,6 +251,7 @@ export function LocalMusicPage({
       <MusicPlaylistView
         title="本地音乐"
         tracks={tracks}
+        icon={<HardDriveDownload className="h-8 w-8 text-primary/80" />}
         onPlay={handlePlay}
         currentTrackId={currentTrackId}
         isPlaying={isPlaying}

@@ -6,6 +6,7 @@ import { usePlayHelper } from "@/hooks/usePlayHelper";
 import { PageLoader } from "@/components/PageLoader";
 import { MusicTrack } from "@/types/music";
 import { PageLayout } from "@/components/PageLayout";
+import { ListMusic } from "lucide-react";
 
 // Lazy load components
 const MusicSearchView = lazy(() => import("@/components/MusicSearchView").then(m => ({ default: m.MusicSearchView })));
@@ -96,6 +97,7 @@ export function PlaylistDetailRoute() {
         description={`创建于 ${new Date(playlist.createdAt).toLocaleDateString()}`}
         tracks={playlist.tracks}
         playlistId={id}
+        icon={<ListMusic className="h-8 w-8 text-primary/80" />}
         onPlay={handlePlayInPlaylist}
         onRemove={(t) => removeFromPlaylist(id!, t.id)}
         onRename={renamePlaylist}

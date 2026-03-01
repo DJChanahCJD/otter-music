@@ -1,6 +1,6 @@
 "use client";
 
-import { Trash2 } from "lucide-react";
+import { Trash2, ListVideo } from "lucide-react";
 import { MusicPlaylistView } from "./MusicPlaylistView";
 import { MusicTrack } from "@/types/music";
 import { Button } from "./ui/button";
@@ -45,6 +45,7 @@ export function QueuePage({
       <MusicPlaylistView
       title="播放列表"
       tracks={queue}
+      icon={<ListVideo className="h-8 w-8 text-primary/80" />}
       onPlay={onPlay}
       onRemove={onRemove}
       currentTrackId={currentTrackId}
