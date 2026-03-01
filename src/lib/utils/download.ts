@@ -9,6 +9,8 @@ import { useDownloadStore } from "@/store/download-store";
 import { toastUtils } from "./toast";
 
 const DOWNLOAD_DIR = "OtterMusic";
+export const DownloadPath = `Download/${DOWNLOAD_DIR}`;
+
 export function buildDownloadKey(trackSource: MusicSource, trackId: string) {
   return `${trackSource}:${trackId}`
 }
@@ -38,7 +40,7 @@ export async function downloadMusicTrack(track: MusicTrack, br = 192) {
     if (!url) throw new Error("无法获取下载链接");
 
     if (Capacitor.isNativePlatform()) {
-      await downloadNative(url, fileName, track.source, track.id, br, toastId);
+      await downloadNative(url, fileName, track.source, track.id, toastId);
     } else {
       await downloadWeb(url, fileName, toastId);
     }
@@ -53,11 +55,8 @@ async function downloadNative(
   fileName: string,
   source: MusicSource,
   id: string,
-  br: number,
   toastId: string
 ) {
-  const dirPath = `Download/${DOWNLOAD_DIR}`;
-
   try {
     const permStatus = await Filesystem.checkPermissions();
     if (permStatus.publicStorage !== "granted") {
@@ -75,7 +74,7 @@ async function downloadNative(
 
   const fileUri = await Filesystem.getUri({
     directory: Directory.ExternalStorage,
-    path: `${dirPath}/${fileName}`,
+    path: `${DownloadPath}/${fileName}`,
   });
 
   const listener = await FileTransfer.addListener("progress", (p) => {

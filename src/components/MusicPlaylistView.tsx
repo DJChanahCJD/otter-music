@@ -18,6 +18,7 @@ import { buildDownloadKey } from "@/lib/utils/download";
 import toast from "react-hot-toast";
 import { deduplicateTracks } from "@/lib/utils/music";
 import { toastUtils } from "@/lib/utils/toast";
+import { exportPlaylist } from "@/lib/utils/playlist-backup";
 
 interface MusicPlaylistViewProps {
   title: string;
@@ -162,6 +163,9 @@ export function MusicPlaylistView({
                    )}
                    <DropdownMenuItem onClick={handleDeduplicate}>
                      歌单去重
+                   </DropdownMenuItem>
+                   <DropdownMenuItem onClick={() => exportPlaylist(title, tracks)}>
+                     导出歌单
                    </DropdownMenuItem>
                    {onDelete && (
                      <DropdownMenuItem onClick={() => {

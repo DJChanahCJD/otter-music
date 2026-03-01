@@ -1,9 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Plus, Trash2, RotateCcw } from "lucide-react";
-import { getApiUrls, setApiUrls, DEFAULT_API_URL } from "@/lib/api/config";
+import { getApiUrls, setApiUrls, DEFAULT_API_URL, MY_PROXY_API_URL } from "@/lib/api/config";
 import toast from "react-hot-toast";
 
 interface LoadBalanceDialogProps {
@@ -14,12 +14,15 @@ interface LoadBalanceDialogProps {
 export function LoadBalanceDialog({ open, onOpenChange }: LoadBalanceDialogProps) {
   const [urls, setUrls] = useState<string[]>([]);
   const [newUrl, setNewUrl] = useState("");
+  const [prevOpen, setPrevOpen] = useState(open);
 
-  useEffect(() => {
+  if (open !== prevOpen) {
+    setPrevOpen(open);
     if (open) {
       setUrls(getApiUrls());
+      setNewUrl("");
     }
-  }, [open]);
+  }
 
   const handleAdd = () => {
     if (!newUrl.trim()) return;
@@ -46,7 +49,7 @@ export function LoadBalanceDialog({ open, onOpenChange }: LoadBalanceDialogProps
   };
 
   const handleReset = () => {
-    setUrls([DEFAULT_API_URL]);
+    setUrls([DEFAULT_API_URL, MY_PROXY_API_URL]);
     toast.success("已恢复默认列表 (需保存生效)");
   };
 
@@ -92,7 +95,7 @@ export function LoadBalanceDialog({ open, onOpenChange }: LoadBalanceDialogProps
 
           <div className="space-y-2 max-h-[300px] overflow-y-auto pr-1">
             {urls.map((url, index) => (
-              <div key={index} className="flex items-center gap-2 p-2 rounded-md border bg-muted/50 group">
+              <div key={url} className="flex items-center gap-2 p-2 rounded-md border bg-muted/50 group">
                 <span className="flex-1 text-sm truncate font-mono" title={url}>{url}</span>
                 <Button
                   variant="ghost"

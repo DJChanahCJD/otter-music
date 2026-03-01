@@ -29,6 +29,10 @@ export const toastUtils = {
       ...options,
     });
   },
+
+  success: (message: string, options?: ToastOptions) => toast.success(message, options),
+  error: (message: string, options?: ToastOptions) => toast.error(message, options),
+  loading: (message: string, options?: ToastOptions) => toast.loading(message, options),
 };
 
 // 导出类型以便使用

@@ -17,6 +17,7 @@ import { buildDownloadKey } from "@/lib/utils/download";
 import toast from "react-hot-toast";
 import { deduplicateTracks } from "@/lib/utils/music";
 import { toastUtils } from "@/lib/utils/toast";
+import { exportPlaylist } from "@/lib/utils/playlist-backup";
 
 interface FavoritesViewProps {
   tracks: MusicTrack[];
@@ -105,6 +106,9 @@ export function FavoritesView({
                <DropdownMenuContent align="end">
                  <DropdownMenuItem onClick={handleDeduplicate}>
                    列表去重
+                 </DropdownMenuItem>
+                 <DropdownMenuItem onClick={() => exportPlaylist("我喜欢的音乐", tracks)}>
+                   导出歌单
                  </DropdownMenuItem>
                </DropdownMenuContent>
              </DropdownMenu>
