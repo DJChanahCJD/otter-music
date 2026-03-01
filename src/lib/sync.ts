@@ -56,6 +56,7 @@ export async function checkAndSync(): Promise<SyncResult> {
       const pullResult = await syncPull(syncKey);
       applySyncData(pullResult.data as SyncData);
       useSyncStore.getState().setLastSyncTime(pullResult.lastSyncTime);
+      toast.success("检测到新数据，已自动同步");
       return { success: true };
     }
 
