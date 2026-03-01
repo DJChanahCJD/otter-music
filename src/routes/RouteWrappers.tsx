@@ -10,6 +10,7 @@ import { PageLayout } from "@/components/PageLayout";
 // Lazy load components
 const MusicSearchView = lazy(() => import("@/components/MusicSearchView").then(m => ({ default: m.MusicSearchView })));
 const MusicPlaylistView = lazy(() => import("@/components/MusicPlaylistView").then(m => ({ default: m.MusicPlaylistView })));
+const FavoritesView = lazy(() => import("@/components/FavoritesView").then(m => ({ default: m.FavoritesView })));
 const MinePage = lazy(() => import("@/components/MinePage").then(m => ({ default: m.MinePage })));
 const QueuePage = lazy(() => import("@/components/QueuePage").then(m => ({ default: m.QueuePage })));
 const HistoryPage = lazy(() => import("@/components/HistoryPage").then(m => ({ default: m.HistoryPage })));
@@ -46,12 +47,12 @@ export function FavoritesRoute() {
 
   return (
     <Suspense fallback={<PageLoader />}>
-      <MusicPlaylistView
-        title="我的喜欢"
+      <FavoritesView
         tracks={favorites}
         onPlay={handlePlayInPlaylist}
         currentTrackId={currentTrack?.id}
         isPlaying={isPlaying}
+        onRemove={(track) => removeFromFavorites(track.id)}
       />
     </Suspense>
   );

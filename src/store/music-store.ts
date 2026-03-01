@@ -35,6 +35,7 @@ interface MusicState {
 
   addToFavorites: (track: MusicTrack) => string | null;
   removeFromFavorites: (trackId: string) => void;
+  setFavorites: (tracks: MusicTrack[]) => void;
   isFavorite: (trackId: string) => boolean;
 
   createPlaylist: (name: string) => string;
@@ -149,6 +150,7 @@ export const useMusicStore = create<MusicState>()(
       removeFromFavorites: (trackId) => set((state) => {
         return { favorites: state.favorites.filter(t => t.id !== trackId) };
       }),
+      setFavorites: (tracks) => set({ favorites: tracks }),
       isFavorite: (trackId) => get().favorites.some(t => t.id === trackId),
 
       createPlaylist: (name) => {
