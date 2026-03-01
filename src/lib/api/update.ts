@@ -5,7 +5,6 @@ const UPDATE_API_URL = `${API_URL}/update`;
 export interface UpdateInfo {
   hasUpdate: boolean;
   latestVersion: string;
-  currentVersion: string;
   changelog: string;
   downloadUrl: string;
   directUrl: string;

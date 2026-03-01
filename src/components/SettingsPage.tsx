@@ -7,9 +7,7 @@ import { AggregatedSourceSelect } from "./settings/AggregatedSourceSelect";
 import { SyncConfig } from "./settings/SyncConfig";
 import { useMusicStore } from "@/store/music-store";
 import { Slider } from "./ui/slider";
-import { useState } from "react";
-import { Palette, Volume2, Server } from "lucide-react";
-import { LoadBalanceDialog } from "./settings/LoadBalanceDialog";
+import { Palette, Volume2 } from "lucide-react";
 import { PlaylistImport } from "./settings/PlaylistImport";
 import { SettingItem } from "./settings/SettingItem";
 import { UpdateCheck } from "./settings/UpdateCheck";
@@ -21,7 +19,6 @@ interface SettingsPageProps {
 
 export function SettingsPage({ onBack }: SettingsPageProps) {
   const { volume, setVolume } = useMusicStore();
-  const [showLoadBalance, setShowLoadBalance] = useState(false);
 
   return (
     <PageLayout title="系统设置" onBack={onBack}>
@@ -54,20 +51,19 @@ export function SettingsPage({ onBack }: SettingsPageProps) {
 
         <AggregatedSourceSelect />
 
-
         <PlaylistImport />
         
-        <UpdateCheck />
-
         {/* <SettingItem
           icon={Server}
           title="负载均衡"
           onClick={() => setShowLoadBalance(true)}
           showChevron
-        />
-        <LoadBalanceDialog open={showLoadBalance} onOpenChange={setShowLoadBalance} /> */}
+          />
+          <LoadBalanceDialog open={showLoadBalance} onOpenChange={setShowLoadBalance} /> */}
 
         <SyncConfig /> 
+
+        <UpdateCheck />
       </div>
     </PageLayout>
   );
