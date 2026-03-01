@@ -60,7 +60,11 @@ export function MusicSearchView({ onPlay, currentTrackId, isPlaying }: MusicSear
 
   useEffect(() => {
     if (searchResults.length === 0) {
-      searchInputRef.current?.focus();
+      if (searchQuery.trim()) {
+        fetchPage(1, true);
+      } else {
+        searchInputRef.current?.focus();
+      }
     }
   }, []);
 

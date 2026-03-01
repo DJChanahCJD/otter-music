@@ -23,6 +23,11 @@ export const normalizeText = (v: string): string => {
 export const normalizeArtists = (artists: string[]) =>
   artists.map(normalizeText).filter(Boolean).sort();
 
+export const toSimplified = (v: string): string => {
+  if (!v) return '';
+  return v.replace(/[\u4e00-\u9fa5]/g, c => tMap.get(c) ?? c);
+};
+
 /* -------------------------------------------------- */
 /* 稳定 Key（全局唯一规则） */
 /* -------------------------------------------------- */

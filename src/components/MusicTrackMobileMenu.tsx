@@ -14,11 +14,22 @@ import {
   MoreVertical,
   Trash2,
   CornerDownRight,
+  User,
+  Disc,
 } from "lucide-react";
-import { ReactNode } from "react";
+import { ReactNode, useState } from "react";
 import { MusicCover } from "./MusicCover";
 import { useMusicCover } from "@/hooks/useMusicCover";
 import { MusicTrack } from "@/types/music";
+import { useNavigate } from "react-router-dom";
+import { useMusicStore } from "@/store/music-store";
+import { toSimplified } from "@/lib/utils/music-key";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 interface MusicTrackMobileMenuProps {
   track: MusicTrack;
@@ -50,6 +61,18 @@ export function MusicTrackMobileMenu({
   triggerClassName,
 }: MusicTrackMobileMenuProps) {
   const coverUrl = useMusicCover(track, open);
+  const navigate = useNavigate();
+  const setSearchQuery = useMusicStore((state) => state.setSearchQuery);
+  const setSearchResults = useMusicStore((state) => state.setSearchResults);
+  const [showArtistSelection, setShowArtistSelection] = useState(false);
+
+  const handleSearch = (keyword: string) => {
+    setSearchQuery(toSimplified(keyword));
+    setSearchResults([]);
+    navigate("/search");
+    onOpenChange(false);
+    setShowArtistSelection(false);
+  };
 
   return (
     <div onClick={(e) => e.stopPropagation()}>
@@ -117,8 +140,7 @@ export function MusicTrackMobileMenu({
                 <Download className="mr-2 h-4 w-4" /> 下载
               </Button>
             )}
-
-            {onAddToPlaylist && (
+             {onAddToPlaylist && (
               <Button
                 variant="ghost"
                 className="justify-start w-full"
@@ -141,6 +163,30 @@ export function MusicTrackMobileMenu({
                 }}
               >
                 <CornerDownRight className="mr-2 h-4 w-4" /> 下一首播放
+              </Button>
+            )}
+
+            <Button
+              variant="ghost"
+              className="justify-start w-full"
+              onClick={() => {
+                if (track.artist.length > 1) {
+                  setShowArtistSelection(true);
+                } else {
+                  handleSearch(track.artist[0]);
+                }
+              }}
+            >
+              <User className="mr-2 h-4 w-4" /> 歌手：{track.artist.join(" / ")}
+            </Button>
+
+            {track.album && (
+              <Button
+                variant="ghost"
+                className="justify-start w-full"
+                onClick={() => handleSearch(track.album!)}
+              >
+                <Disc className="mr-2 h-4 w-4" /> 专辑：{track.album}
               </Button>
             )}
 
@@ -176,6 +222,26 @@ export function MusicTrackMobileMenu({
           </DrawerClose>
         </DrawerContent>
       </Drawer>
+      <Dialog open={showArtistSelection} onOpenChange={setShowArtistSelection}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>选择歌手</DialogTitle>
+          </DialogHeader>
+          <div className="flex flex-col gap-2">
+            {track.artist.map((artist) => (
+              <Button
+                key={artist}
+                variant="ghost"
+                className="justify-start w-full"
+                onClick={() => handleSearch(artist)}
+              >
+                <User className="mr-2 h-4 w-4" />
+                {artist}
+              </Button>
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
