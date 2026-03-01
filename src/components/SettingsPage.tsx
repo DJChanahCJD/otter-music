@@ -12,6 +12,7 @@ import { Palette, Volume2, Server } from "lucide-react";
 import { LoadBalanceDialog } from "./settings/LoadBalanceDialog";
 import { PlaylistImport } from "./settings/PlaylistImport";
 import { SettingItem } from "./settings/SettingItem";
+import { UpdateCheck } from "./settings/UpdateCheck";
 
 
 interface SettingsPageProps {
@@ -53,16 +54,18 @@ export function SettingsPage({ onBack }: SettingsPageProps) {
 
         <AggregatedSourceSelect />
 
-        <SettingItem
+
+        <PlaylistImport />
+        
+        <UpdateCheck />
+
+        {/* <SettingItem
           icon={Server}
           title="负载均衡"
           onClick={() => setShowLoadBalance(true)}
           showChevron
         />
-
-        <PlaylistImport />
-
-        <LoadBalanceDialog open={showLoadBalance} onOpenChange={setShowLoadBalance} />
+        <LoadBalanceDialog open={showLoadBalance} onOpenChange={setShowLoadBalance} /> */}
 
         <SyncConfig /> 
       </div>

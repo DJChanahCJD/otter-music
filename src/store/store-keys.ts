@@ -5,4 +5,5 @@ export enum storeKey {
     LocalMusicStore = "oh_local_music_store",
     HistoryStore = "oh_history_store",
     DownloadStore = "oh_download_store",
+    AppStore = "oh_app_store",
 }

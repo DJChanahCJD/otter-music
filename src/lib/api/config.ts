@@ -1,35 +1,6 @@
 import { type ApiResponse } from "@/types/index";
 
-export const MY_API_URL = "https://otter-music-web.pages.dev";
-
-export const DEFAULT_API_URL = "https://music-api.gdstudio.xyz/api.php";
-export const MY_PROXY_API_URL = `${MY_API_URL}/music-api`;
-const STORAGE_KEY_URLS = "otter_api_urls";
-
-export function getApiUrls(): string[] {
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY_URLS);
-    if (stored) {
-      const parsed = JSON.parse(stored);
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        return parsed;
-      }
-    }
-  } catch (e) {
-    console.error("Failed to parse API URLs", e);
-  }
-  return [DEFAULT_API_URL, MY_PROXY_API_URL];
-}
-
-export function setApiUrls(urls: string[]) {
-  localStorage.setItem(STORAGE_KEY_URLS, JSON.stringify(urls));
-}
-
-export function getApiUrl(): string {
-  const urls = getApiUrls();
-  if (urls.length === 0) return DEFAULT_API_URL;
-  return urls[Math.floor(Math.random() * urls.length)];
-}
+export const API_URL = "https://otter-music-web.pages.dev";
 
 /**
  * 统一处理后端 ok / fail 响应
@@ -48,4 +19,34 @@ export async function unwrap<T>(resOrPromise: Response | Promise<Response>): Pro
   }
 
   return body.data as T;
+}
+
+// 音乐 API 配置
+export const DEFAULT_MUSIC_API_URL = "https://music-api.gdstudio.xyz/api.php";
+export const MY_PROXY_MUSIC_API_URL = `${API_URL}/music-api`;
+const STORAGE_KEY_MUSIC_URLS = "otter_music_api_urls";
+
+export function getMusicApiUrls(): string[] {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY_MUSIC_URLS);
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return parsed;
+      }
+    }
+  } catch (e) {
+    console.error("Failed to parse music API URLs", e);
+  }
+  return [DEFAULT_MUSIC_API_URL, MY_PROXY_MUSIC_API_URL];
+}
+
+export function setMusicApiUrls(urls: string[]) {
+  localStorage.setItem(STORAGE_KEY_MUSIC_URLS, JSON.stringify(urls));
+}
+
+export function getMusicApiUrl(): string {
+  const urls = getMusicApiUrls();
+  if (urls.length === 0) return DEFAULT_MUSIC_API_URL;
+  return urls[Math.floor(Math.random() * urls.length)];
 }

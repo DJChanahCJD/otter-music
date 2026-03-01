@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Plus, Trash2, RotateCcw } from "lucide-react";
-import { getApiUrls, setApiUrls, DEFAULT_API_URL, MY_PROXY_API_URL } from "@/lib/api/config";
+import { getMusicApiUrls, setMusicApiUrls, DEFAULT_MUSIC_API_URL, MY_PROXY_MUSIC_API_URL } from "@/lib/api/config";
 import toast from "react-hot-toast";
 
 interface LoadBalanceDialogProps {
@@ -19,7 +19,7 @@ export function LoadBalanceDialog({ open, onOpenChange }: LoadBalanceDialogProps
   if (open !== prevOpen) {
     setPrevOpen(open);
     if (open) {
-      setUrls(getApiUrls());
+      setUrls(getMusicApiUrls());
       setNewUrl("");
     }
   }
@@ -49,7 +49,7 @@ export function LoadBalanceDialog({ open, onOpenChange }: LoadBalanceDialogProps
   };
 
   const handleReset = () => {
-    setUrls([DEFAULT_API_URL, MY_PROXY_API_URL]);
+    setUrls([DEFAULT_MUSIC_API_URL, MY_PROXY_MUSIC_API_URL]);
     toast.success("已恢复默认列表 (需保存生效)");
   };
 
@@ -58,7 +58,7 @@ export function LoadBalanceDialog({ open, onOpenChange }: LoadBalanceDialogProps
       toast.error("至少需要一个 API URL");
       return;
     }
-    setApiUrls(urls);
+    setMusicApiUrls(urls);
     toast.success("设置已保存，即将刷新...");
     
     // 延迟刷新以显示提示

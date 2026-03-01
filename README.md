@@ -37,7 +37,7 @@
 
 > API 来自GD音乐台(https://music.gdstudio.xyz)
 >
-> 数据同步功能依赖主项目 OtterHub: (https://github.com/DJChanahCJD/otterhub)
+> 数据同步功能依赖主项目 [Otter Music Web](https://github.com/DJChanahCJD/otter-music-web)
 >
 > ⚠️ 当前仅支持 Android，欢迎 PR
 
@@ -88,9 +88,9 @@ src/
 ```
 
 ## TODO
-1. 设置页面添加单独的「负载均衡」选项，允许自部署后端 API。（允许删除GD Studio API, 但是必须提供至少1个API_URL）
-2. 研究 GD Studio API 的原理，如何实现自搭建后端 API。
 
+- [x] **版本更新**：集成 GitHub Releases 检查与下载（支持代理加速）。
+- [] 研究 GD Studio API 的原理，如何实现自搭建后端 API。
 
 ## License
 

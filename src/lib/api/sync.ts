@@ -1,6 +1,6 @@
-import { MY_API_URL, unwrap } from "./config";
+import { API_URL, unwrap } from "./config";
 
-const SYNC_API_URL = MY_API_URL;
+const SYNC_API_URL = API_URL;
 
 export type SyncCheckResponse = {
   lastSyncTime: number;

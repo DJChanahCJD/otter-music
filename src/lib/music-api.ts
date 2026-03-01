@@ -1,12 +1,12 @@
 import type { MusicSource, MusicTrack, SearchPageResult, MergedMusicTrack, SongLyric } from "@/types/music";
 import { cachedFetch } from "@/lib/utils/cache";
 import { mergeAndSortTracks } from "@/lib/utils/search-helper";
-import { getApiUrl } from "./api";
+import { getMusicApiUrl } from "./api";
 import { retry } from "@/lib/utils";
 import { Capacitor } from "@capacitor/core";
 import { LocalMusicPlugin } from "@/plugins/local-music";
 
-const getApiBase = () => `${getApiUrl()}`;
+const getApiBase = () => `${getMusicApiUrl()}`;
 
 const TTL_SHORT = 60 * 60 * 1000; // 60 minutes
 const TTL_LONG = 7 * 24 * 60 * 60 * 1000; // 7 days
