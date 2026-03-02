@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { throttle } from "@/lib/utils";
+import { throttle, retry } from "@/lib/utils";
 import { musicApi } from "@/lib/music-api";
 import { useMusicStore } from "@/store/music-store";
 import { useSourceQualityStore } from "@/store/source-quality-store";
@@ -10,28 +10,40 @@ import { MediaSession } from "@jofr/capacitor-media-session";
 import { buildDownloadKey } from "@/lib/utils/download";
 import type { MusicSource } from "@/types/music";
 import toast from "react-hot-toast";
-import { retry } from "@/lib/utils";
 
+/**
+ * 远程重试工具函数
+ * 使用 getState() 确保在异步回调中获取最新的状态/方法
+ */
 async function retryWithRemote(
   audio: HTMLAudioElement,
   trackId: string,
   source: MusicSource,
   quality: number
 ): Promise<void> {
-  const remoteUrl = await retry(
-    async () => {
-      const result = await musicApi.getUrl(trackId, source, quality);
-      if (!result) throw new Error("EMPTY_URL");
-      return result;
-    },
-    2,
-    800,
-  );
+  const { setIsPlaying, setIsLoading, setCurrentAudioUrl } = useMusicStore.getState();
+  
+  try {
+    setIsLoading(true);
+    const remoteUrl = await retry(
+      async () => {
+        const result = await musicApi.getUrl(trackId, source, quality);
+        if (!result) throw new Error("EMPTY_URL");
+        return result;
+      },
+      2,
+      800
+    );
 
-  if (audio.src !== remoteUrl) {
-    audio.src = remoteUrl;
-    audio.load();
-    await audio.play();
+    if (audio.src !== remoteUrl) {
+      setCurrentAudioUrl(remoteUrl);
+      audio.src = remoteUrl;
+      audio.load();
+      await audio.play();
+      setIsPlaying(true); // 显式同步播放状态
+    }
+  } finally {
+    setIsLoading(false);
   }
 }
 
@@ -48,6 +60,7 @@ export function useAudioEventHandlers(
   const queue = useMusicStore(s => s.queue);
   const currentIndex = useMusicStore(s => s.currentIndex);
   const quality = useMusicStore(s => s.quality);
+
   const setIsPlaying = useMusicStore(s => s.setIsPlaying);
   const setAudioCurrentTime = useMusicStore(s => s.setAudioCurrentTime);
   const setDuration = useMusicStore(s => s.setDuration);
@@ -94,19 +107,26 @@ export function useAudioEventHandlers(
         useSourceQualityStore.getState().recordFail(currentTrack.source);
       }
 
+      // 仅处理 Native 环境下的下载记录失效问题
       if (Capacitor.isNativePlatform() && (currentTrackSource as string) !== 'local') {
         const downloadKey = buildDownloadKey(currentTrackSource, currentTrackId || '');
         const downloadUri = useDownloadStore.getState().getUri(downloadKey);
 
-        if (downloadUri && audio.src.startsWith('file://')) {
+        const isLocalFileUrl =
+          audio.src.includes('_capacitor_file_') ||
+          audio.src.startsWith('capacitor://') ||
+          audio.src.startsWith('file://');
+
+        if (downloadUri && isLocalFileUrl) {
           useDownloadStore.getState().removeRecord(downloadKey);
+          toast.error(`本地文件失效，尝试网络播放`, { duration: 3000 });
 
           try {
             const br = parseInt(quality, 10);
             await retryWithRemote(audio, currentTrackId || '', currentTrackSource, br);
           } catch (retryError) {
             console.error("Retry load failed:", retryError);
-            toast.error(`无法播放: ${currentTrack.name}`);
+            toast.error(`播放失败: ${currentTrack.name}`);
             audio.src = "";
             setCurrentAudioUrl(null);
             skipToNext();
@@ -117,7 +137,7 @@ export function useAudioEventHandlers(
 
     const onPause = () => {
       if (isSwitchingTrackRef.current) return;
-
+      // 只有在非切歌、非正常结束的情况下暂停，才同步 UI 状态
       if (!audio.ended && audio.error === null) {
         setIsPlaying(false);
       }
@@ -125,16 +145,14 @@ export function useAudioEventHandlers(
 
     const onPlay = () => {
       if (audio.paused) return;
-      
+
       if (hasRecordedRef.current) return;
       hasRecordedRef.current = true;
 
-      if (!isPlaying) {
-        setIsPlaying(true);
-      }
-      
+      if (!isPlaying) setIsPlaying(true);
+
       useMusicStore.getState().resetFailures();
-      
+
       if (currentTrack?.source) {
         useSourceQualityStore.getState().recordSuccess(currentTrack.source);
       }
@@ -158,5 +176,7 @@ export function useAudioEventHandlers(
       audio.removeEventListener("pause", onPause);
       audio.removeEventListener("play", onPlay);
     };
-  }, [isRepeat, currentTrack?.source, currentTrack?.name, currentTrack, isPlaying, setIsPlaying, setAudioCurrentTime, setDuration, queue.length, currentIndex, setIsLoading, currentTrackSource, currentTrackId, quality, setCurrentAudioUrl, skipToNext]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [isRepeat, currentTrack, isPlaying, quality]); // 简化依赖项，由内部 Action 处理同步
+
+  return null;
 }
