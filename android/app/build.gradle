@@ -27,6 +27,17 @@ android {
         sourceCompatibility JavaVersion.VERSION_21
         targetCompatibility JavaVersion.VERSION_21
     }
+
+    applicationVariants.all { variant ->
+        variant.outputs.all { output ->
+            def appName = "otter-music"
+            def versionName = defaultConfig.versionName
+            def buildType = variant.buildType.name
+
+            // 最终文件名：app名-版本号-环境.apk
+            outputFileName = "${appName}-v${versionName}-${buildType}.apk"
+        }
+    }
 }
 
 // Apply Capacitor build configuration
