@@ -1,5 +1,5 @@
 import { Capacitor } from "@capacitor/core";
-import { Filesystem, Directory } from "@capacitor/filesystem";
+import { Filesystem, Directory, Encoding } from "@capacitor/filesystem";
 import { FileTransfer } from "@capacitor/file-transfer";
 import { musicApi } from "@/lib/music-api";
 import { MusicSource, MusicTrack } from "@/types/music";
@@ -10,6 +10,7 @@ import { toastUtils } from "./toast";
 
 const DOWNLOAD_DIR = "OtterMusic";
 export const DownloadPath = `Download/${DOWNLOAD_DIR}`;
+const DOWNLOAD_RECORDS_FILE = "download_records.json";
 
 export function buildDownloadKey(trackSource: MusicSource, trackId: string) {
   return `${trackSource}:${trackId}`
@@ -177,6 +178,41 @@ async function ensureDownloadDir(name: string) {
 
 function sanitize(name: string) {
   return name.replace(/[\\/:*?"<>|]/g, "").trim();
+}
+
+export async function saveDownloadRecordsToDisk(records: Record<string, string>) {
+  if (!Capacitor.isNativePlatform()) return;
+
+  try {
+    await ensureDownloadDir(DOWNLOAD_DIR);
+    await Filesystem.writeFile({
+      path: `${DownloadPath}/${DOWNLOAD_RECORDS_FILE}`,
+      data: JSON.stringify(records),
+      directory: Directory.ExternalStorage,
+      encoding: Encoding.UTF8,
+    });
+  } catch (e) {
+    console.error("Failed to save download records to disk:", e);
+  }
+}
+
+export async function loadDownloadRecordsFromDisk(): Promise<Record<string, string> | null> {
+  if (!Capacitor.isNativePlatform()) return null;
+
+  try {
+    const result = await Filesystem.readFile({
+      path: `${DownloadPath}/${DOWNLOAD_RECORDS_FILE}`,
+      directory: Directory.ExternalStorage,
+      encoding: Encoding.UTF8,
+    });
+    
+    const content = typeof result.data === 'string' ? result.data : JSON.stringify(result.data);
+    return JSON.parse(content);
+  } catch (e) {
+    // File might not exist or other error
+    console.warn("Failed to load download records from disk:", e);
+    return null;
+  }
 }
 
 /**
