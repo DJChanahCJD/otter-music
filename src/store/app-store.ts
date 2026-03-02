@@ -29,9 +29,6 @@ const initialState: AppState = {
    工具函数
 ========================= */
 
-const isSameDay = (t1: number, t2: number) =>
-  new Date(t1).toDateString() === new Date(t2).toDateString();
-
 const getCurrentVersion = async (): Promise<string> => {
   try {
     if (Capacitor.isNativePlatform()) {
@@ -83,15 +80,6 @@ export const useAppStore = create<AppState & AppActions>()(
         try {
           const currentVersion = await getCurrentVersion();
           set({ currentVersion });
-
-          // 当天已检查 + 静默 -> 不重复请求
-          if (
-            silent &&
-            state.lastCheckTime &&
-            isSameDay(state.lastCheckTime, now)
-          ) {
-            return;
-          }
 
           const info = await apiCheckUpdate();
 
