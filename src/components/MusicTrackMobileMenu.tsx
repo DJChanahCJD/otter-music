@@ -74,7 +74,9 @@ export function MusicTrackMobileMenu({
     const simplified = toSimplified(keyword);
     setSearchQuery(simplified);
     setSearchIntent({ type });
-    setSearchSource(track.source || 'all');
+    if (track.source !== 'local') {
+      setSearchSource(track.source || 'all');
+    }
     setSearchResults([]);
     navigate("/search");
     onOpenChange(false);
