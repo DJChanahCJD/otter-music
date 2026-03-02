@@ -33,6 +33,8 @@ android/.cxx/
 android/*.apk
 android/*.aab
 android/*.ap_
+android/*.jks
+android/*.keystore
 android/.idea/
 android/captures/
 
