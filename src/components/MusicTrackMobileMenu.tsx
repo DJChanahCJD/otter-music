@@ -67,12 +67,14 @@ export function MusicTrackMobileMenu({
   const setSearchQuery = useMusicStore((state) => state.setSearchQuery);
   const setSearchResults = useMusicStore((state) => state.setSearchResults);
   const setSearchIntent = useMusicStore((state) => state.setSearchIntent);
+  const setSearchSource = useMusicStore((state) => state.setSearchSource);
   const [showArtistSelection, setShowArtistSelection] = useState(false);
 
   const handleSearch = (keyword: string, type: SearchIntent['type'] = '') => {
     const simplified = toSimplified(keyword);
     setSearchQuery(simplified);
     setSearchIntent({ type });
+    setSearchSource(track.source || 'all');
     setSearchResults([]);
     navigate("/search");
     onOpenChange(false);
