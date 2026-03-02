@@ -1,3 +1,4 @@
+import { MusicTrack } from "@/types/music";
 import { Directory } from "@capacitor/filesystem";
 
 /**
@@ -33,3 +34,19 @@ export const AppPaths = {
    */
   join: (base: string, fileName: string) => `${base}/${fileName}`,
 };
+
+export const DOWNLOAD_RECORDS_FILE = "downloads.json";
+
+
+export function buildFileName(track: MusicTrack) {
+  return sanitize(
+    `${track.name} - ${track.artist?.join(" & ") || "Unknown"}.mp3`
+  );
+}
+
+function sanitize(name: string) {
+  return name
+    .replace(/[\\/:*?"<>|]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}

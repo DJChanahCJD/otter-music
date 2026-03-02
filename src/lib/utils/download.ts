@@ -2,7 +2,7 @@ import { Capacitor } from "@capacitor/core";
 import { Filesystem, Encoding } from "@capacitor/filesystem";
 import { FileTransfer } from "@capacitor/file-transfer";
 import { musicApi } from "@/lib/music-api";
-import { AppPaths, STORAGE_CONFIG } from "@/lib/storage-path";
+import { AppPaths, DOWNLOAD_RECORDS_FILE, STORAGE_CONFIG, buildFileName } from "@/lib/storage-manager";
 import { MusicSource, MusicTrack } from "@/types/music";
 import toast from "react-hot-toast";
 import { LocalMusicFile } from "@/plugins/local-music";
@@ -117,7 +117,7 @@ async function downloadWeb(
     }
   }
 
-  const blob = new Blob(chunks, { type: "audio/mpeg" });
+  const blob = new Blob(chunks as BlobPart[], { type: "audio/mpeg" });
   triggerBlobDownload(blob, fileName, toastId);
 }
 
@@ -166,19 +166,7 @@ function triggerBlobDownload(blob: Blob, filename: string, toastId?: string) {
   toast.success("下载完成", { id: toastId });
 }
 
-function buildFileName(track: MusicTrack) {
-  return sanitize(
-    `${track.name} - ${track.artist?.join(" / ") || "Unknown"}.mp3`
-  );
-}
-
-function sanitize(name: string) {
-  return name.replace(/[\\/:*?"<>|]/g, "").trim();
-}
-
 /* ================= 下载记录持久化 ================= */
-const DOWNLOAD_RECORDS_FILE = "downloads.json";
-
 export async function saveDownloadRecordsToDisk(
   records: Record<string, string>
 ) {
@@ -223,6 +211,30 @@ export async function loadDownloadRecordsFromDisk(): Promise<Record<string, stri
   }
 }
 
+const LOCAL_ARTIST_SPLIT_RE = /[/、,，&＆;；|]/;
+const LOCAL_ARTIST_DOUBLE_SPACE_RE = /\s{2,}/;
+
+function isOtterMusicDownloadPath(localPath?: string | null) {
+  return !!localPath && localPath.includes(STORAGE_CONFIG.ROOT);
+}
+
+function getBasename(path: string) {
+  const normalized = path.replace(/^file:\/\//, "");
+  const parts = normalized.split(/[\\/]/).filter(Boolean);
+  return parts.length ? parts[parts.length - 1] : "";
+}
+
+function getArtistFromLocalPath(localPath?: string | null) {
+  if (!localPath) return null;
+  const basename = getBasename(localPath);
+  if (!basename) return null;
+  const withoutExt = basename.replace(/\.[^/.]+$/, "");
+  const sepIndex = withoutExt.lastIndexOf(" - ");
+  if (sepIndex <= 0 || sepIndex >= withoutExt.length - 3) return null;
+  const artistPart = withoutExt.slice(sepIndex + 3).trim();
+  return artistPart || null;
+}
+
 /**
  * 本地文件转 MusicTrack
  */
@@ -233,13 +245,36 @@ export const convertToMusicTrack = (file: LocalMusicFile): MusicTrack => {
     album = "";
   }
 
-  // 处理艺术家：分割、去空格、去空值，直接返回数组
-  const artistList = file.artist
-    ? file.artist
-      .split(/[/、,，&＆]/)       // 分隔多艺术家
-      .map(item => item.trim())  // 去空格
-      .filter(Boolean)           // 去掉空字符串
-    : ["未知艺术家"];             // 无艺术家时默认值
+  const localPathArtist = getArtistFromLocalPath(file.localPath);
+  const otterPath = isOtterMusicDownloadPath(file.localPath);
+  let artistStr = (file.artist || "").trim();
+
+  if (!artistStr && localPathArtist) {
+    artistStr = localPathArtist;
+  } else if (
+    otterPath &&
+    localPathArtist &&
+    !LOCAL_ARTIST_SPLIT_RE.test(artistStr) &&
+    (LOCAL_ARTIST_SPLIT_RE.test(localPathArtist) || LOCAL_ARTIST_DOUBLE_SPACE_RE.test(localPathArtist))
+  ) {
+    artistStr = localPathArtist;
+  }
+
+  let artistList: string[] = [];
+  if (artistStr) {
+    if (LOCAL_ARTIST_SPLIT_RE.test(artistStr)) {
+      artistList = artistStr.split(LOCAL_ARTIST_SPLIT_RE);
+    } else if (otterPath && LOCAL_ARTIST_DOUBLE_SPACE_RE.test(artistStr)) {
+      artistList = artistStr.split(LOCAL_ARTIST_DOUBLE_SPACE_RE);
+    } else {
+      artistList = [artistStr];
+    }
+  }
+
+  artistList = artistList.map((item) => item.trim()).filter(Boolean);
+  if (artistList.length === 0) {
+    artistList = ["未知艺术家"];
+  }
 
   return {
     id: `local-${file.id}`,

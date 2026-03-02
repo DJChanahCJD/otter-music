@@ -1,7 +1,7 @@
 import { MusicTrack } from "@/types/music";
 import { Capacitor } from "@capacitor/core";
 import { Filesystem, Encoding } from "@capacitor/filesystem";
-import { AppPaths, STORAGE_CONFIG } from "@/lib/storage-path";
+import { AppPaths, STORAGE_CONFIG } from "@/lib/storage-manager";
 import { toastUtils } from "@/lib/utils/toast";
 interface PlaylistBackup {
   name: string;
