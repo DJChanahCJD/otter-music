@@ -6,27 +6,16 @@ import type { MusicTrack, MusicSource, Playlist, SearchIntent } from '@/types/mu
 import { cleanTrack } from '@/lib/utils/music';
 import { toastUtils } from '@/lib/utils/toast';
 
-/**
- * 清理 Playlist，移除 tracks 中的 variants
- */
-function cleanPlaylist(playlist: Playlist): Playlist {
-  return {
-    ...playlist,
-    tracks: playlist.tracks.map(cleanTrack),
-  };
-}
-
-/**
- * Fisher-Yates shuffle
- */
-function shuffleArray<T>(array: T[]): T[] {
-  const newArr = [...array];
-  for (let i = newArr.length - 1; i > 0; i--) {
+const cleanPlaylist = (p: Playlist): Playlist => ({ ...p, tracks: p.tracks.map(cleanTrack) });
+const clamp = (val: number, max: number) => Math.min(Math.max(val, 0), Math.max(0, max));
+const shuffleArray = <T>(arr: T[]): T[] => {
+  const res = [...arr];
+  for (let i = res.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
-    [newArr[i], newArr[j]] = [newArr[j], newArr[i]];
+    [res[i], res[j]] = [res[j], res[i]];
   }
-  return newArr;
-}
+  return res;
+};
 
 interface MusicState {
   // --- Library (Persisted) ---
@@ -135,74 +124,45 @@ interface MusicState {
 export const useMusicStore = create<MusicState>()(
   persist(
     (set, get) => ({
+      // --- Library ---
       favorites: [],
       playlists: [],
-
       addToFavorites: (track) => {
+        if (track.source === 'local') return "本地音乐不支持喜欢";
         const { favorites } = get();
-        if (track.source === 'local') {
-          return "本地音乐不支持喜欢";
-        }
-        if (favorites.some((t) => t.id === track.id)) {
-          return "已在「我的喜欢」中";
-        }
+        if (favorites.some((t) => t.id === track.id)) return "已在「我的喜欢」中";
         set({ favorites: [track, ...favorites] });
         return null;
       },
-      removeFromFavorites: (trackId) => set((state) => {
-        return { favorites: state.favorites.filter(t => t.id !== trackId) };
-      }),
-      setFavorites: (tracks) => set({ favorites: tracks }),
-      isFavorite: (trackId) => get().favorites.some(t => t.id === trackId),
+      removeFromFavorites: (id) => set((s) => ({ favorites: s.favorites.filter(t => t.id !== id) })),
+      setFavorites: (favorites) => set({ favorites }),
+      isFavorite: (id) => get().favorites.some(t => t.id === id),
 
       createPlaylist: (name) => {
         const id = uuidv4();
-        set((state) => ({
-          playlists: [
-            { id, name, tracks: [], createdAt: Date.now() },
-            ...state.playlists
-          ]
-        }));
+        set((s) => ({ playlists: [{ id, name, tracks: [], createdAt: Date.now() }, ...s.playlists] }));
         return id;
       },
-      deletePlaylist: (id) => set((state) => ({
-        playlists: state.playlists.filter(p => p.id !== id)
-      })),
-      renamePlaylist: (id, name) => set((state) => ({
-        playlists: state.playlists.map(p =>
-          p.id === id
-            ? { ...p, name }
-            : p
-        )
-      })),
-      addToPlaylist: (pid, track) => set((state) => {
+      deletePlaylist: (id) => set((s) => ({ playlists: s.playlists.filter(p => p.id !== id) })),
+      renamePlaylist: (id, name) => set((s) => ({ playlists: s.playlists.map(p => p.id === id ? { ...p, name } : p) })),
+      addToPlaylist: (pid, track) => set((s) => {
         if (track.source === 'local') {
           toastUtils.info("本地音乐不支持添加歌单");
-          return state;
+          return s;
         }
         return {
-          playlists: state.playlists.map(p =>
-            p.id === pid
-              ? { ...p, tracks: p.tracks.some(t => t.id === track.id) ? p.tracks : [track, ...p.tracks] }
-              : p
-          )
+          playlists: s.playlists.map(p => p.id === pid && !p.tracks.some(t => t.id === track.id) 
+            ? { ...p, tracks: [track, ...p.tracks] } : p)
         };
       }),
-      removeFromPlaylist: (pid, tid) => set((state) => ({
-        playlists: state.playlists.map(p =>
-          p.id === pid
-            ? { ...p, tracks: p.tracks.filter(t => t.id !== tid) }
-            : p
-        )
+      removeFromPlaylist: (pid, tid) => set((s) => ({
+        playlists: s.playlists.map(p => p.id === pid ? { ...p, tracks: p.tracks.filter(t => t.id !== tid) } : p)
       })),
-      setPlaylistTracks: (pid, tracks) => set((state) => ({
-        playlists: state.playlists.map(p =>
-          p.id === pid
-            ? { ...p, tracks }
-            : p
-        )
+      setPlaylistTracks: (pid, tracks) => set((s) => ({
+        playlists: s.playlists.map(p => p.id === pid ? { ...p, tracks } : p)
       })),
 
+      // --- Settings ---
       quality: "192",
       searchSource: "all",
       aggregatedSources: ['joox', 'netease'],
@@ -210,453 +170,151 @@ export const useMusicStore = create<MusicState>()(
       setSearchSource: (searchSource) => set({ searchSource }),
       setAggregatedSources: (aggregatedSources) => set({ aggregatedSources }),
 
-      // --- Search State Defaults & Methods ---
-      searchQuery: "",
-      searchIntent: null,
-      searchResults: [],
-      searchLoading: false,
-      searchHasMore: false,
-      searchPage: 0,
+      // --- Search State ---
+      searchQuery: "", searchIntent: null, searchResults: [], searchLoading: false, searchHasMore: false, searchPage: 0,
       setSearchQuery: (searchQuery) => set({ searchQuery }),
       setSearchIntent: (searchIntent) => set({ searchIntent }),
       setSearchResults: (searchResults) => set({ searchResults }),
       setSearchLoading: (searchLoading) => set({ searchLoading }),
       setSearchHasMore: (searchHasMore) => set({ searchHasMore }),
       setSearchPage: (searchPage) => set({ searchPage }),
-      resetSearch: () => set({
-        searchQuery: "",
-        searchIntent: null,
-        searchResults: [],
-        searchLoading: false,
-        searchHasMore: false,
-        searchPage: 0
-      }),
+      resetSearch: () => set({ searchQuery: "", searchIntent: null, searchResults: [], searchLoading: false, searchHasMore: false, searchPage: 0 }),
 
-      // --- UI State ---
-      isFullScreenPlayer: false,
-      setIsFullScreenPlayer: (isFullScreen) => set({ isFullScreenPlayer: isFullScreen }),
-
-      volume: 1.0,
-      isRepeat: false,
-      isShuffle: false,
-      currentAudioTime: 0,
-      isPlaying: false,
-      isLoading: false,
-      seekTimestamp: 0,
-      seekTargetTime: -1, // -1 表示无 seek 目标
-      duration: 0,
-      currentAudioUrl: null,
-      hasUserGesture: false,
-      consecutiveFailures: 0,
-      maxConsecutiveFailures: 3,
-
+      // --- UI & Playback Base ---
+      isFullScreenPlayer: false, setIsFullScreenPlayer: (isFullScreenPlayer) => set({ isFullScreenPlayer }),
+      volume: 1.0, isRepeat: false, isShuffle: false, currentAudioTime: 0, isPlaying: false, isLoading: false,
+      seekTimestamp: 0, seekTargetTime: -1, duration: 0, currentAudioUrl: null, hasUserGesture: false, consecutiveFailures: 0, maxConsecutiveFailures: 3,
       setVolume: (volume) => set({ volume }),
-      toggleRepeat: () => set((state) => ({ isRepeat: !state.isRepeat })),
-      toggleShuffle: () => set((state) => {
-        const newIsShuffle = !state.isShuffle;
-        const safeCurrentIndex =
-          state.queue.length === 0
-            ? 0
-            : Math.min(Math.max(state.currentIndex, 0), state.queue.length - 1);
-
-        if (newIsShuffle) {
-          // 开启随机：备份 -> 打乱
-          if (state.queue.length <= 1) {
-            return {
-              isShuffle: true,
-              originalQueue: state.queue,
-              currentIndex: safeCurrentIndex,
-            };
-          }
-
-          const currentTrack = state.queue[safeCurrentIndex];
-          // 排除当前歌曲，打乱剩余的
-          const rest = state.queue.filter((_, i) => i !== safeCurrentIndex);
-          const shuffledRest = shuffleArray(rest);
-          const newQueue = [currentTrack, ...shuffledRest];
-
-          return {
-            isShuffle: true,
-            originalQueue: state.queue,
-            queue: newQueue,
-            currentIndex: 0,
-          };
-        } else {
-          // 关闭随机：恢复
-          if (!state.originalQueue || state.originalQueue.length === 0) {
-            return { isShuffle: false };
-          }
-
-          const currentTrack = state.queue[safeCurrentIndex];
-          if (!currentTrack) {
-            return {
-              isShuffle: false,
-              queue: state.originalQueue,
-              currentIndex: 0,
-              originalQueue: [],
-            };
-          }
-          // 在原始队列中找到当前歌曲的新位置
-          const newIndex = state.originalQueue.findIndex((t) => t.id === currentTrack.id);
-
-          return {
-            isShuffle: false,
-            queue: state.originalQueue,
-            currentIndex: newIndex !== -1 ? newIndex : 0,
-            originalQueue: [], 
-          };
-        }
-      }),
-      setAudioCurrentTime: (currentTime) => set({ currentAudioTime: currentTime }),
+      toggleRepeat: () => set((s) => ({ isRepeat: !s.isRepeat })),
+      setAudioCurrentTime: (currentAudioTime) => set({ currentAudioTime }),
       setDuration: (duration) => set({ duration }),
       setIsPlaying: (isPlaying) => set({ isPlaying }),
-      togglePlay: () => set((state) => ({ 
-        hasUserGesture: true,
-        isPlaying: !state.isPlaying 
-      })),
+      togglePlay: () => set((s) => ({ hasUserGesture: true, isPlaying: !s.isPlaying })),
       setIsLoading: (isLoading) => set({ isLoading }),
       seek: (time) => set({ seekTargetTime: time, seekTimestamp: Date.now() }),
       clearSeekTargetTime: () => set({ seekTargetTime: -1 }),
-      setCurrentAudioUrl: (url) => set({ currentAudioUrl: url }),
+      setCurrentAudioUrl: (currentAudioUrl) => set({ currentAudioUrl }),
       setUserGesture: () => set({ hasUserGesture: true }),
-      incrementFailures: () => {
-        const current = get().consecutiveFailures + 1;
-        set({ consecutiveFailures: current });
-        return current;
-      },
+      incrementFailures: () => { const f = get().consecutiveFailures + 1; set({ consecutiveFailures: f }); return f; },
       resetFailures: () => set({ consecutiveFailures: 0 }),
 
-      queue: [],
-      originalQueue: [],
-      currentIndex: 0,
-      contextId: null,
+      // --- Queue Management ---
+      queue: [], originalQueue: [], currentIndex: 0, contextId: null,
 
-      playContext: (tracks, startIndex, contextId) => set((state) => {
-        if (tracks.length === 0) {
-          return {
-            queue: [],
-            originalQueue: [],
-            currentIndex: 0,
-            currentAudioTime: 0,
-            isPlaying: false,
-            isLoading: false,
-            duration: 0,
-            contextId: null,
-          };
+      toggleShuffle: () => set((s) => {
+        const newShuffle = !s.isShuffle;
+        const curIdx = clamp(s.currentIndex, s.queue.length - 1);
+        if (newShuffle) { // Turn ON
+          if (s.queue.length <= 1) return { isShuffle: true, originalQueue: s.queue, currentIndex: curIdx };
+          const curTrack = s.queue[curIdx];
+          const rest = s.queue.filter((_, i) => i !== curIdx);
+          return { isShuffle: true, originalQueue: s.queue, queue: [curTrack, ...shuffleArray(rest)], currentIndex: 0 };
+        } else { // Turn OFF
+          const curTrack = s.queue[curIdx];
+          const newIdx = s.originalQueue.findIndex(t => t.id === curTrack?.id);
+          return { isShuffle: false, queue: s.originalQueue.length ? s.originalQueue : s.queue, currentIndex: Math.max(0, newIdx), originalQueue: [] };
         }
-
-        let actualIndex = startIndex ?? 0;
-        actualIndex = Math.min(Math.max(actualIndex, 0), tracks.length - 1);
-
-        const originalQueue = tracks;
-
-        if (state.isShuffle && tracks.length > 0) {
-          // 使用 contextId 判断是否是相同上下文（O(1) 比较）
-          if (contextId && state.contextId === contextId && startIndex !== undefined) {
-            const targetTrack = tracks[startIndex];
-            const targetIndex = state.queue.findIndex((t) => t.id === targetTrack.id);
-
-            if (targetIndex !== -1) {
-              return {
-                currentIndex: targetIndex,
-                currentAudioTime: 0,
-                hasUserGesture: true,
-              };
-            }
-          }
-
-          // 不同上下文或未指定索引：重新打乱
-          if (startIndex === undefined) {
-            actualIndex = Math.floor(Math.random() * tracks.length);
-          }
-
-          const firstTrack = tracks[actualIndex];
-          const rest = tracks.filter((_, i) => i !== actualIndex);
-          const shuffledRest = shuffleArray(rest);
-          const newQueue = [firstTrack, ...shuffledRest];
-
-          return {
-            queue: newQueue,
-            originalQueue,
-            currentIndex: 0,
-            currentAudioTime: 0,
-            hasUserGesture: true,
-            contextId: contextId ?? null,
-          };
-        }
-
-        return {
-          queue: tracks,
-          originalQueue,
-          currentIndex: actualIndex,
-          currentAudioTime: 0,
-          hasUserGesture: true,
-          contextId: contextId ?? null,
-        };
       }),
 
-      addToNextPlay: (track) => set((state) => {
-        // 如果队列为空，作为唯一一首
-        if (state.queue.length === 0) {
-          return {
-            queue: [track],
-            originalQueue: state.isShuffle ? [track] : [],
-            currentIndex: 0,
-            // 不自动播放
-          };
-        }
-
-        const newQueue = [...state.queue];
-        const existingIndex = newQueue.findIndex((t) => t.id === track.id);
+      playContext: (tracks, startIdx = 0, contextId) => set((s) => {
+        if (!tracks.length) return { queue: [], originalQueue: [], currentIndex: 0, currentAudioTime: 0, isPlaying: false, duration: 0, contextId: null };
+        const idx = clamp(startIdx, tracks.length - 1);
         
-        // 如果这首歌已经在当前播放，不做任何操作
-        if (existingIndex === state.currentIndex) {
-          return {};
-        }
-
-        let targetIndex = state.currentIndex + 1;
-        let newCurrentIndex = state.currentIndex;
-
-        if (existingIndex !== -1) {
-          // 移除已存在的
-          newQueue.splice(existingIndex, 1);
-          // 如果移除的位置在当前位置之前，targetIndex 和 currentIndex 都需要减 1
-          if (existingIndex < state.currentIndex) {
-            targetIndex--;
-            newCurrentIndex--;
+        if (s.isShuffle) {
+          if (contextId && s.contextId === contextId && startIdx !== undefined) {
+            const targetIdx = s.queue.findIndex(t => t.id === tracks[startIdx].id);
+            if (targetIdx !== -1) return { currentIndex: targetIdx, currentAudioTime: 0, hasUserGesture: true };
           }
+          const realIdx = startIdx !== undefined ? idx : Math.floor(Math.random() * tracks.length);
+          const first = tracks[realIdx];
+          const rest = shuffleArray(tracks.filter((_, i) => i !== realIdx));
+          return { queue: [first, ...rest], originalQueue: tracks, currentIndex: 0, currentAudioTime: 0, hasUserGesture: true, contextId: contextId ?? null };
         }
-
-        // 插入到 targetIndex
-        newQueue.splice(targetIndex, 0, track);
-
-        // 处理 originalQueue (随机模式下同步更新)
-        let newOriginalQueue = state.originalQueue;
-        if (state.isShuffle) {
-          const oQueue = [...(state.originalQueue || [])];
-          const currentTrack = state.queue[state.currentIndex];
-          if (currentTrack) {
-            // 找到当前歌曲在 originalQueue 中的位置
-            const originalCurrentIndex = oQueue.findIndex(t => t.id === currentTrack.id);
-            // 如果不在 originalQueue 中，插入到当前位置之后
-            if (!oQueue.some(t => t.id === track.id)) {
-              if (originalCurrentIndex !== -1) {
-                oQueue.splice(originalCurrentIndex + 1, 0, track);
-              } else {
-                oQueue.push(track);
-              }
-            } else {
-              // 如果已存在，移除后插入到当前位置之后
-              const existingIndex = oQueue.findIndex(t => t.id === track.id);
-              oQueue.splice(existingIndex, 1);
-              if (originalCurrentIndex !== -1) {
-                oQueue.splice(originalCurrentIndex + 1, 0, track);
-              } else {
-                oQueue.push(track);
-              }
-            }
-          } else {
-            // 找不到当前歌曲，添加到末尾
-            if (!oQueue.some(t => t.id === track.id)) {
-              oQueue.push(track);
-            }
-          }
-          newOriginalQueue = oQueue;
-        }
-
-        return {
-          queue: newQueue,
-          currentIndex: newCurrentIndex,
-          originalQueue: newOriginalQueue,
-        };
+        return { queue: tracks, originalQueue: tracks, currentIndex: idx, currentAudioTime: 0, hasUserGesture: true, contextId: contextId ?? null };
       }),
 
+      // 提取核心插入逻辑，复用于 addToNextPlay 和 playTrackAsNext
+      addToNextPlay: (track) => set((s) => insertNext(s, track, false)),
+      playTrackAsNext: (track) => set((s) => insertNext(s, track, true)),
 
-      playTrackAsNext: (track) => set((state) => {
-        // 如果队列为空，直接播放
-        if (state.queue.length === 0) {
-          return {
-            queue: [track],
-            originalQueue: [track],
-            currentIndex: 0,
-            currentAudioTime: 0,
-          };
-        }
-
-        const newQueue = [...state.queue];
-        const existingIndex = newQueue.findIndex((t) => t.id === track.id);
+      removeFromQueue: (tid) => set((s) => {
+        const idx = s.queue.findIndex(t => t.id === tid);
+        if (idx === -1) return {};
+        const q = s.queue.filter(t => t.id !== tid);
+        if (!q.length) return { queue: [], originalQueue: [], currentIndex: 0, currentAudioTime: 0, isPlaying: false };
         
-        // 如果这首歌已经在当前播放，只需重置时间
-        if (existingIndex === state.currentIndex) {
-          return { currentAudioTime: 0 };
-        }
-
-        let targetIndex = state.currentIndex + 1;
-
-        if (existingIndex !== -1) {
-          // 移除已存在的
-          newQueue.splice(existingIndex, 1);
-          // 如果移除的位置在当前位置之前，targetIndex 需要减 1
-          if (existingIndex < state.currentIndex) {
-            targetIndex--;
-          }
-        }
-
-        // 插入到 targetIndex
-        newQueue.splice(targetIndex, 0, track);
-
-        // 处理 originalQueue (随机模式下同步更新)
-        let newOriginalQueue = state.originalQueue;
-        if (state.isShuffle) {
-          const oQueue = [...(state.originalQueue || [])];
-          const currentTrack = state.queue[state.currentIndex];
-          if (currentTrack) {
-            // 找到当前歌曲在 originalQueue 中的位置
-            const originalCurrentIndex = oQueue.findIndex(t => t.id === currentTrack.id);
-            // 如果不在 originalQueue 中，插入到当前位置之后
-            if (!oQueue.some(t => t.id === track.id)) {
-              if (originalCurrentIndex !== -1) {
-                oQueue.splice(originalCurrentIndex + 1, 0, track);
-              } else {
-                oQueue.push(track);
-              }
-            } else {
-              // 如果已存在，移除后插入到当前位置之后
-              const existingIndex = oQueue.findIndex(t => t.id === track.id);
-              oQueue.splice(existingIndex, 1);
-              if (originalCurrentIndex !== -1) {
-                oQueue.splice(originalCurrentIndex + 1, 0, track);
-              } else {
-                oQueue.push(track);
-              }
-            }
-          } else {
-            // 找不到当前歌曲，添加到末尾
-            if (!oQueue.some(t => t.id === track.id)) {
-              oQueue.push(track);
-            }
-          }
-          newOriginalQueue = oQueue;
-        }
-
         return {
-          queue: newQueue,
-          currentIndex: targetIndex,
-          currentAudioTime: 0,
-          originalQueue: newOriginalQueue,
+          queue: q,
+          originalQueue: s.isShuffle ? (s.originalQueue || []).filter(t => t.id !== tid) : s.originalQueue,
+          currentIndex: idx < s.currentIndex ? s.currentIndex - 1 : (idx === s.currentIndex ? Math.min(s.currentIndex, q.length - 1) : s.currentIndex)
         };
       }),
 
-      removeFromQueue: (trackId) => set((state) => {
-        const removedIndex = state.queue.findIndex((t) => t.id === trackId);
-        if (removedIndex === -1) return {};
-
-        const nextQueue = state.queue.filter((t) => t.id !== trackId);
-        const nextOriginalQueue = state.isShuffle
-          ? (state.originalQueue || []).filter((t) => t.id !== trackId)
-          : state.originalQueue;
-
-        if (nextQueue.length === 0) {
-          return {
-            queue: [],
-            originalQueue: [],
-            currentIndex: 0,
-            currentAudioTime: 0,
-            isPlaying: false,
-            isLoading: false,
-            duration: 0,
-          };
-        }
-
-        let nextIndex = state.currentIndex;
-        if (removedIndex < state.currentIndex) {
-          nextIndex = state.currentIndex - 1;
-        } else if (removedIndex === state.currentIndex) {
-          nextIndex = Math.min(state.currentIndex, nextQueue.length - 1);
-        }
-
-        return {
-          queue: nextQueue,
-          originalQueue: nextOriginalQueue,
-          currentIndex: nextIndex,
-        };
+      clearQueue: () => set({ queue: [], originalQueue: [], currentIndex: 0, currentAudioTime: 0, isPlaying: false, duration: 0, contextId: null }),
+      
+      reshuffle: () => set((s) => {
+        if (!s.isShuffle || s.queue.length <= 1) return s;
+        const curTrack = s.queue[s.currentIndex];
+        const srcQueue = s.originalQueue?.length ? s.originalQueue : s.queue;
+        return { queue: [curTrack, ...shuffleArray(srcQueue.filter(t => t.id !== curTrack.id))], currentIndex: 0 };
       }),
 
-      clearQueue: () =>
-        set({
-          queue: [],
-          originalQueue: [],
-          currentIndex: 0,
-          currentAudioTime: 0,
-          isPlaying: false,
-          isLoading: false,
-          duration: 0,
-          contextId: null,
-        }),
-      reshuffle: () => set((state) => {
-        if (!state.isShuffle || state.queue.length <= 1) return state;
+      setCurrentIndex: (idx, resetTime = true) => set((s) => ({
+        currentIndex: s.queue.length ? clamp(idx, s.queue.length - 1) : 0,
+        currentAudioTime: resetTime ? 0 : s.currentAudioTime,
+      })),
 
-        // 使用 originalQueue 进行重新打乱
-        const sourceQueue = (state.originalQueue && state.originalQueue.length > 0)
-          ? state.originalQueue
-          : state.queue;
+      setCurrentIndexAndPlay: (idx) => set((s) => ({
+        currentIndex: s.queue.length ? clamp(idx, s.queue.length - 1) : 0,
+        currentAudioTime: 0, hasUserGesture: true, isPlaying: true,
+      })),
 
-        const currentTrack = state.queue[state.currentIndex];
-        if (!currentTrack) return state;
-        // 排除当前歌曲
-        const rest = sourceQueue.filter((t) => t.id !== currentTrack.id);
-        const shuffledRest = shuffleArray(rest);
-        const newQueue = [currentTrack, ...shuffledRest];
-
-        return {
-          queue: newQueue,
-          currentIndex: 0,
-        };
-      }),
-      setCurrentIndex: (index, resetTime = true) =>
-        set((state) => ({
-          currentIndex:
-            state.queue.length === 0
-              ? 0
-              : Math.min(Math.max(index, 0), state.queue.length - 1),
-          currentAudioTime: resetTime ? 0 : state.currentAudioTime,
-        })),
-      setCurrentIndexAndPlay: (index) =>
-        set((state) => {
-          if (state.queue.length === 0) return { currentIndex: 0 };
-          return {
-            currentIndex: Math.min(Math.max(index, 0), state.queue.length - 1),
-            currentAudioTime: 0,
-            hasUserGesture: true,
-            isPlaying: true,
-          };
-        }),
-      skipToNext: () =>
-        set((state) => {
-          if (state.queue.length === 0) return {};
-          const nextIndex = (state.currentIndex + 1) % state.queue.length;
-          return {
-            currentIndex: nextIndex,
-            currentAudioTime: 0,
-          };
-        }),
+      skipToNext: () => set((s) => s.queue.length ? { currentIndex: (s.currentIndex + 1) % s.queue.length, currentAudioTime: 0 } : {}),
     }),
     {
       name: storeKey.MusicStore,
-      partialize: (state) => ({
-        favorites: state.favorites.map(cleanTrack),
-        playlists: state.playlists.map(cleanPlaylist),
-        queue: state.queue.map(cleanTrack),
-        currentIndex: state.currentIndex,
-        volume: state.volume,
-        isRepeat: state.isRepeat,
-        isShuffle: state.isShuffle,
-        currentAudioTime: state.currentAudioTime,
-        duration: state.duration,
-        quality: state.quality,
-        searchSource: state.searchSource,
-        aggregatedSources: state.aggregatedSources,
+      partialize: (s) => ({
+        favorites: s.favorites.map(cleanTrack), playlists: s.playlists.map(cleanPlaylist), queue: s.queue.map(cleanTrack),
+        currentIndex: s.currentIndex, volume: s.volume, isRepeat: s.isRepeat, isShuffle: s.isShuffle, currentAudioTime: s.currentAudioTime,
+        duration: s.duration, quality: s.quality, searchSource: s.searchSource, aggregatedSources: s.aggregatedSources,
       }),
     }
   )
 );
+
+// --- 独立抽离的插入队列逻辑 ---
+function insertNext(state: MusicState, track: MusicTrack, playImmediately: boolean): Partial<MusicState> {
+  if (!state.queue.length) {
+    return { queue: [track], originalQueue: state.isShuffle ? [track] : [], currentIndex: 0, ...(playImmediately && { currentAudioTime: 0 }) };
+  }
+  
+  const q = [...state.queue];
+  const existIdx = q.findIndex(t => t.id === track.id);
+  if (existIdx === state.currentIndex) return playImmediately ? { currentAudioTime: 0 } : {};
+
+  let targetIdx = state.currentIndex + 1;
+  let curIdx = state.currentIndex;
+
+  if (existIdx !== -1) {
+    q.splice(existIdx, 1);
+    if (existIdx < state.currentIndex) { targetIdx--; curIdx--; }
+  }
+  q.splice(targetIdx, 0, track);
+
+  let oq = state.originalQueue;
+  if (state.isShuffle) {
+    oq = [...(state.originalQueue || [])];
+    const curId = state.queue[state.currentIndex]?.id;
+    const oqExistIdx = oq.findIndex(t => t.id === track.id);
+    if (oqExistIdx !== -1) oq.splice(oqExistIdx, 1);
+    const oqCurIdx = curId ? oq.findIndex(t => t.id === curId) : -1;
+    oq.splice(oqCurIdx !== -1 ? oqCurIdx + 1 : oq.length, 0, track);
+  }
+
+  return {
+    queue: q,
+    originalQueue: oq,
+    currentIndex: playImmediately ? targetIdx : curIdx,
+    ...(playImmediately && { currentAudioTime: 0 })
+  };
+}
