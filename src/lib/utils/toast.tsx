@@ -13,7 +13,7 @@ export const toastUtils = {
    */
   info: (message: string, options?: ToastOptions) => {
     return toast(message, {
-      icon: <Info className="w-5 h-5 text-blue-500" />,
+      icon: "ℹ️",
       ...options,
     });
   },
@@ -25,7 +25,19 @@ export const toastUtils = {
    */
   warning: (message: string, options?: ToastOptions) => {
     return toast(message, {
-      icon: <AlertTriangle className="w-5 h-5 text-yellow-500" />,
+      icon: "⚠️",
+      ...options,
+    });
+  },
+
+  /**
+   * 未找到结果提示
+   * @param message 提示内容
+   * @param options 配置项
+   */
+  notFound: (message: string, options?: ToastOptions) => {
+    return toast(message, {
+      icon: "👻",
       ...options,
     });
   },
