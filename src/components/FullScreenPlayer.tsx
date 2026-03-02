@@ -252,6 +252,7 @@ export function FullScreenPlayer({
                   isFavorite={isFavorite}
                   onToggleLike={onToggleLike}
                   triggerClassName="h-10 w-10 text-muted-foreground hover:bg-muted/40 hover:text-foreground"
+                  onNavigate={onClose}
                 />
                 <AddToPlaylistDialog
                   open={isAddToPlaylistOpen}

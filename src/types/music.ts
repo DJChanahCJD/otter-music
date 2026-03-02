@@ -79,6 +79,10 @@ export type MusicSource =
   // Common sources mentioned in doc: netease, tencent, tidal, spotify, ytmusic, qobuz, joox, deezer, migu, kugou, kuwo, ximalaya, apple
   | 'tidal' | 'spotify' | 'ytmusic' | 'qobuz' | 'deezer' | 'apple' | 'all' | 'local';
 
+export interface SearchIntent {
+  type: 'artist' | 'album' | '';
+}
+
 export interface MusicTrack {
   id: string;
   name: string;

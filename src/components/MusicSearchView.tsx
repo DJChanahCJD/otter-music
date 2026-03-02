@@ -1,4 +1,4 @@
-import { getExactKey } from "@/lib/utils/music-key";
+import { getExactKey, toSimplified } from "@/lib/utils/music-key";
 import { musicApi } from "@/lib/music-api";
 import { useMusicStore } from "@/store/music-store";
 import { MusicTrack, MusicSource, searchOptions } from "@/types/music";
@@ -11,6 +11,7 @@ import { useShallow } from "zustand/react/shallow";
 import { MusicTrackList } from "./MusicTrackList";
 import { Button } from "./ui/button";
 import { SelectTrigger, SelectValue, SelectContent, SelectItem } from "./ui/select";
+import { toastUtils } from "@/lib/utils/toast";
 
 interface MusicSearchViewProps {
   onPlay: (track: MusicTrack, list: MusicTrack[], contextId?: string) => void;
@@ -32,7 +33,9 @@ export function MusicSearchView({ onPlay, currentTrackId, isPlaying }: MusicSear
     setSearchHasMore,
     searchPage,
     setSearchPage,
-    aggregatedSources
+    aggregatedSources,
+    searchIntent,
+    setSearchIntent,
   } = useMusicStore(
     useShallow(s => ({
       source: s.searchSource, 
@@ -47,7 +50,9 @@ export function MusicSearchView({ onPlay, currentTrackId, isPlaying }: MusicSear
       setSearchHasMore: s.setSearchHasMore,
       searchPage: s.searchPage,
       setSearchPage: s.setSearchPage,
-      aggregatedSources: s.aggregatedSources
+      aggregatedSources: s.aggregatedSources,
+      searchIntent: s.searchIntent,
+      setSearchIntent: s.setSearchIntent,
     }))
   );
 
@@ -66,7 +71,7 @@ export function MusicSearchView({ onPlay, currentTrackId, isPlaying }: MusicSear
         searchInputRef.current?.focus();
       }
     }
-  }, []);
+  }, [searchQuery, searchResults.length]);
 
   const fetchPage = async (nextPage: number, reset = false) => {
     if (!searchQuery.trim()) return;
@@ -93,7 +98,29 @@ export function MusicSearchView({ onPlay, currentTrackId, isPlaying }: MusicSear
 
       if (version !== versionRef.current) return; // 过期响应
 
-      const filtered = res.items.filter(t => {
+      // 排序逻辑：如果是专辑搜索，优先把同名专辑放到前面
+      let items = res.items;
+      if (searchIntent?.type === 'album') {
+        const q = toSimplified(searchQuery);
+        items = [...items].sort((a, b) => {
+          const aMatch = toSimplified(a.album) === q;
+          const bMatch = toSimplified(b.album) === q;
+          if (aMatch && !bMatch) return -1;
+          if (!aMatch && bMatch) return 1;
+          return 0;
+        });
+      } else if (searchIntent?.type === 'artist') {
+        const q = toSimplified(searchQuery);
+        items = [...items].sort((a, b) => {
+          const aMatch = a.artist.some(artist => toSimplified(artist) === q);
+          const bMatch = b.artist.some(artist => toSimplified(artist) === q);
+          if (aMatch && !bMatch) return -1;
+          if (!aMatch && bMatch) return 1;
+          return 0;
+        });
+      }
+
+      const filtered = items.filter(t => {
         const key = getExactKey(t);
         if (seenRef.current.has(key)) return false;
         seenRef.current.add(key);
@@ -103,6 +130,10 @@ export function MusicSearchView({ onPlay, currentTrackId, isPlaying }: MusicSear
       setSearchResults(reset ? filtered : [...searchResults, ...filtered]);
       setSearchHasMore(res.hasMore);
       setSearchPage(nextPage);
+
+      if (reset && filtered.length === 0) {
+        toastUtils.notFound("未找到相关歌曲");
+      }
 
     } catch (e) {
       if ((e as any)?.name !== "AbortError") toast.error("搜索失败，请稍后重试");
@@ -123,7 +154,12 @@ export function MusicSearchView({ onPlay, currentTrackId, isPlaying }: MusicSear
               ref={searchInputRef}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && fetchPage(1, true)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  setSearchIntent(null);
+                  fetchPage(1, true);
+                }
+              }}
               placeholder="搜索歌曲 / 歌手 / 专辑"
               className="pl-9"
             />
@@ -140,7 +176,10 @@ export function MusicSearchView({ onPlay, currentTrackId, isPlaying }: MusicSear
             </SelectContent>
           </Select>
 
-          <Button onClick={() => fetchPage(1, true)} disabled={searchLoading}>
+          <Button onClick={() => {
+            setSearchIntent(null);
+            fetchPage(1, true);
+          }} disabled={searchLoading}>
             {searchLoading ? <Loader2 className="animate-spin" /> : <Search />}
           </Button>
         </div>
@@ -155,7 +194,7 @@ export function MusicSearchView({ onPlay, currentTrackId, isPlaying }: MusicSear
           loading={searchLoading}
           hasMore={searchHasMore}
           onLoadMore={() => fetchPage(searchPage + 1)}
-          emptyMessage={searchLoading ? "搜索中..." : "输入关键词开始搜索"}
+          emptyMessage={searchLoading ? "搜索中..." : (searchQuery.trim() ? "未找到相关歌曲" : "输入关键词开始搜索")}
         />
       </div>
     </div>

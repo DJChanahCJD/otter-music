@@ -20,7 +20,7 @@ import {
 import { ReactNode, useState } from "react";
 import { MusicCover } from "./MusicCover";
 import { useMusicCover } from "@/hooks/useMusicCover";
-import { MusicTrack } from "@/types/music";
+import { MusicTrack, SearchIntent } from "@/types/music";
 import { useNavigate } from "react-router-dom";
 import { useMusicStore } from "@/store/music-store";
 import { toSimplified } from "@/lib/utils/music-key";
@@ -44,6 +44,7 @@ interface MusicTrackMobileMenuProps {
   removeLabel?: string;
   customActions?: ReactNode;
   triggerClassName?: string;
+  onNavigate?: () => void;
 }
 
 export function MusicTrackMobileMenu({
@@ -59,19 +60,24 @@ export function MusicTrackMobileMenu({
   removeLabel = "移除",
   customActions,
   triggerClassName,
+  onNavigate,
 }: MusicTrackMobileMenuProps) {
   const coverUrl = useMusicCover(track, open);
   const navigate = useNavigate();
   const setSearchQuery = useMusicStore((state) => state.setSearchQuery);
   const setSearchResults = useMusicStore((state) => state.setSearchResults);
+  const setSearchIntent = useMusicStore((state) => state.setSearchIntent);
   const [showArtistSelection, setShowArtistSelection] = useState(false);
 
-  const handleSearch = (keyword: string) => {
-    setSearchQuery(toSimplified(keyword));
+  const handleSearch = (keyword: string, type: SearchIntent['type'] = '') => {
+    const simplified = toSimplified(keyword);
+    setSearchQuery(simplified);
+    setSearchIntent({ type });
     setSearchResults([]);
     navigate("/search");
     onOpenChange(false);
     setShowArtistSelection(false);
+    onNavigate?.();
   };
 
   return (
@@ -173,7 +179,7 @@ export function MusicTrackMobileMenu({
                 if (track.artist.length > 1) {
                   setShowArtistSelection(true);
                 } else {
-                  handleSearch(track.artist[0]);
+                  handleSearch(track.artist[0], 'artist');
                 }
               }}
             >
@@ -184,7 +190,7 @@ export function MusicTrackMobileMenu({
               <Button
                 variant="ghost"
                 className="justify-start w-full"
-                onClick={() => handleSearch(track.album!)}
+                onClick={() => handleSearch(track.album!, 'album')}
               >
                 <Disc className="mr-2 h-4 w-4" /> 专辑：{track.album}
               </Button>
@@ -233,7 +239,7 @@ export function MusicTrackMobileMenu({
                 key={artist}
                 variant="ghost"
                 className="justify-start w-full"
-                onClick={() => handleSearch(artist)}
+                onClick={() => handleSearch(artist, 'artist')}
               >
                 <User className="mr-2 h-4 w-4" />
                 {artist}

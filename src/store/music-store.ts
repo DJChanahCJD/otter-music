@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { v4 as uuidv4 } from 'uuid';
 import { storeKey } from './store-keys';
-import type { MusicTrack, MusicSource, Playlist } from '@/types/music';
+import type { MusicTrack, MusicSource, Playlist, SearchIntent } from '@/types/music';
 import { cleanTrack } from '@/lib/utils/music';
 import { toastUtils } from '@/lib/utils/toast';
 
@@ -55,11 +55,13 @@ interface MusicState {
 
   // --- Search State (Not Persisted) ---
   searchQuery: string;
+  searchIntent: SearchIntent | null;
   searchResults: MusicTrack[];
   searchLoading: boolean;
   searchHasMore: boolean;
   searchPage: number;
   setSearchQuery: (query: string) => void;
+  setSearchIntent: (intent: SearchIntent | null) => void;
   setSearchResults: (results: MusicTrack[]) => void;
   setSearchLoading: (loading: boolean) => void;
   setSearchHasMore: (hasMore: boolean) => void;
@@ -210,17 +212,20 @@ export const useMusicStore = create<MusicState>()(
 
       // --- Search State Defaults & Methods ---
       searchQuery: "",
+      searchIntent: null,
       searchResults: [],
       searchLoading: false,
       searchHasMore: false,
       searchPage: 0,
       setSearchQuery: (searchQuery) => set({ searchQuery }),
+      setSearchIntent: (searchIntent) => set({ searchIntent }),
       setSearchResults: (searchResults) => set({ searchResults }),
       setSearchLoading: (searchLoading) => set({ searchLoading }),
       setSearchHasMore: (searchHasMore) => set({ searchHasMore }),
       setSearchPage: (searchPage) => set({ searchPage }),
       resetSearch: () => set({
         searchQuery: "",
+        searchIntent: null,
         searchResults: [],
         searchLoading: false,
         searchHasMore: false,
