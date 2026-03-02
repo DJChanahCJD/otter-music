@@ -1,16 +1,11 @@
 import { Button } from "@/components/ui/button";
-import { Play, MoreHorizontal, Search } from "lucide-react";
+import { Play, Search } from "lucide-react";
 import { MusicTrackList } from "./MusicTrackList";
 import { Input } from "@/components/ui/input";
 import { useState, useMemo } from "react";
 import { MusicCover } from "./MusicCover";
 import { cn } from "@/lib/utils";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { PlaylistOperations } from "./PlaylistOperations";
 import { MusicTrack } from "@/types/music";
 import { useMusicStore } from "@/store/music-store";
 import { useDownloadStore } from "@/store/download-store";
@@ -139,45 +134,22 @@ export function MusicPlaylistView({
                 <Play className="h-3 w-3 fill-current" />
              </Button>
              {action}
-             {playlistId && (onRename || onDelete) && (
-               <DropdownMenu>
-                 <DropdownMenuTrigger asChild>
-                   <Button
-                     variant="secondary"
-                     size="icon"
-                     title="更多操作"
-                   >
-                     <MoreHorizontal className="h-4 w-4" />
-                   </Button>
-                 </DropdownMenuTrigger>
-                 <DropdownMenuContent align="end">
-                   {onRename && (
-                     <DropdownMenuItem onClick={() => {
-                       const newName = window.prompt("请输入新歌单名称", title);
-                       if (newName && newName.trim()) {
-                         onRename(playlistId, newName.trim());
-                       }
-                     }}>
-                       重命名
-                     </DropdownMenuItem>
-                   )}
-                   <DropdownMenuItem onClick={handleDeduplicate}>
-                     歌单去重
-                   </DropdownMenuItem>
-                   <DropdownMenuItem onClick={() => exportPlaylist(title, tracks)}>
-                     导出歌单
-                   </DropdownMenuItem>
-                   {onDelete && (
-                     <DropdownMenuItem onClick={() => {
-                       if (confirm(`确定删除歌单「${title}」吗？`)) {
-                         onDelete(playlistId);
-                       }
-                     }} className="text-red-500">
-                       删除歌单
-                     </DropdownMenuItem>
-                   )}
-                 </DropdownMenuContent>
-               </DropdownMenu>
+             {playlistId && (
+               <PlaylistOperations
+                 onRename={onRename ? () => {
+                   const newName = window.prompt("请输入新歌单名称", title);
+                   if (newName && newName.trim()) {
+                     onRename(playlistId, newName.trim());
+                   }
+                 } : undefined}
+                 onDeduplicate={handleDeduplicate}
+                 onExport={() => exportPlaylist(title, tracks)}
+                 onDelete={onDelete ? () => {
+                   if (confirm(`确定删除歌单「${title}」吗？`)) {
+                     onDelete(playlistId);
+                   }
+                 } : undefined}
+               />
              )}
              
              <div className="relative ml-auto w-32">

@@ -1,15 +1,10 @@
 import { Button } from "@/components/ui/button";
-import { Play, MoreHorizontal, Search, Heart } from "lucide-react";
+import { Play, Search, Heart } from "lucide-react";
 import { MusicTrackList } from "./MusicTrackList";
 import { Input } from "@/components/ui/input";
 import { useState, useMemo } from "react";
 import { cn } from "@/lib/utils";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { PlaylistOperations } from "./PlaylistOperations";
 import { MusicTrack } from "@/types/music";
 import { useMusicStore } from "@/store/music-store";
 import { useDownloadStore } from "@/store/download-store";
@@ -93,25 +88,10 @@ export function FavoritesView({
                 <Play className="h-3 w-3 fill-current" />
              </Button>
 
-             <DropdownMenu>
-               <DropdownMenuTrigger asChild>
-                 <Button
-                   variant="secondary"
-                   size="icon"
-                   title="更多操作"
-                 >
-                   <MoreHorizontal className="h-4 w-4" />
-                 </Button>
-               </DropdownMenuTrigger>
-               <DropdownMenuContent align="end">
-                 <DropdownMenuItem onClick={handleDeduplicate}>
-                   列表去重
-                 </DropdownMenuItem>
-                 <DropdownMenuItem onClick={() => exportPlaylist("我喜欢的音乐", tracks)}>
-                   导出歌单
-                 </DropdownMenuItem>
-               </DropdownMenuContent>
-             </DropdownMenu>
+             <PlaylistOperations 
+                onDeduplicate={handleDeduplicate}
+                onExport={() => exportPlaylist("我喜欢的音乐", tracks)}
+             />
              
              <div className="relative ml-auto w-32">
                 <Search className="absolute left-2 top-2.5 h-3 w-3 text-muted-foreground" />
