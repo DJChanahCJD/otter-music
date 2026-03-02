@@ -233,14 +233,15 @@ export function MusicTrackList({
 
     await processBatchIO(
       selectedTracks,
-      (track) => downloadMusicTrack(track, parseInt(quality)),
+      async (track) => {
+        await downloadMusicTrack(track, parseInt(quality));
+      },
       (current, total) => {
         toast.loading(`已开始下载 ${current}/${total}...`, { id: toastId });
       },
       1, // 一次下载一个
     );
 
-    toast.success(`下载任务已全部开始`, { id: toastId });
     setIsSelectionMode(false);
     setSelectedIds(new Set());
   };

@@ -18,7 +18,7 @@ export default function RootLayout({ children }: PropsWithChildren) {
           top: "calc(24px + var(--safe-area-top))",
         }}
         toastOptions={{
-          duration: 2000,
+          duration: 3000,
           style: {
             padding: "12px 16px",
             fontSize: "14px",
