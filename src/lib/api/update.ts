@@ -3,7 +3,6 @@ import { API_URL, unwrap } from "./config";
 const UPDATE_API_URL = `${API_URL}/update`;
 
 export interface UpdateInfo {
-  hasUpdate: boolean;
   latestVersion: string;
   changelog: string;
   downloadUrl: string;
@@ -15,9 +14,9 @@ export interface UpdateInfo {
 /**
  * 检查更新
  */
-export async function checkUpdate(currentVersion: string): Promise<UpdateInfo> {
+export async function checkUpdate(): Promise<UpdateInfo> {
   return unwrap<UpdateInfo>(
-    fetch(`${UPDATE_API_URL}/check?version=${currentVersion}`, {
+    fetch(`${UPDATE_API_URL}/check`, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",

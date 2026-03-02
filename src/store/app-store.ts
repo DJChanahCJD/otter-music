@@ -10,7 +10,6 @@ interface AppState {
   currentVersion: string;
   lastCheckTime: number;
   latestVersionInfo: UpdateInfo | null;
-  hasNewVersion: boolean;
   isChecking: boolean;
 }
 
@@ -23,19 +22,16 @@ const initialState: AppState = {
   currentVersion: "0.0.0",
   lastCheckTime: 0,
   latestVersionInfo: null,
-  hasNewVersion: false,
   isChecking: false,
 };
 
-/**
- * 判断是否同一天
- */
+/* =========================
+   工具函数
+========================= */
+
 const isSameDay = (t1: number, t2: number) =>
   new Date(t1).toDateString() === new Date(t2).toDateString();
 
-/**
- * 获取当前版本号
- */
 const getCurrentVersion = async (): Promise<string> => {
   try {
     if (Capacitor.isNativePlatform()) {
@@ -45,8 +41,32 @@ const getCurrentVersion = async (): Promise<string> => {
   } catch (e) {
     console.error("Failed to get app info", e);
   }
-  return "0.0.0"; // Web fallback
+  return "0.0.0";
 };
+
+const normalizeVersion = (version: string): string => {
+  const trimmed = version.trim().replace(/^v/i, "");
+  const match = trimmed.match(/\d+(?:\.\d+)*/);
+  return match?.[0] ?? "0.0.0";
+};
+
+const compareVersions = (a: string, b: string): number => {
+  const va = normalizeVersion(a).split(".").map(Number);
+  const vb = normalizeVersion(b).split(".").map(Number);
+
+  const len = Math.max(va.length, vb.length);
+  for (let i = 0; i < len; i++) {
+    const na = va[i] ?? 0;
+    const nb = vb[i] ?? 0;
+    if (na > nb) return 1;
+    if (na < nb) return -1;
+  }
+  return 0;
+};
+
+/* =========================
+   Store
+========================= */
 
 export const useAppStore = create<AppState & AppActions>()(
   persist(
@@ -61,42 +81,33 @@ export const useAppStore = create<AppState & AppActions>()(
         set({ isChecking: true });
 
         try {
-          // 1️⃣ 获取当前版本
           const currentVersion = await getCurrentVersion();
           set({ currentVersion });
 
-          // 2️⃣ 静默 + 当天已检查 -> 直接使用缓存
+          // 当天已检查 + 静默 -> 不重复请求
           if (
             silent &&
             state.lastCheckTime &&
             isSameDay(state.lastCheckTime, now)
           ) {
-            if (state.hasNewVersion && state.latestVersionInfo) {
-              toast(`发现新版本 ${state.latestVersionInfo.latestVersion}，请前往设置更新`, {
-                icon: "✨",
-                duration: 3000,
-              });
-            }
             return;
           }
 
-          // 3️⃣ 请求更新接口
-          const info = await apiCheckUpdate(currentVersion);
+          const info = await apiCheckUpdate();
+
+          const hasUpdate =
+            compareVersions(currentVersion, info.latestVersion) < 0;
 
           set({
-            latestVersionInfo: info,
-            hasNewVersion: info.hasUpdate,
+            latestVersionInfo: hasUpdate ? info : null,
             lastCheckTime: now,
           });
 
-          // 4️⃣ 统一 toast 逻辑
-          if (info.hasUpdate) {
-            if (silent) {
-              toast(`发现新版本 ${info.latestVersion}，请前往设置更新`, {
-                icon: "✨",
-                duration: 3000,
-              });
-            }
+          if (hasUpdate) {
+            toast(`发现新版本 ${info.latestVersion}`, {
+              icon: "✨",
+              duration: 3000,
+            });
           } else if (!silent) {
             toast.success(`当前已是最新版本 (${currentVersion})`);
           }
@@ -116,10 +127,8 @@ export const useAppStore = create<AppState & AppActions>()(
     {
       name: storeKey.AppStore,
       partialize: (state) => ({
-        currentVersion: state.currentVersion,
         lastCheckTime: state.lastCheckTime,
         latestVersionInfo: state.latestVersionInfo,
-        hasNewVersion: state.hasNewVersion,
       }),
     }
   )
