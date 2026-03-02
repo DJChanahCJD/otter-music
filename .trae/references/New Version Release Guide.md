@@ -1,49 +1,103 @@
-# Android 移动端版本发布手册 (Release Guide)
+# Android 发布手册（Release Guide）
 
-本手册涵盖了从修改版本号到生成、签名正式版 APK 的完整流程。
+完整流程：**改版本 → 构建 → 签名 → 生成 APK**
 
 ---
 
-## 1. 修改版本号
+## 1️⃣ 修改版本号（每次发布必须）
 
-发布新版本前，必须同步更新以下三个配置，确保版本一致。
+确保三处版本保持一致：
 
-| 文件位置 | 关键字段 | 说明 |
-| --- | --- | --- |
-| `android/app/build.gradle` | `versionCode` | **必须递增**（整数，如 1 → 2），用于 Google Play 识别更新 |
-| `android/app/build.gradle` | `versionName` | **用户可见版本**（字符串，如 "1.1.0"） |
-| `package.json` | `version` | 全局项目版本号 |
+| 文件                         | 字段            | 要求                 |
+| -------------------------- | ------------- | ------------------ |
+| `android/app/build.gradle` | `versionCode` | 必须递增（整数）           |
+| `android/app/build.gradle` | `versionName` | 用户可见版本，如 `"1.1.0"` |
+| `package.json`             | `version`     | 项目版本号              |
 
-**同步配置命令**:
+### 推荐操作顺序
 
 ```bash
-npm version 1.1.0  # 自动更新 package.json 版本
-npx cap sync android
+# 1. 更新 package.json
+npm version x.x.x
 
+# 2. 手动修改 android/app/build.gradle
+#    versionCode++
+#    versionName = "x.x.x"
+```
+
+⚠ `versionCode` 只要比上个版本大即可，否则 Google Play 会拒绝上传。
+
+---
+
+## 2️⃣ 生成签名证书（仅首次执行）
+
+若无 `.jks` 文件，执行：
+
+```bash
+keytool -genkeypair -v \
+-keystore otter-music-release.jks \
+-alias otter-music \
+-keyalg RSA \
+-keysize 2048 \
+-validity 10000
+```
+
+### 重要事项
+
+* 建议存放位置：`android/`
+* 必须加入 `.gitignore`
+* 丢失证书 = 无法更新应用（极其重要）
+
+---
+
+## 3️⃣ 正式构建流程（每次发布）
+
+### Step 1 — 构建 Android Release
+
+```bash
+npm run build:android:release
 ```
 
 ---
 
-## 2. 证书生成 (只需执行一次)
+### Step 2 — 设置签名密码
 
-如果没有 `.jks` 证书，使用以下命令生成。请妥善保存该文件。
+PowerShell：
 
-```bash
-keytool -genkeypair -v -keystore otter-music-release.jks -alias otter-music -keyalg RSA -keysize 2048 -validity 10000
-
+```powershell
+$env:KS_PASS="你的密码"
 ```
 
-> **注意**: 建议将 `.jks` 文件放在 `android/` 目录下，并将其加入 `.gitignore`（防止密钥泄露）。
+确保：
+
+* 密码与 `.jks` 一致
+* `sign-apk.ps1` 使用相同变量
 
 ---
 
-## 3. 完整构建工作流
+### Step 3 — 执行自动签名
 
-每次发布新版本时，按以下顺序执行：
-
-1. **Web 构建 + 同步 + 编译**: `npm run build:android:release`
-2. **设置密码**: 在终端中执行`$env:KS_PASS="xxx"`。确保 `sign-apk.ps1` 脚本中的密码与 `.jks` 文件密码一致。
-2. **调用自动化签名脚本**:
 ```powershell
 ./sign-apk.ps1
 ```
+
+---
+
+# ✅ 最终产物
+
+签名后的 APK 位于：
+
+```
+android/app/build/outputs/apk/release/
+```
+
+---
+
+# 🚀 发布前检查清单
+
+* [ ] versionCode 已递增
+* [ ] versionName 正确
+* [ ] package.json 已同步
+* [ ] 使用正确的 `.jks`
+* [ ] 签名成功
+* [ ] 本地安装测试通过
