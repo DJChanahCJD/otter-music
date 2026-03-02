@@ -8,8 +8,6 @@ import { useMusicStore } from "@/store/music-store";
 import toast from "react-hot-toast";
 import { toastUtils } from "@/lib/utils/toast";
 import { useMusicCover } from "@/hooks/useMusicCover";
-import { useSyncStore } from "@/store/sync-store";
-import { checkAndSync } from "@/lib/sync";
 import { useRef, useEffect } from "react";
 import { App as CapacitorApp } from '@capacitor/app';
 import {
@@ -81,18 +79,6 @@ function RootLayout() {
 
   const currentTrack = queue[currentIndex] || null;
   const coverUrl = useMusicCover(currentTrack);
-
-  // Sync Logic
-  const { syncKey } = useSyncStore();
-  const syncInProgress = useRef(false);
-  useEffect(() => {
-    if (syncKey && !syncInProgress.current) {
-      syncInProgress.current = true;
-      checkAndSync().finally(() => {
-        syncInProgress.current = false;
-      });
-    }
-  }, [syncKey]);
 
   const isTab = ["/search", "/favorites", "/mine"].includes(location.pathname) || location.pathname === "/";
   
