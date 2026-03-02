@@ -40,9 +40,10 @@ export async function downloadMusicTrack(track: MusicTrack, br = 192) {
       ? downloadNative(url, fileName, track, toastId)
       : downloadWeb(url, fileName, toastId));
 
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error(err);
-    toast.error(`下载失败: ${err.message || err}`, { id: toastId });
+    const message = err instanceof Error ? err.message : String(err);
+    toast.error(`下载失败: ${message}`, { id: toastId });
   }
 }
 

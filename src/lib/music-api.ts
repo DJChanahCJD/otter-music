@@ -15,11 +15,25 @@ const cookieOf = (source: MusicSource) => localStorage.getItem(`cookie:${source}
 
 const isAbort = (e: unknown) => e instanceof Error && e.name === 'AbortError';
 
-const normalizeTrack = (t: any, source: MusicSource): MusicTrack => ({
-  ...t,
+interface RawApiTrack {
+  id: string | number;
+  name: string;
+  artist: string | string[];
+  album: string;
+  pic_id: string;
+  url_id: string;
+  lyric_id: string;
+}
+
+const normalizeTrack = (t: RawApiTrack, source: MusicSource): MusicTrack => ({
   id: String(t.id),
-  source,
+  name: t.name,
   artist: Array.isArray(t.artist) ? t.artist : [t.artist],
+  album: t.album,
+  pic_id: t.pic_id,
+  url_id: t.url_id,
+  lyric_id: t.lyric_id,
+  source,
 });
 
 /* -------------------------------------------------- */
@@ -76,7 +90,7 @@ export const musicApi = {
     if (source === 'all') return this.searchAll(query, page, count, signal);
 
     const json = await retry(
-      () => requestJSON<Partial<MusicTrack>[]>(
+      () => requestJSON<RawApiTrack[]>(
         buildUrl({ types: 'search', name: query, count, pages: page }, source),
         signal
       ),

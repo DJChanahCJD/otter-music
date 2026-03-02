@@ -17,9 +17,10 @@ export function PlaylistImport() {
       const playlistId = useMusicStore.getState().createPlaylist(name);
       useMusicStore.getState().setPlaylistTracks(playlistId, tracks);
       toastUtils.success(`成功导入歌单「${name}」\n共 ${tracks.length} 首歌曲`);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Import failed:", error);
-      toastUtils.error(error.message || "导入失败");
+      const message = error instanceof Error ? error.message : "导入失败";
+      toastUtils.error(message);
     } finally {
       if (fileInputRef.current) {
         fileInputRef.current.value = "";

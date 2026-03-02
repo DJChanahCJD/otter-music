@@ -82,7 +82,7 @@ npm run build:android:debug
 src/
 ├── components/     # UI 组件
 ├── hooks/          # 自定义 Hooks
-├── services/       # API 服务
+├── lib/api/        # API 服务
 ├── store/          # Zustand 状态管理
 ├── types/          # TypeScript 类型定义
 └── lib/utils/      # 工具函数
@@ -90,7 +90,11 @@ src/
 
 ## TODO
 
-- [x] **版本更新**：集成 GitHub Releases 检查与下载（支持代理加速）。
+- [] 睡眠定时器
+- [] 改用异步存储引擎, 如`idb-keyval` 或 `localforage`
+- [] 歌单市场？
+- [] 自动化测试...
+
 - [] 研究 GD Studio API 的原理，如何实现自搭建后端 API。
 
 ## License

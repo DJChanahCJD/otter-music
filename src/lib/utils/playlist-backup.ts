@@ -107,7 +107,11 @@ export async function importPlaylist(file: File): Promise<{ name: string, tracks
         }
 
         // 简单的结构校验
-        const isValidTrack = (t: any) => t && typeof t.id === 'string' && typeof t.name === 'string';
+        const isValidTrack = (t: unknown): t is MusicTrack => {
+          if (typeof t !== 'object' || t === null) return false;
+          const track = t as Record<string, unknown>;
+          return typeof track.id === 'string' && typeof track.name === 'string';
+        };
         if (!tracks.every(isValidTrack)) {
            // 过滤掉无效数据
            const validTracks = tracks.filter(isValidTrack);

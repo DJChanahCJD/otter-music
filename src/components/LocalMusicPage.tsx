@@ -73,8 +73,9 @@ export function LocalMusicPage({
 
         throw new Error(result.error || "扫描失败");
 
-      } catch (err: any) {
-        setError(err.message);
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : String(err);
+        setError(message);
         throw err;
 
       } finally {
