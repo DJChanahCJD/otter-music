@@ -1,9 +1,8 @@
 import { MusicTrack } from "@/types/music";
 import { Capacitor } from "@capacitor/core";
-import { Filesystem, Directory, Encoding } from "@capacitor/filesystem";
+import { Filesystem, Encoding } from "@capacitor/filesystem";
+import { AppPaths, STORAGE_CONFIG } from "@/lib/storage-path";
 import { toastUtils } from "@/lib/utils/toast";
-import { DownloadPath } from "./download";
-
 interface PlaylistBackup {
   name: string;
   tracks: MusicTrack[];
@@ -27,7 +26,7 @@ export async function exportPlaylist(name: string, tracks: MusicTrack[]) {
 
   const jsonContent = JSON.stringify(backupData, null, 2);
   const fileName = `${name.replace(/[\\/:*?"<>|]/g, '_')}.json`;
-  const exportPath = `${DownloadPath}/Playlists/${fileName}`;
+  const exportPath = `${AppPaths.Playlists}/${fileName}`;
 
   if (Capacitor.isNativePlatform()) {
     try {
@@ -35,7 +34,7 @@ export async function exportPlaylist(name: string, tracks: MusicTrack[]) {
       await Filesystem.writeFile({
         path: exportPath,
         data: jsonContent,
-        directory: Directory.ExternalStorage,
+        directory: STORAGE_CONFIG.BASE_DIR,
         encoding: Encoding.UTF8,
         recursive: true, // 自动创建目录
       });
