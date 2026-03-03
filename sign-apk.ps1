@@ -79,4 +79,4 @@ if ($LASTEXITCODE -ne 0) { Fail "签名验证失败" }
 # ---------- 8. 清理 ----------
 Remove-Item $aligned -ErrorAction SilentlyContinue
 
-Write-Host "✔ 签名成功: $final" -ForegroundColor Green
+Write-Host "Success: $final" -ForegroundColor Green

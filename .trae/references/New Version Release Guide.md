@@ -48,22 +48,7 @@ npm run build:android:release
 
 ---
 
-### Step 2 — 设置签名密码
-
-PowerShell：
-
-```powershell
-$env:KS_PASS="你的密码"
-```
-
-确保：
-
-* 密码与 `.jks` 一致
-* `sign-apk.ps1` 使用相同变量
-
----
-
-### Step 3 — 执行自动签名
+### Step 2 — 执行自动签名
 
 ```powershell
 ./sign-apk.ps1
