@@ -46,14 +46,19 @@ export const useSourceQualityStore = create<SourceQualityState>()(
         const stats = get().stats[source];
         if (!stats) return 0;
 
-        const total = stats.success + stats.fail;
-        if (total === 0) return 0;
+        const { success, fail } = stats;
+        const n = success + fail;
+        if (n < 5) return 0; // 样本太少不可信
 
-        const successRate = stats.success / total;
+        const z = 1.96; // 95% confidence
+        const phat = success / n;
 
-        const score = successRate * Math.log(total + 1) * 20;
+        const score =
+          (phat + z * z / (2 * n) -
+            z * Math.sqrt((phat * (1 - phat) + z * z / (4 * n)) / n)) /
+          (1 + z * z / n); 
 
-        return Math.min(score, 50);
+        return score * 40; // 映射到 0~40
       },
 
       resetStats: () => set({ stats: {} })

@@ -63,13 +63,19 @@ export function MusicSearchView({ onPlay, currentTrackId, isPlaying }: MusicSear
 
   /* ---------------- 请求核心 ---------------- */
 
+  // 1. 仅在有明确搜索意图（如从歌手/专辑跳转）时自动搜索
   useEffect(() => {
-    if (searchResults.length === 0) {
-      if (searchQuery.trim()) {
-        fetchPage(1, true);
-      } else {
-        searchInputRef.current?.focus();
-      }
+    if (searchResults.length === 0 && searchIntent && searchQuery.trim()) {
+      fetchPage(1, true);
+    }
+    // 依赖中不包含 searchQuery，避免打字时触发
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchIntent, searchResults.length]);
+
+  // 2. 当搜索词为空且无结果时，自动聚焦输入框
+  useEffect(() => {
+    if (searchResults.length === 0 && !searchQuery.trim()) {
+      searchInputRef.current?.focus();
     }
   }, [searchQuery, searchResults.length]);
 

@@ -14,6 +14,10 @@ const SOURCE_PRIORITY: MusicSource[] = Object.entries(SOURCE_WEIGHT)
   .sort(([, a], [, b]) => b - a)
   .map(([source]) => source as MusicSource);
 
+const SOURCE_RANK = Object.fromEntries(
+  SOURCE_PRIORITY.map((s, i) => [s, i])
+);
+
 /* 内部预处理结构（缓存所有可复用信息） */
 type PreparedTrack = MusicTrack & {
   normalizedName: string;
@@ -55,7 +59,7 @@ function dedupeExact(tracks: PreparedTrack[]): (MergedMusicTrack & PreparedTrack
     // 选主曲：短名 + 源优先
     group.sort((a, b) =>
       a.name.length - b.name.length ||
-      SOURCE_PRIORITY.indexOf(a.source) - SOURCE_PRIORITY.indexOf(b.source)
+      SOURCE_RANK[a.source] - SOURCE_RANK[b.source]
     );
 
     const [main, ...vars] = group;
@@ -86,22 +90,28 @@ function clusterTracks(tracks: (MergedMusicTrack & PreparedTrack)[]): (MergedMus
     for (const item of list) {
       let merged = false;
 
-      for (const c of clusters) {
+      for (let i = 0; i < clusters.length; i++) {
+        const c = clusters[i];
         if (item.normalizedArtists.some(a => c.normalizedArtists.includes(a))) {
           // 选更好的主曲
           const better =
             item.name.length < c.name.length ||
-            SOURCE_PRIORITY.indexOf(item.source) < SOURCE_PRIORITY.indexOf(c.source)
+            SOURCE_RANK[item.source] < SOURCE_RANK[c.source]
               ? item
               : c;
 
           const worse = better === item ? c : item;
 
-          Object.assign(better, {
-            variants: [...(better.variants || []), worse, ...(worse.variants || [])]
-          });
+          // 安全合并（不修改已有对象）
+          clusters[i] = {
+            ...better,
+            variants: [
+              ...(better.variants || []),
+              worse,
+              ...(worse.variants || [])
+            ]
+          };
 
-          Object.assign(c, better);
           merged = true;
           break;
         }
@@ -131,12 +141,15 @@ function score(t: MergedMusicTrack & PreparedTrack, q: string): number {
   if (t.artistKey.includes(q)) s += 40;
 
   // 多来源 = 热门
-  s += Math.min((t.variants?.length || 0) * 15, 60);
+  const uniqueSources = new Set(
+    [t.source, ...(t.variants?.map(v => v.source) || [])]
+  );
+  s += Math.log2(uniqueSources.size + 1) * 18;
 
   // 静态权重（基础分，保留不变）
   s += SOURCE_WEIGHT[t.source] || 0;
 
-  // 动态学习加成（0 ~ 50，基于实际播放数据）
+  // 动态学习加成（0 ~ 40，基于实际播放数据）
   s += useSourceQualityStore.getState().getSourceDynamicScore(t.source);
 
   // 原版通常更短
@@ -153,42 +166,26 @@ function diversifiedSort(
 
   const q = normalizeText(query);
 
-  // 1️⃣ 初始评分
-  const pool = tracks.map(t => ({
+  const scored = tracks.map((t, i) => ({
     track: t,
-    base: score(t, q)
+    base: score(t, q),
+    index: i
   }));
+
+  // 初始排序（保留 API 顺序）
+  scored.sort((a, b) => b.base - a.base);
 
   const result: MergedMusicTrack[] = [];
   const sourceCount = new Map<MusicSource, number>();
 
-  while (pool.length) {
+  for (const item of scored) {
+    const used = sourceCount.get(item.track.source) || 0;
 
-    let bestIndex = 0;
-    let bestScore = -Infinity;
+    // 平台惩罚：越多出现越难再上
+    item.base -= used * 6;
 
-    for (let i = 0; i < pool.length; i++) {
-      const { track, base } = pool[i];
-
-      // 平台惩罚：越多出现越难再上
-      const used = sourceCount.get(track.source) || 0;
-
-      // 关键公式（非常重要）
-      const diversityPenalty = used * 10;
-
-      // 最终排序分
-      const finalScore = base - diversityPenalty;
-
-      if (finalScore > bestScore) {
-        bestScore = finalScore;
-        bestIndex = i;
-      }
-    }
-
-    const chosen = pool.splice(bestIndex, 1)[0].track;
-
-    result.push(chosen);
-    sourceCount.set(chosen.source, (sourceCount.get(chosen.source) || 0) + 1);
+    result.push(item.track);
+    sourceCount.set(item.track.source, used + 1);
   }
 
   return result;
