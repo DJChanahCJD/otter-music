@@ -8,6 +8,7 @@ const SOURCE_WEIGHT: Record<string, number> = {
   netease: 28,  //  稳定但周杰伦等版权缺失
   kuwo: 20,     //  酷我音源不稳定
   bilibili: 18, //  bilibili 质量一般
+  _netease: 0, //  ! 搜索时推荐直接用 netease 而不是客户端 API
 };
 
 const SOURCE_PRIORITY: MusicSource[] = Object.entries(SOURCE_WEIGHT)

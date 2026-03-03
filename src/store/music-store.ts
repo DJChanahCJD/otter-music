@@ -120,6 +120,9 @@ interface MusicState {
   setCurrentIndex: (index: number, resetTime?: boolean) => void;
   /** Switch to track at index and start playing */
   setCurrentIndexAndPlay: (index: number) => void;
+
+  /** Update a track in the queue (e.g. replacing a trial version with a full version) */
+  updateTrackInQueue: (trackId: string, newTrack: MusicTrack) => void;
 }
 
 export const useMusicStore = create<MusicState>()(
@@ -271,6 +274,15 @@ export const useMusicStore = create<MusicState>()(
       })),
 
       skipToNext: () => set((s) => s.queue.length ? { currentIndex: (s.currentIndex + 1) % s.queue.length, currentAudioTime: 0 } : {}),
+
+      updateTrackInQueue: (tid, newTrack) => set((s) => ({
+        queue: s.queue.map(t => t.id === tid ? newTrack : t),
+        originalQueue: s.originalQueue?.map(t => t.id === tid ? newTrack : t),
+        // 如果当前播放的就是这首歌，强制刷新播放状态（保留进度或重置视需求而定，这里假设是为了听完整版，重置较好，但也可能想无缝）
+        // 若 id 相同，播放器可能不会重新加载 url。需要触发 url 更新。
+        // 由于 currentAudioUrl 是 store 状态，我们将其置空强制重新获取
+        currentAudioUrl: s.queue[s.currentIndex]?.id === tid ? null : s.currentAudioUrl,
+      })),
     }),
     {
       name: storeKey.MusicStore,

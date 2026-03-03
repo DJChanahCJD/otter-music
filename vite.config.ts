@@ -45,4 +45,17 @@ export default defineConfig({
     globals: true,
     setupFiles: './src/test/setup.ts',
   },
+  server: {
+    proxy: {
+      '/api/netease': {
+        target: 'https://music.163.com',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api\/netease/, ''),
+        headers: {
+          'Referer': 'https://music.163.com',
+          'Origin': 'https://music.163.com'
+        }
+      }
+    }
+  }
 })

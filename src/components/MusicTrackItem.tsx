@@ -16,7 +16,7 @@ import { MusicTrackMobileMenu } from "./MusicTrackMobileMenu";
 import { MusicTrackVariants } from "./MusicTrackVariants";
 import { Checkbox } from "./ui/checkbox";
 import { Badge } from "./ui/badge";
-import { DatabaseZap } from "lucide-react";
+import { DatabaseZap, Gem, Headphones } from "lucide-react";
 
 interface MusicTrackItemProps {
   track: MusicTrack | MergedMusicTrack;
@@ -51,24 +51,36 @@ export function MusicTrackItem({
   className,
   style,
 }: MusicTrackItemProps) {
-  const {
-    addToFavorites,
-    removeFromFavorites,
-    isFavorite,
-    addToNextPlay,
-  } = useMusicStore(
-    useShallow((state) => ({
-      addToFavorites: state.addToFavorites,
-      removeFromFavorites: state.removeFromFavorites,
-      isFavorite: state.isFavorite,
-      addToNextPlay: state.addToNextPlay,
-    })),
-  );
+  const { addToFavorites, removeFromFavorites, isFavorite, addToNextPlay } =
+    useMusicStore(
+      useShallow((state) => ({
+        addToFavorites: state.addToFavorites,
+        removeFromFavorites: state.removeFromFavorites,
+        isFavorite: state.isFavorite,
+        addToNextPlay: state.addToNextPlay,
+      })),
+    );
 
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isAddToPlaylistOpen, setIsAddToPlaylistOpen] = useState(false);
   const variants = (track as MergedMusicTrack).variants || [];
-
+  const badge = getNeteaseBadge(track.privilege?.fee || 0);
+  function getNeteaseBadge(fee: number) {
+    switch (fee) {
+      case 1: // 试听
+        return {
+          label: "试听",
+          icon: Headphones,
+        };
+      case 4: // 付费
+        return {
+          label: "付费",
+          icon: Gem,
+        };
+      default:
+        return null;
+    }
+  }
   return (
     <div
       style={style}
@@ -125,6 +137,7 @@ export function MusicTrackItem({
           <span className="truncate" title={track.name}>
             {track.name}
           </span>
+
           <Badge
             variant="outline"
             className={cn(
@@ -134,6 +147,16 @@ export function MusicTrackItem({
           >
             {sourceLabels[track.source] || track.source}
           </Badge>
+
+          {badge && (
+            <Badge
+              variant="secondary"
+              className="h-4 px-1.5 text-[10px] gap-1 flex items-center leading-none font-medium"
+            >
+              <badge.icon className="h-3 w-3" />
+              {badge.label}
+            </Badge>
+          )}
 
           {isDownloaded && (
             <DatabaseZap className="h-3.5 w-3.5 text-muted-foreground/60" />

@@ -1,3 +1,5 @@
+import { NeteasePrivilege } from "@/lib/netease/netease-types";
+
 export interface SearchResult {
   code: number;
   data: MusicTrack[];
@@ -39,6 +41,7 @@ export const searchOptions: Record<string, string> = {
 export const sourceLabels: Record<string, string> = {
   joox: "Joox",
   netease: "网易",
+  _netease: "Netease",
   kuwo: "酷我",
   bilibili: "B站",
 };
@@ -52,6 +55,7 @@ export const aggregatedSourceOptions: { value: MusicSource; label: string }[] = 
 
 export const sourceBadgeStyles: Record<string, string> = {
   netease: "bg-red-50 text-red-600 border-red-200 hover:bg-red-100",
+  _netease: "bg-red-50 text-red-600 border-red-200 hover:bg-red-100",
   kuwo: "bg-amber-50 text-amber-600 border-amber-200 hover:bg-amber-100",
   joox: "bg-green-50 text-green-600 border-green-200 hover:bg-green-100",
   bilibili: "bg-pink-50 text-pink-600 border-pink-200 hover:bg-pink-100",
@@ -63,6 +67,7 @@ export const sourceBadgeStyles: Record<string, string> = {
 // 音乐轨道信息
 export type MusicSource =
   | 'netease' //  🌟
+  | '_netease' //  🌟 网易云客户端API
   | 'joox'   //  🌟
   | 'tencent'
   | 'kugou'
@@ -97,6 +102,7 @@ export interface MusicTrack {
   url_id: string;
   lyric_id: string;
   source: MusicSource;
+  privilege?: NeteasePrivilege;
 }
 
 export interface Playlist {

@@ -5,6 +5,7 @@ import { getMusicApiUrl } from "./api";
 import { retry } from "@/lib/utils";
 import { Capacitor } from "@capacitor/core";
 import { LocalMusicPlugin } from "@/plugins/local-music";
+import { getSongUrl, getLyric, getSongDetail } from "@/lib/netease/netease-api";
 
 const getApiBase = () => `${getMusicApiUrl()}`;
 
@@ -129,6 +130,23 @@ export const musicApi = {
   /* ---------------- URL ---------------- */
 
   async getUrl(id: string, source: MusicSource, br = 192): Promise<string | null> {
+    if (source === '_netease') {
+      const key = `url:${source}:${id}:${br}`;
+      return cachedFetch<string | null>(
+        key,
+        async () => {
+          try {
+            const res = await getSongUrl(id, br * 1000, cookieOf(source) || '');
+            return res.data?.data?.[0]?.url || null;
+          } catch (e) {
+            console.error('getSongUrl failed:', e);
+            return null;
+          }
+        },
+        TTL_SHORT
+      );
+    }
+
     if (source === 'local') {
       if (Capacitor.isNativePlatform()) {
         try {
@@ -164,15 +182,40 @@ export const musicApi = {
 
   /* ---------------- 封面 ---------------- */
 
-  async getPic(id: string, source: MusicSource, size: number = 800): Promise<string | null> {
+  async getPic(idOrUrl: string, source: MusicSource, size: number = 800): Promise<string | null> {
+    const idStr = String(idOrUrl || '');
+    if (idStr.startsWith('http')) {
+      return idStr.includes('163.com')
+        ? `${idStr}?param=${size}y${size}`
+        : idStr;
+    }
+
+    if (source === '_netease') {
+      const key = `pic:${source}:${idStr}:${size}`;
+      return cachedFetch<string | null>(
+        key,
+        async () => {
+          try {
+            const song = await getSongDetail(idStr, cookieOf(source) || '');
+            const url = song?.al?.picUrl;
+            return url ? `${url}?param=${size}y${size}` : null;
+          } catch (e) {
+            console.error('getPic failed:', e);
+            return null;
+          }
+        },
+        TTL_LONG
+      );
+    }
+
     try {
-      const key = `pic:${source}:${id}`;
+      const key = `pic:${source}:${idOrUrl}`;
 
       const res = await cachedFetch<{ url: string }>(
         key,
         async () => {
           const json = await requestJSON<{ url?: string }>(
-            buildUrl({ types: 'pic', id, size }, source)
+            buildUrl({ types: 'pic', id: idOrUrl, size }, source)
           );
           return json?.url ? { url: json.url } : null;
         },
@@ -190,6 +233,25 @@ export const musicApi = {
 
   async getLyric(id: string, source: MusicSource): Promise<SongLyric | null> {
     const key = `lyric:${source}:${id}`;
+
+    if (source === '_netease') {
+      return cachedFetch<SongLyric | null>(
+        key,
+        async () => {
+          try {
+            const res = await getLyric(id, cookieOf(source) || '');
+            return {
+              lyric: res.data?.lrc?.lyric || '',
+              tlyric: res.data?.tlyric?.lyric || ''
+            };
+          } catch (e) {
+            console.error('getLyric failed:', e);
+            return null;
+          }
+        },
+        TTL_LONG
+      );
+    }
 
     return cachedFetch<SongLyric>(
       key,

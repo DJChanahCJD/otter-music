@@ -93,6 +93,7 @@ src/
 
 ## TODO
 - [] 研究 GD Studio API 的原理，如何实现自搭建后端 API。
+- [] 优化全屏背景，从cover中提取主要色调，做成渐进式或纯色背景，颜色更丰富纯净。
 ## License
 
 MIT

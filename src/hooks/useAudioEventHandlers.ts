@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { throttle, retry } from "@/lib/utils";
 import { musicApi } from "@/lib/music-api";
 import { useMusicStore } from "@/store/music-store";
@@ -52,6 +52,7 @@ export function useAudioEventHandlers(
   isSwitchingTrackRef: React.MutableRefObject<boolean>,
   hasRecordedRef: React.MutableRefObject<boolean>
 ) {
+  const toastedTrackIdRef = useRef<string | null>(null);
   const isRepeat = useMusicStore(s => s.isRepeat);
   const currentTrack = useMusicStore(s => s.queue[s.currentIndex]);
   const currentTrackSource = currentTrack?.source;
@@ -84,7 +85,15 @@ export function useAudioEventHandlers(
     }, 1000);
 
     const onDurationChange = () => {
-      setDuration(audio.duration || 0);
+      const duration = audio.duration || 0;
+      setDuration(duration);
+
+      if (currentTrackSource === '_netease' && duration > 0 && duration <= 45) {
+        if (toastedTrackIdRef.current !== currentTrackId) {
+          toast("试听中...", { icon: "🎵" });
+          toastedTrackIdRef.current = currentTrackId || null;
+        }
+      }
     };
 
     const onEnded = () => {

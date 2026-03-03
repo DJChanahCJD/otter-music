@@ -2,7 +2,7 @@ import { getExactKey, toSimplified } from "@/lib/utils/music-key";
 import { musicApi } from "@/lib/music-api";
 import { useMusicStore } from "@/store/music-store";
 import { MusicTrack, MusicSource, searchOptions } from "@/types/music";
-import { Search, Loader2 } from "lucide-react";
+import { Search, Loader2, X } from "lucide-react";
 import { Input } from "./ui/input"
 import { Select } from "./ui/select"
 import { useRef, useEffect } from "react";
@@ -12,6 +12,7 @@ import { MusicTrackList } from "./MusicTrackList";
 import { Button } from "./ui/button";
 import { SelectTrigger, SelectValue, SelectContent, SelectItem } from "./ui/select";
 import { toastUtils } from "@/lib/utils/toast";
+import { PlaylistMarket } from "./PlaylistMarket/PlaylistMarket";
 
 interface MusicSearchViewProps {
   onPlay: (track: MusicTrack, list: MusicTrack[], contextId?: string) => void;
@@ -167,8 +168,8 @@ export function MusicSearchView({ onPlay, currentTrackId, isPlaying }: MusicSear
 
   return (
     <div className="flex flex-col h-full min-h-0">
-      <div className="p-4 border-b space-y-4">
-        <div className="flex gap-2">
+      <div className="p-2 border-b">
+        <div className="flex gap-2 items-center">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
@@ -182,12 +183,23 @@ export function MusicSearchView({ onPlay, currentTrackId, isPlaying }: MusicSear
                 }
               }}
               placeholder="搜索歌曲 / 歌手 / 专辑"
-              className="pl-9"
+              className="pl-9 pr-8 h-8 text-sm"
             />
+            {searchQuery && (
+              <button
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                onClick={() => {
+                  setSearchQuery("");
+                  searchInputRef.current?.focus();
+                }}
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
           </div>
 
           <Select value={source} onValueChange={(v) => setSource(v as MusicSource)}>
-            <SelectTrigger className="w-[120px]">
+            <SelectTrigger className="w-[120px] h-8 text-sm">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -197,26 +209,39 @@ export function MusicSearchView({ onPlay, currentTrackId, isPlaying }: MusicSear
             </SelectContent>
           </Select>
 
-          <Button onClick={() => {
-            setSearchIntent(null);
-            fetchPage(1, true);
-          }} disabled={searchLoading}>
-            {searchLoading ? <Loader2 className="animate-spin" /> : <Search />}
+          <Button 
+            onClick={() => {
+              setSearchIntent(null);
+              fetchPage(1, true);
+            }} 
+            disabled={searchLoading}
+            size="sm"
+            className="h-8 px-3"
+          >
+            {searchLoading ? <Loader2 className="animate-spin h-4 w-4" /> : <Search className="h-4 w-4" />}
           </Button>
         </div>
       </div>
 
       <div className="flex-1 min-h-0">
-        <MusicTrackList
-          tracks={searchResults}
-          onPlay={(track) => onPlay(track, searchResults, "search")}
-          currentTrackId={currentTrackId}
-          isPlaying={isPlaying}
-          loading={searchLoading}
-          hasMore={searchHasMore}
-          onLoadMore={() => fetchPage(searchPage + 1)}
-          emptyMessage={searchLoading ? "搜索中..." : (searchQuery.trim() ? "未找到相关歌曲" : "输入关键词开始搜索")}
-        />
+        {!searchQuery.trim() ? (
+          <PlaylistMarket
+            onPlay={(track, list) => onPlay(track, list, "playlist_market")}
+            currentTrackId={currentTrackId}
+            isPlaying={isPlaying}
+          />
+        ) : (
+          <MusicTrackList
+            tracks={searchResults}
+            onPlay={(track) => onPlay(track, searchResults, "search")}
+            currentTrackId={currentTrackId}
+            isPlaying={isPlaying}
+            loading={searchLoading}
+            hasMore={searchHasMore}
+            onLoadMore={() => fetchPage(searchPage + 1)}
+            emptyMessage={searchLoading ? "搜索中..." : "未找到相关歌曲"}
+          />
+        )}
       </div>
     </div>
   );
