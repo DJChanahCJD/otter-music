@@ -70,10 +70,10 @@ export function MusicTrackMobileMenu({
   const setSearchSource = useMusicStore((state) => state.setSearchSource);
   const [showArtistSelection, setShowArtistSelection] = useState(false);
 
-  const handleSearch = (keyword: string, type: SearchIntent['type'] = '') => {
+  const handleSearch = (keyword: string, type: SearchIntent['type'] = '', artist?: string) => {
     const simplified = toSimplified(keyword);
     setSearchQuery(simplified);
-    setSearchIntent({ type });
+    setSearchIntent({ type, artist });
     if (track.source !== 'local') {
       setSearchSource(track.source || 'all');
     }
@@ -194,7 +194,7 @@ export function MusicTrackMobileMenu({
               <Button
                 variant="ghost"
                 className="justify-start w-full"
-                onClick={() => handleSearch(track.album!, 'album')}
+                onClick={() => handleSearch(track.album!, 'album', track.artist[0])}
               >
                 <Disc className="mr-2 h-4 w-4" /> 专辑：{track.album}
               </Button>

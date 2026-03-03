@@ -85,6 +85,7 @@ export type MusicSource =
 
 export interface SearchIntent {
   type: 'artist' | 'album' | '';
+  artist?: string;
 }
 
 export interface MusicTrack {

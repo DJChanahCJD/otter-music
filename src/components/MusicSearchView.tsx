@@ -108,11 +108,26 @@ export function MusicSearchView({ onPlay, currentTrackId, isPlaying }: MusicSear
       let items = res.items;
       if (searchIntent?.type === 'album') {
         const q = toSimplified(searchQuery);
+        const targetArtist = searchIntent.artist ? toSimplified(searchIntent.artist) : null;
+
         items = [...items].sort((a, b) => {
-          const aMatch = toSimplified(a.album) === q;
-          const bMatch = toSimplified(b.album) === q;
-          if (aMatch && !bMatch) return -1;
-          if (!aMatch && bMatch) return 1;
+          const aAlbumMatch = toSimplified(a.album) === q;
+          const bAlbumMatch = toSimplified(b.album) === q;
+
+          if (targetArtist) {
+            const aArtistMatch = a.artist.some(art => toSimplified(art) === targetArtist);
+            const bArtistMatch = b.artist.some(art => toSimplified(art) === targetArtist);
+
+            // 优先匹配：专辑名完全一致且歌手一致
+            const aFull = aAlbumMatch && aArtistMatch;
+            const bFull = bAlbumMatch && bArtistMatch;
+            if (aFull && !bFull) return -1;
+            if (!aFull && bFull) return 1;
+          }
+
+          // 其次匹配：专辑名完全一致
+          if (aAlbumMatch && !bAlbumMatch) return -1;
+          if (!aAlbumMatch && bAlbumMatch) return 1;
           return 0;
         });
       } else if (searchIntent?.type === 'artist') {
