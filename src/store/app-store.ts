@@ -1,11 +1,12 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
-import { storeKey } from "./store-keys";
+import { storeKey } from "./config";
 import { idbStorage } from "@/lib/storage-adapter";
 import { type UpdateInfo, checkUpdate as apiCheckUpdate } from "@/lib/api/update";
 import { Capacitor } from "@capacitor/core";
 import { App } from "@capacitor/app";
 import { toast } from "react-hot-toast";
+import { storeVersion } from "./config";
 
 interface AppState {
   currentVersion: string;
@@ -120,6 +121,7 @@ export const useAppStore = create<AppState & AppActions>()(
         lastCheckTime: state.lastCheckTime,
         latestVersionInfo: state.latestVersionInfo,
       }),
+      version: storeVersion,
     }
   )
 );

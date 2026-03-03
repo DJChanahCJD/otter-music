@@ -7,10 +7,14 @@ import { PageLoader } from "@/components/PageLoader";
 import { MusicTrack } from "@/types/music";
 import { PageLayout } from "@/components/PageLayout";
 import { ListMusic } from "lucide-react";
+import { NetEaseDiscoverView } from "@/components/NetEaseDiscoverView";
 
 // Lazy load components
 const MusicSearchView = lazy(() => import("@/components/MusicSearchView").then(m => ({ default: m.MusicSearchView })));
 const MusicPlaylistView = lazy(() => import("@/components/MusicPlaylistView").then(m => ({ default: m.MusicPlaylistView })));
+const NeteasePlaylistDetail = lazy(() => import("@/components/netease/NeteasePlaylistDetail").then(m => ({ default: m.NeteasePlaylistDetail })));
+const NeteaseArtistDetail = lazy(() => import("@/components/netease/NeteaseArtistDetail").then(m => ({ default: m.NeteaseArtistDetail })));
+const NeteaseAlbumDetail = lazy(() => import("@/components/netease/NeteaseAlbumDetail").then(m => ({ default: m.NeteaseAlbumDetail })));
 const FavoritesView = lazy(() => import("@/components/FavoritesView").then(m => ({ default: m.FavoritesView })));
 const MinePage = lazy(() => import("@/components/MinePage").then(m => ({ default: m.MinePage })));
 const QueuePage = lazy(() => import("@/components/QueuePage").then(m => ({ default: m.QueuePage })));
@@ -73,6 +77,19 @@ export function PlaylistDetailRoute() {
     playContext, 
     togglePlay 
   } = useMusicStore();
+
+  if (!id) return null;
+
+  // Handle Netease Playlist
+  if (id.startsWith("neplaylist_")) {
+    // Extract numeric ID
+    const realId = id.replace("neplaylist_", "");
+    return (
+      <Suspense fallback={<PageLoader />}>
+        <NeteasePlaylistDetail id={realId} />
+      </Suspense>
+    );
+  }
   
   const playlist = playlists.find((p) => p.id === id);
   const currentTrack = queue[currentIndex] || null;
@@ -120,6 +137,17 @@ export function MineRoute() {
             <MinePage onSelectPlaylist={(id) => navigate(`/playlist/${id}`)} />
         </Suspense>
     );
+}
+
+export function DiscoverRoute() {
+  const navigate = useNavigate();
+  return (
+    <Suspense fallback={<PageLoader />}>
+      <NetEaseDiscoverView cookie={""} onPlaylistClick={(p) => {
+        navigate(`/playlist/neplaylist_${p.id}`);
+      }} />
+    </Suspense>
+  );
 }
 
 export function LocalMusicRoute() {
@@ -197,4 +225,36 @@ export function SettingsRoute() {
             <SettingsPage />
         </Suspense>
     );
+}
+
+export function ArtistDetailRoute() {
+  const { id } = useParams<{ id: string }>();
+  if (!id) return null;
+  
+  if (id.startsWith("neartist_")) {
+    const realId = id.replace("neartist_", "");
+    return (
+      <Suspense fallback={<PageLoader />}>
+        <NeteaseArtistDetail id={realId} />
+      </Suspense>
+    );
+  }
+  
+  return <div className="p-4 text-center text-muted-foreground">未知的歌手来源</div>;
+}
+
+export function AlbumDetailRoute() {
+  const { id } = useParams<{ id: string }>();
+  if (!id) return null;
+  
+  if (id.startsWith("nealbum_")) {
+    const realId = id.replace("nealbum_", "");
+    return (
+      <Suspense fallback={<PageLoader />}>
+        <NeteaseAlbumDetail id={realId} />
+      </Suspense>
+    );
+  }
+  
+  return <div className="p-4 text-center text-muted-foreground">未知的专辑来源</div>;
 }

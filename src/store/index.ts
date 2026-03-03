@@ -1,4 +1,4 @@
-export * from './store-keys';
+export * from './config';
 export * from './download-store';
 export * from './music-store';
 export * from './history-store';

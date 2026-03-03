@@ -7,6 +7,10 @@ import { mutate } from 'swr';
 const CACHE_NAME = 'otter-cache-v1';
 const DEFAULT_TTL = 7 * 24 * 60 * 60 * 1000;
 
+export const TTL_SHORT = 5 * 60 * 1000;    // 5 minutes
+export const TTL_MEDIUM = 15 * 60 * 1000;  // 15 minutes
+export const TTL_LONG = 30 * 60 * 1000;    // 30 minutes
+
 const now = () => Date.now();
 
 /** 构造稳定 Request */

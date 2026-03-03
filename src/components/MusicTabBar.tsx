@@ -1,10 +1,10 @@
 "use client";
 
-import { Search, Heart, User } from "lucide-react";
+import { Search, Heart, User, DiscAlbum } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Link, useLocation } from "react-router-dom";
 
-export type TabId = "search" | "favorites" | "mine";
+export type TabId = "search" | "discover" | "favorites" | "mine";
 
 interface TabItem {
   id: TabId;
@@ -14,7 +14,8 @@ interface TabItem {
 }
 
 const tabs: TabItem[] = [
-  { id: "search", label: "发现", icon: Search, path: "/search" },
+  { id: "search", label: "搜索", icon: Search, path: "/search" },
+  { id: "discover", label: "发现", icon: DiscAlbum, path: "/discover" },
   { id: "favorites", label: "喜欢", icon: Heart, path: "/favorites" },
   { id: "mine", label: "我的", icon: User, path: "/mine" },
 ];

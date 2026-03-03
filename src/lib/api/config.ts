@@ -1,16 +1,19 @@
 import { type ApiResponse } from "@/types/index";
 
+// 统一 API 根路径
 export const API_URL = "https://otter-music-web.pages.dev";
+// 所有的音乐请求都走这个统一代理接口，不再从前端随机分流
+export const MUSIC_API_URL = `${API_URL}/music-api`;
 
 /**
- * 统一处理后端 ok / fail 响应
- * 支持传入 Response 对象或 Promise<Response>
+ * 统一处理响应流：
+ * 验证 HTTP 状态码 -> 验证业务 success 状态 -> 返回数据
  */
 export async function unwrap<T>(resOrPromise: Response | Promise<Response>): Promise<T> {
   const res = await resOrPromise;
   
   if (!res.ok) {
-    throw new Error(await res.text());
+    throw new Error(await res.text() || `HTTP Error: ${res.status}`);
   }
 
   const body = (await res.json()) as ApiResponse<T>;
@@ -21,32 +24,10 @@ export async function unwrap<T>(resOrPromise: Response | Promise<Response>): Pro
   return body.data as T;
 }
 
-// 音乐 API 配置
-export const DEFAULT_MUSIC_API_URL = "https://music-api.gdstudio.xyz/api.php";
-export const MY_PROXY_MUSIC_API_URL = `${API_URL}/music-api`;
-const STORAGE_KEY_MUSIC_URLS = "otter_music_api_urls";
-
-export function getMusicApiUrls(): string[] {
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY_MUSIC_URLS);
-    if (stored) {
-      const parsed = JSON.parse(stored);
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        return parsed;
-      }
-    }
-  } catch (e) {
-    console.error("Failed to parse music API URLs", e);
-  }
-  return [DEFAULT_MUSIC_API_URL, MY_PROXY_MUSIC_API_URL];
-}
-
-export function setMusicApiUrls(urls: string[]) {
-  localStorage.setItem(STORAGE_KEY_MUSIC_URLS, JSON.stringify(urls));
-}
-
+/**
+ * 获取当前的音乐 API 地址
+ * 简化后直接返回统一代理地址，为后续 CF 端的逻辑分流做准备
+ */
 export function getMusicApiUrl(): string {
-  const urls = getMusicApiUrls();
-  if (urls.length === 0) return DEFAULT_MUSIC_API_URL;
-  return urls[Math.floor(Math.random() * urls.length)];
+  return MUSIC_API_URL;
 }

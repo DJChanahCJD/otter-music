@@ -76,6 +76,9 @@ export function MusicTrackMobileMenu({
     setSearchIntent({ type, artist });
     if (track.source !== 'local') {
       setSearchSource(track.source || 'all');
+    } 
+    if (track.source === '_netease') {
+      setSearchSource('netease');
     }
     setSearchResults([]);
     navigate("/search");

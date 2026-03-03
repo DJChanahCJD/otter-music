@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import { storeKey } from './store-keys';
+import { storeKey, storeVersion } from './config';
 import { idbStorage } from '@/lib/storage-adapter';
 
 interface SyncState {
@@ -28,7 +28,8 @@ export const useSyncStore = create<SyncState>()(
       partialize: (state) => ({
         syncKey: state.syncKey,
         lastSyncTime: state.lastSyncTime,
-      }),
+      }), 
+      version: storeVersion,  
     }
   )
 );

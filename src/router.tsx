@@ -18,7 +18,10 @@ import {
   LocalMusicRoute,
   QueueRoute,
   HistoryRoute,
-  SettingsRoute
+  SettingsRoute,
+  ArtistDetailRoute,
+  AlbumDetailRoute,
+  DiscoverRoute
 } from "@/routes/RouteWrappers";
 
 // --- Root Layout ---
@@ -169,6 +172,10 @@ export const router = createBrowserRouter([
         element: <SearchRoute />,
       },
       {
+        path: "discover",
+        element: <DiscoverRoute />,
+      },
+      {
         path: "favorites",
         element: <FavoritesRoute />,
       },
@@ -179,6 +186,14 @@ export const router = createBrowserRouter([
       {
         path: "playlist/:id",
         element: <PlaylistDetailRoute />,
+      },
+      {
+        path: "artist/:id",
+        element: <ArtistDetailRoute />,
+      },
+      {
+        path: "album/:id",
+        element: <AlbumDetailRoute />,
       },
       {
         path: "local",

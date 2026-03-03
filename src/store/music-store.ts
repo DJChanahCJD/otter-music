@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { v4 as uuidv4 } from 'uuid';
-import { storeKey } from './store-keys';
+import { storeKey, storeVersion } from './config';
 import { idbStorage } from '@/lib/storage-adapter';
 import type { MusicTrack, MusicSource, Playlist, SearchIntent } from '@/types/music';
 import { cleanTrack } from '@/lib/utils/music';
@@ -289,6 +289,7 @@ export const useMusicStore = create<MusicState>()(
         searchSource: state.searchSource,
         aggregatedSources: state.aggregatedSources,
       }),
+      version: storeVersion,
     }
   )
 );
