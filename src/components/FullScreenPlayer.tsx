@@ -197,6 +197,7 @@ export function FullScreenPlayer({
             <LyricsPanel
               track={currentTrack}
               currentTime={currentTime}
+              active={isFullScreen}
             />
           </div>
         ) : (

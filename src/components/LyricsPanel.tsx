@@ -9,6 +9,7 @@ import { useMusicStore } from "@/store/music-store";
 interface LyricsPanelProps {
   track: MusicTrack | null;
   currentTime: number;
+  active?: boolean;
 }
 
 interface LyricLine {
@@ -37,14 +38,27 @@ function parseTime(timeStr: string): number | null {
 
 function parseSimpleLrc(lrc: string): { time: number; text: string }[] {
   const lines: { time: number; text: string }[] = [];
+  const timeRegex = /\[(\d{2}):(\d{2})\.(\d{2,3})\]/g; // 添加全局标志 g
+
   for (const line of lrc.split("\n")) {
-    const time = parseTime(line);
-    if (time !== null) {
-      const text = line.replace(TIME_EXP, "").trim();
-      if (text) lines.push({ time, text });
+    const timeMatches = [...line.matchAll(timeRegex)];
+    
+    if (timeMatches.length > 0) {
+      // 移除该行所有的时间标签，提取纯文本
+      const text = line.replace(timeRegex, "").trim();
+      
+      if (text) {
+        // 为每一个匹配到的时间标签推入相同的歌词文本
+        for (const m of timeMatches) {
+          const time = Number(m[1]) * 60 + Number(m[2]) + Number(m[3].padEnd(3, "0")) / 1000;
+          lines.push({ time, text });
+        }
+      }
     }
   }
-  return lines;
+  
+  // 必须按时间排序，因为多标签展开后顺序会被打乱
+  return lines.sort((a, b) => a.time - b.time);
 }
 
 function parseLrc(lrc: string, tLrc?: string): LyricLine[] {
@@ -119,7 +133,7 @@ const LyricLineView = memo(function LyricLineView({
   );
 });
 
-export function LyricsPanel({ track, currentTime }: LyricsPanelProps) {
+export function LyricsPanel({ track, currentTime, active = true }: LyricsPanelProps) {
   const [lyrics, setLyrics] = useState<LyricLine[]>([]);
   const [loading, setLoading] = useState(false);
   const [isUserScrolling, setIsUserScrolling] = useState(false);
@@ -204,15 +218,17 @@ export function LyricsPanel({ track, currentTime }: LyricsPanelProps) {
   }, [handleScroll]);
 
   useEffect(() => {
+    setLyrics([]);
+    setLoading(true);
+  }, [trackId, lyricId, source]);
+
+  useEffect(() => {
     if (!trackId || !lyricId || !source) return;
+    if (!active) return;
 
     let cancelled = false;
 
-    Promise.resolve().then(() => {
-      if (cancelled) return;
-      setLoading(true);
-      setLyrics([]);
-    });
+    setLoading(true);
 
     musicApi
       .getLyric(lyricId, source)
@@ -236,7 +252,7 @@ export function LyricsPanel({ track, currentTime }: LyricsPanelProps) {
     return () => {
       cancelled = true;
     };
-  }, [trackId, lyricId, source]);
+  }, [trackId, lyricId, source, active]);
 
   useEffect(() => {
     if (isUserScrolling) return;
