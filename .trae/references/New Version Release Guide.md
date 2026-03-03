@@ -14,19 +14,7 @@
 | `android/app/build.gradle` | `versionName` | 用户可见版本，如 `"1.1.0"` |
 | `package.json`             | `version`     | 项目版本号              |
 
-### 推荐操作顺序
-
-```bash
-# 1. 更新 package.json
-npm version x.x.x
-
-# 2. 手动修改 android/app/build.gradle
-#    versionCode++
-#    versionName = "x.x.x"
-```
-
-⚠ `versionCode` 只要比上个版本大即可，否则 Google Play 会拒绝上传。
-
+> 修改完 package.json 后，运行 `npm install --legacy-peer-deps` 同步到 package-lock.json。
 ---
 
 ## 2️⃣ 生成签名证书（仅首次执行）
