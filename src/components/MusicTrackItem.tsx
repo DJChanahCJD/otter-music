@@ -75,7 +75,7 @@ export function MusicTrackItem({
       onClick={showCheckbox ? onSelect : onPlay}
       className={cn(
         "group grid gap-4 items-center px-4 py-2.5 rounded-md cursor-pointer transition-all text-sm",
-        "grid-cols-[2.5rem_1fr_auto]",
+        "grid-cols-[2rem_1fr_auto]",
         isSelected && showCheckbox ? "bg-primary/10" : "hover:bg-muted/50",
         className,
       )}
