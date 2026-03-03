@@ -45,7 +45,10 @@ export function AggregatedSourceSelect() {
                 checked={aggregatedSources.includes(opt.value)}
                 onCheckedChange={() => toggleSource(opt.value)}
               />
-              <span className="text-sm text-foreground">{opt.label}</span>
+              <div className="flex flex-col">
+                <span className="text-sm text-foreground">{opt.label}</span>
+                <span className="text-xs text-muted-foreground">{opt.description}</span>
+              </div>
             </label>
           ))}
         </div>

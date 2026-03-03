@@ -5,6 +5,7 @@ import { ThemeToggle } from "./ThemeToggle";
 import { QualitySelect } from "./settings/QualitySelect";
 import { AggregatedSourceSelect } from "./settings/AggregatedSourceSelect";
 import { SyncConfig } from "./settings/SyncConfig";
+import { NeteaseLogin } from "./settings/NeteaseLogin";
 import { useMusicStore } from "@/store/music-store";
 import { Slider } from "./ui/slider";
 import { Palette, Volume2 } from "lucide-react";
@@ -46,6 +47,8 @@ export function SettingsPage({ onBack }: SettingsPageProps) {
             </div>
           }
         />
+
+        <NeteaseLogin />
 
         <QualitySelect />
 

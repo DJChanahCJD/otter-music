@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { RECOMMEND_FILTERS } from "@/lib/netease/playlist-category";
 import { getPlaylists, getToplist } from "@/lib/netease/netease-api";
+import { Toplist, UserPlaylist } from "@/lib/netease/netease-types";
 import { cachedFetch } from "@/lib/utils/cache";
 import { MusicCover } from "@/components/MusicCover";
 import { Loader2, Headphones, LayoutGrid } from "lucide-react";
@@ -78,7 +79,9 @@ export function PlaylistMarket({
         );
 
         if (res) {
-          const rawList = isToplist ? res.data.list : res.data.playlists;
+          const rawList = isToplist
+            ? (res.data as { list: Toplist[] }).list
+            : (res.data as { playlists: UserPlaylist[] }).playlists;
           const newItems = rawList.map((i: any) => ({
             id: i.id,
             name: i.name,
@@ -143,8 +146,8 @@ export function PlaylistMarket({
       <header className="sticky top-0 z-20 bg-background/90 backdrop-blur-xl border-b border-white/5 shadow-sm">
         <div className="flex items-center justify-between px-3 py-1.5 gap-2">
           {/* 左侧：当前分类展示 */}
-          <div className="flex-1 overflow-hidden">
-             <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar mask-gradient-right">
+          <div className="flex-1 overflow-hidden relative">
+             <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar mask-[linear-gradient(to_right,black_calc(100%-32px),transparent_100%)]">
                 {displayFilters.map((f) => (
                   <Button
                     key={f.id}
@@ -161,6 +164,8 @@ export function PlaylistMarket({
                     {f.name}
                   </Button>
                 ))}
+                {/* Spacer matching mask fade width to ensure last item visibility */}
+                <div className="w-12 shrink-0" />
              </div>
           </div>
 

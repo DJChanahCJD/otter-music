@@ -30,12 +30,6 @@ function formatTime(seconds: number): string {
   return `${mins}:${secs.toString().padStart(2, "0")}`;
 }
 
-function parseTime(timeStr: string): number | null {
-  const m = TIME_EXP.exec(timeStr);
-  if (!m) return null;
-  return Number(m[1]) * 60 + Number(m[2]) + Number(m[3].padEnd(3, "0")) / 1000;
-}
-
 function parseSimpleLrc(lrc: string): { time: number; text: string }[] {
   const lines: { time: number; text: string }[] = [];
   const timeRegex = /\[(\d{2}):(\d{2})\.(\d{2,3})\]/g; // 添加全局标志 g

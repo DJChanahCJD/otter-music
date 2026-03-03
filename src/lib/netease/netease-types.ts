@@ -262,6 +262,7 @@ export interface QrCheckResponse {
   code: number;
   message: string;
   cookie?: string;
+  redirectUrl?: string;
 }
 
 export interface UserProfile {

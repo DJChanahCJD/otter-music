@@ -77,7 +77,7 @@ export function MusicTrackMobileMenu({
   const removeFromQueue = useMusicStore((state) => state.removeFromQueue);
   const [showArtistSelection, setShowArtistSelection] = useState(false);
   const aggregatedSources = useMusicStore((state) => state.aggregatedSources);
-  
+
   const handleMatch = async () => {
     onOpenChange(false);
     const toastId = toastUtils.loading("正在搜索完整版...");
@@ -275,7 +275,7 @@ export function MusicTrackMobileMenu({
                 className="justify-start w-full text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"
                 onClick={handleMatch}
               >
-                <Zap className="mr-2 h-4 w-4" /> 匹配完整版
+                <Zap className="mr-2 h-4 w-4" /> 解锁完整音源
               </Button>
             )}
 
