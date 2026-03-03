@@ -83,7 +83,7 @@ export async function importPlaylist(file: File): Promise<{ name: string, tracks
         const data = JSON.parse(content);
         
         // 校验数据格式
-        let tracks: MusicTrack[] = [];
+        let tracks: any[] = [];
         let name = file.name.replace(/\.json$/i, "");
 
         if (Array.isArray(data)) {

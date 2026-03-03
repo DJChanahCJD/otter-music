@@ -56,6 +56,9 @@ npm run dev
 # 构建生产版本
 npm run build
 ```
+# 运行测试
+npm run test
+```
 > ⚠ 必须加 `--legacy-peer-deps`，因为`@jofr/capacitor-media-session` 与 Capacitor 8 存在 peer 版本冲突
 
 
@@ -92,7 +95,7 @@ src/
 
 - [x] 改用异步存储引擎, 如`idb-keyval` 或 `localforage`
 - [] 歌单市场？
-- [] 自动化测试...
+- [x] 自动化测试 (Vitest)
 
 - [] 研究 GD Studio API 的原理，如何实现自搭建后端 API。
 

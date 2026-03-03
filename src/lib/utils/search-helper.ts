@@ -7,6 +7,7 @@ const SOURCE_WEIGHT: Record<string, number> = {
   joox: 30,     //  稳定但版本参差不齐，且为繁体
   netease: 28,  //  稳定但周杰伦等版权缺失
   kuwo: 20,     //  酷我音源不稳定
+  bilibili: 18, //  bilibili 质量一般
 };
 
 const SOURCE_PRIORITY: MusicSource[] = Object.entries(SOURCE_WEIGHT)
