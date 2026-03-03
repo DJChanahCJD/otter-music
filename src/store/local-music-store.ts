@@ -1,7 +1,8 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { persist, createJSONStorage } from 'zustand/middleware';
 import { LocalMusicFile } from '@/plugins/local-music';
 import { storeKey } from './store-keys';
+import { idbStorage } from '@/lib/storage-adapter';
 
 interface LocalMusicState {
   files: LocalMusicFile[];
@@ -28,6 +29,7 @@ export const useLocalMusicStore = create<LocalMusicState>()(
     }),
     {
       name: storeKey.LocalMusicStore,
+      storage: createJSONStorage(() => idbStorage),
       partialize: (state) => ({
         files: state.files,
       }),

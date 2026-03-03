@@ -1,7 +1,8 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { persist, createJSONStorage } from 'zustand/middleware';
 import { v4 as uuidv4 } from 'uuid';
 import { storeKey } from './store-keys';
+import { idbStorage } from '@/lib/storage-adapter';
 import type { MusicTrack, MusicSource, Playlist, SearchIntent } from '@/types/music';
 import { cleanTrack } from '@/lib/utils/music';
 import { toastUtils } from '@/lib/utils/toast';
@@ -273,10 +274,20 @@ export const useMusicStore = create<MusicState>()(
     }),
     {
       name: storeKey.MusicStore,
-      partialize: (s) => ({
-        favorites: s.favorites.map(cleanTrack), playlists: s.playlists.map(cleanPlaylist), queue: s.queue.map(cleanTrack),
-        currentIndex: s.currentIndex, volume: s.volume, isRepeat: s.isRepeat, isShuffle: s.isShuffle, currentAudioTime: s.currentAudioTime,
-        duration: s.duration, quality: s.quality, searchSource: s.searchSource, aggregatedSources: s.aggregatedSources,
+      storage: createJSONStorage(() => idbStorage),
+      partialize: (state) => ({
+        favorites: state.favorites.map(cleanTrack),
+        playlists: state.playlists.map(cleanPlaylist),
+        queue: state.queue.map(cleanTrack),
+        currentIndex: state.currentIndex,
+        volume: state.volume,
+        isRepeat: state.isRepeat,
+        isShuffle: state.isShuffle,
+        currentAudioTime: state.currentAudioTime,
+        duration: state.duration,
+        quality: state.quality,
+        searchSource: state.searchSource,
+        aggregatedSources: state.aggregatedSources,
       }),
     }
   )

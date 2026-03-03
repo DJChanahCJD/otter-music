@@ -90,8 +90,7 @@ src/
 
 ## TODO
 
-- [] 睡眠定时器
-- [] 改用异步存储引擎, 如`idb-keyval` 或 `localforage`
+- [x] 改用异步存储引擎, 如`idb-keyval` 或 `localforage`
 - [] 歌单市场？
 - [] 自动化测试...
 

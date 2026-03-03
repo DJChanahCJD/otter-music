@@ -1,6 +1,7 @@
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
+import { persist, createJSONStorage } from "zustand/middleware";
 import { storeKey } from "./store-keys";
+import { idbStorage } from "@/lib/storage-adapter";
 import { type UpdateInfo, checkUpdate as apiCheckUpdate } from "@/lib/api/update";
 import { Capacitor } from "@capacitor/core";
 import { App } from "@capacitor/app";
@@ -114,6 +115,7 @@ export const useAppStore = create<AppState & AppActions>()(
     }),
     {
       name: storeKey.AppStore,
+      storage: createJSONStorage(() => idbStorage),
       partialize: (state) => ({
         lastCheckTime: state.lastCheckTime,
         latestVersionInfo: state.latestVersionInfo,

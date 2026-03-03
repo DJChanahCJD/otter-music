@@ -1,6 +1,7 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { persist, createJSONStorage } from 'zustand/middleware';
 import { storeKey } from './store-keys';
+import { idbStorage } from '@/lib/storage-adapter';
 import type { MusicSource } from '@/types/music';
 
 interface SourceStats {
@@ -58,7 +59,8 @@ export const useSourceQualityStore = create<SourceQualityState>()(
       resetStats: () => set({ stats: {} })
     }),
     {
-      name: storeKey.SourceQualityStore
+      name: storeKey.SourceQualityStore,
+      storage: createJSONStorage(() => idbStorage),
     }
   )
 );

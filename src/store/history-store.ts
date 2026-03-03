@@ -1,6 +1,7 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { persist, createJSONStorage } from 'zustand/middleware';
 import { storeKey } from './store-keys';
+import { idbStorage } from '@/lib/storage-adapter';
 import type { MusicTrack } from '@/types/music';
 import { cleanTrack } from '@/lib/utils/music';
 
@@ -32,6 +33,7 @@ export const useHistoryStore = create<HistoryState>()(
     }),
     {
       name: storeKey.HistoryStore,
+      storage: createJSONStorage(() => idbStorage),
       partialize: (state) => ({
         history: state.history.map(cleanTrack),
       }),
