@@ -16,20 +16,18 @@ import { MusicTrackMobileMenu } from "./MusicTrackMobileMenu";
 import { MusicTrackVariants } from "./MusicTrackVariants";
 import { Checkbox } from "./ui/checkbox";
 import { Badge } from "./ui/badge";
-import { DatabaseZap, Gem, Headphones } from "lucide-react";
+import { DatabaseZap, DollarSign, Gem } from "lucide-react";
 import { NeteasePrivilege } from "@/lib/netease/netease-types";
 
 // 预定义 Badge 样式，避免每次渲染都重新计算
 const PRIVILEGE_BADGES = {
   1: { label: "VIP", icon: Gem, className: "text-amber-500 bg-amber-500/10 border-amber-500/20" },
-  4: { label: "付费", icon: DatabaseZap, className: "text-rose-500 bg-rose-500/10 border-rose-500/20" },
-  trial: { label: "试听", icon: Headphones, className: "text-muted-foreground bg-muted" },
+  4: { label: "付费", icon: DollarSign, className: "text-rose-500 bg-rose-500/10 border-rose-500/20" },
 } as const;
 
 function getNeteaseBadge(p?: NeteasePrivilege) {
   if (!p || p.pl > 0) return null; // 可完整播放则不显示任何标记
   
-  if (p.fee === 1 && p.pl <= 0) return PRIVILEGE_BADGES.trial;
   if (p.fee === 1) return PRIVILEGE_BADGES[1];
   if (p.fee === 4) return PRIVILEGE_BADGES[4];
   
