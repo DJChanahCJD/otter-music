@@ -18,7 +18,7 @@ interface LyricLine {
   ttext?: string;
 }
 
-const TIME_EXP = /\[(\d{2}):(\d{2})\.(\d{2,3})]/;
+const TIME_EXP = /\[(\d{2}):(\d{2})\.(\d{2,3})]/g;
 const LYRIC_OFFSET = -0.5;
 const MATCH_TOLERANCE = 0.5;
 const AUTO_SCROLL_DELAY = 2000;
@@ -32,7 +32,7 @@ function formatTime(seconds: number): string {
 
 function parseSimpleLrc(lrc: string): { time: number; text: string }[] {
   const lines: { time: number; text: string }[] = [];
-  const timeRegex = /\[(\d{2}):(\d{2})\.(\d{2,3})\]/g; // 添加全局标志 g
+  const timeRegex = TIME_EXP; // 使用全局正则表达式
 
   for (const line of lrc.split("\n")) {
     const timeMatches = [...line.matchAll(timeRegex)];

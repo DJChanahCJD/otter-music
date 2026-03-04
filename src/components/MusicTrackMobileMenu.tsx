@@ -253,7 +253,7 @@ export function MusicTrackMobileMenu({
               </ActionButton>
             )}
 
-            {[1, 4].includes(track.privilege?.fee) && track.privilege?.pl <= 0 && (
+            {track.privilege && [1, 4].includes(track.privilege.fee) && track.privilege.pl <= 0 && (
               <ActionButton
                 icon={Zap}
                 onClick={handleMatch}
