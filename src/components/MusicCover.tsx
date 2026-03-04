@@ -44,7 +44,7 @@ export function MusicCover({
     <img
       src={src}
       alt={alt}
-      className={cn("object-cover shrink-0", className)}
+      className={cn("w-full h-full object-cover shrink-0", className)}
       onError={() => setError(true)}
     />
   );
