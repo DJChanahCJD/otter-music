@@ -1,20 +1,24 @@
 ---
 alwaysApply: true
 ---
-OtterMusic 是一个基于 React + Vite + Shadcn-ui + Capacitor 的移动端音乐应用 APP
+# OtterMusic App 开发规范
 
-# 核心原则
-1. **Mobile-First**: 样式与交互无条件优先适配移动端触控，Web 仅作为辅助容器。
+## 1. 架构与依赖
+- **核心栈**：React 19, Vite, TypeScript, React Router 7。
+- **UI 生态**：Tailwind CSS 4, Shadcn UI。禁止内联样式，类名合并统一使用 `cn()`。
+- **状态管理**：Zustand（全局，需持久化加 `partialize`），`useState`（局部）。
+- **工具库**：`react-hot-toast` (反馈), `date-fns` (日期), `uuid`, `clsx`, `tailwind-merge`。
 
-# 开发规范
-1. **组件重构**: 单文件 >300行 且存在独立子模块时，必须抽离为独立组件。(模块化子目录，如 `src/components/settings/`)
-2. **图标导入**: 仅允许 `lucide-react` 按需导入。
+## 2. 移动端与 Capacitor 特性
+- **UI 交互**：触控热区 ≥44px；菜单/弹窗强制优先使用 `Drawer` 或 `Sheet`。开发需首测移动端视口。
+- **文件系统**：本地 `file://` 路径必须经 `Capacitor.convertFileSrc()` 转换。
+- **性能优化**：
+  - 长列表强制使用 `react-window` 虚拟化。
+  - 并发控制严格区分：计算密集型用 `processBatchCPU`，文件 I/O 用 `processBatchIO`。
 
-# 平台与性能 (Native Bridge)
-1. **路径转换**: 处理本地 `file://` 资源必须调用 `Capacitor.convertFileSrc()`。
-2. **并发控制**: 
-   - 密集计算（元数据解析等）使用 `processBatchCPU`。
-   - I/O 操作（文件读写等）使用 `processBatchIO`。
-
-# 依赖管理
-1. **构建兼容**: 因 `@jofr/capacitor-media-session` 跨版本兼容需求，安装依赖必须带 `--legacy-peer-deps`。
+## 3. 编码与组件标准
+- **结构**：全 Functional Component + Hooks。单文件 >300 行强制拆分。基础组件归入 `src/components/ui`。
+- **命名与导入**：
+  - 组件 `PascalCase`，变量/函数 `camelCase`。
+  - 强制使用 `@/...` 绝对路径。
+  - 图标必须从 `lucide-react` 单独导入（如 `import { Play }...`）以保证 Tree-shaking。
