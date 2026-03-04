@@ -28,9 +28,10 @@ interface MusicState {
   setFavorites: (tracks: MusicTrack[]) => void;
   isFavorite: (trackId: string) => boolean;
 
-  createPlaylist: (name: string) => string;
+  createPlaylist: (name: string, coverUrl?: string) => string;
   deletePlaylist: (id: string) => void;
   renamePlaylist: (id: string, name: string) => void;
+  updatePlaylist: (id: string, data: Partial<Playlist>) => void;
   addToPlaylist: (playlistId: string, track: MusicTrack) => void;
   removeFromPlaylist: (playlistId: string, trackId: string) => void;
   setPlaylistTracks: (playlistId: string, tracks: MusicTrack[]) => void;
@@ -144,13 +145,16 @@ export const useMusicStore = create<MusicState>()(
       setFavorites: (favorites) => set({ favorites }),
       isFavorite: (id) => get().favorites.some(t => t.id === id),
 
-      createPlaylist: (name) => {
+      createPlaylist: (name, coverUrl) => {
         const id = uuidv4();
-        set((s) => ({ playlists: [{ id, name, tracks: [], createdAt: Date.now() }, ...s.playlists] }));
+        set((s) => ({ playlists: [{ id, name, tracks: [], createdAt: Date.now(), coverUrl }, ...s.playlists] }));
         return id;
       },
       deletePlaylist: (id) => set((s) => ({ playlists: s.playlists.filter(p => p.id !== id) })),
       renamePlaylist: (id, name) => set((s) => ({ playlists: s.playlists.map(p => p.id === id ? { ...p, name } : p) })),
+      updatePlaylist: (id, data) => set((s) => ({
+        playlists: s.playlists.map(p => p.id === id ? { ...p, ...data } : p)
+      })),
       addToPlaylist: (pid, track) => set((s) => {
         if (track.source === 'local') {
           toastUtils.info("本地音乐不支持添加歌单");

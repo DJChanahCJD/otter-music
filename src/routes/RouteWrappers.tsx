@@ -95,7 +95,10 @@ export function PlaylistDetailRoute() {
       <PageLayout title={playlist.name}>
         <MusicPlaylistView
         title={playlist.name}
-        description={`创建于 ${new Date(playlist.createdAt).toLocaleDateString()}`}
+        showTitle={false}
+        createdAt={playlist.createdAt}
+        description={playlist.description}
+        coverUrl={playlist.coverUrl}
         tracks={playlist.tracks}
         playlistId={id}
         icon={<ListMusic className="h-8 w-8 text-primary/80" />}

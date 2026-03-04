@@ -36,6 +36,7 @@ export const searchOptions: Record<string, string> = {
   netease: "网易云音乐",
   kuwo: "酷我音乐",
   bilibili: "B站",
+  // _netease: "Netease",
 };
 
 export const sourceLabels: Record<string, string> = {
@@ -110,6 +111,8 @@ export interface Playlist {
   name: string;
   tracks: MusicTrack[];
   createdAt: number;
+  coverUrl?: string;
+  description?: string;
 }
 
 // 本地音乐轨道信息

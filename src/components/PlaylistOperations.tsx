@@ -12,6 +12,7 @@ import {
   CopyMinus,
   Download,
   Trash2,
+  Image,
   type LucideIcon,
 } from "lucide-react";
 
@@ -20,6 +21,7 @@ interface PlaylistOperationsProps {
   onDeduplicate: () => void;
   onExport: () => void;
   onDelete?: () => void;
+  onSetCover?: () => void;
 }
 
 /**
@@ -56,6 +58,7 @@ export function PlaylistOperations({
   onDeduplicate,
   onExport,
   onDelete,
+  onSetCover,
 }: PlaylistOperationsProps) {
   // 普通操作项（配置驱动）
   const items = [
@@ -63,6 +66,11 @@ export function PlaylistOperations({
       icon: Pencil,
       label: "重命名",
       onClick: onRename,
+    },
+    onSetCover && {
+      icon: Image,
+      label: "设置封面",
+      onClick: onSetCover,
     },
     {
       icon: CopyMinus,

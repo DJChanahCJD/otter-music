@@ -14,6 +14,17 @@ import toast from "react-hot-toast";
 import { deduplicateTracks } from "@/lib/utils/music";
 import { toastUtils } from "@/lib/utils/toast";
 import { exportPlaylist } from "@/lib/utils/playlist-backup";
+import { musicApi } from "@/lib/music-api";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+
+import { format } from "date-fns";
 
 interface MusicPlaylistViewProps {
   title: string;
@@ -29,12 +40,14 @@ interface MusicPlaylistViewProps {
   onRename?: (playlistId: string, newName: string) => void;
   onDelete?: (playlistId: string) => void;
   description?: string;
+  createdAt?: number;
   currentTrackId?: string;
   isPlaying?: boolean;
   action?: React.ReactNode;
   coverUrl?: string;
   removeLabel?: string;
   icon?: React.ReactNode;
+  showTitle?: boolean;
 }
 
 export function MusicPlaylistView({
@@ -46,14 +59,18 @@ export function MusicPlaylistView({
   onRename,
   onDelete,
   description,
+  createdAt,
   currentTrackId,
   isPlaying,
   action,
   coverUrl,
   removeLabel,
   icon,
+  showTitle = true,
 }: MusicPlaylistViewProps) {
   const [searchQuery, setSearchQuery] = useState("");
+  const [isCoverDialogOpen, setIsCoverDialogOpen] = useState(false);
+  const [coverUrlInput, setCoverUrlInput] = useState("");
 
   const filteredTracks = useMemo(() => {
     if (!searchQuery.trim()) return tracks;
@@ -99,11 +116,52 @@ export function MusicPlaylistView({
     toast.success(`已移除 ${result.removedCount} 首重复歌曲`);
   };
 
+  const handleSetCover = () => {
+    setCoverUrlInput(coverUrl || "");
+    setIsCoverDialogOpen(true);
+  };
+
+  const handleUseFirstTrackCover = async () => {
+    const firstTrack = tracks[0];
+    if (firstTrack?.pic_id) {
+      try {
+        const url = await musicApi.getPic(firstTrack.pic_id, firstTrack.source);
+        if (url) {
+          setCoverUrlInput(url);
+        } else {
+          toast.error("获取封面失败");
+        }
+      } catch (e) {
+        console.error("Get cover failed", e);
+        toast.error("获取封面出错");
+      }
+    } else if (firstTrack?.imageUrl) {
+      setCoverUrlInput(firstTrack.imageUrl);
+    } else {
+      toast.error("第一首歌曲没有封面");
+    }
+  };
+
+  const handleSaveCover = () => {
+    if (!playlistId) return;
+    
+    // 如果为空，则是清除封面
+    if (coverUrlInput && !coverUrlInput.startsWith("http")) {
+      toast.error("请输入有效的图片链接");
+      return;
+    }
+
+    useMusicStore.getState().updatePlaylist(playlistId, { coverUrl: coverUrlInput });
+    setIsCoverDialogOpen(false);
+    toast.success("封面设置成功");
+  };
+
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
       <div className={cn(
-        "p-4 border-b flex items-end gap-4 bg-muted/10 relative",
+        "p-4 border-b flex gap-4 bg-muted/10 relative",
+        showTitle ? "items-end" : "items-center"
       )}>
         <div className="h-22 w-22 bg-primary/10 rounded-lg flex items-center justify-center shadow-sm border overflow-hidden shrink-0">
           <MusicCover
@@ -115,9 +173,15 @@ export function MusicPlaylistView({
           />
         </div>
         <div className="flex-1 space-y-1">
-          <h1 className="text-xl font-bold tracking-tight">{title}</h1>
+          {showTitle && <h1 className="text-xl font-bold tracking-tight">{title}</h1>}
           <div className="text-xs text-muted-foreground flex items-center gap-2">
             <span>{tracks.length} 首歌曲</span>
+            {createdAt && (
+              <>
+                <span>•</span>
+                <span>{format(createdAt, "yyyy-MM-dd")}</span>
+              </>
+            )}
             {description && (
               <>
                 <span>•</span>
@@ -149,6 +213,7 @@ export function MusicPlaylistView({
                      onDelete(playlistId);
                    }
                  } : undefined}
+                 onSetCover={handleSetCover}
                />
              )}
              
@@ -176,6 +241,34 @@ export function MusicPlaylistView({
           removeLabel={removeLabel}
         />
       </div>
+
+      <Dialog open={isCoverDialogOpen} onOpenChange={setIsCoverDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>设置封面</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="coverUrl">封面图片链接</Label>
+              <Input
+                id="coverUrl"
+                value={coverUrlInput}
+                onChange={(e) => setCoverUrlInput(e.target.value)}
+                placeholder="请输入图片 URL"
+              />
+            </div>
+            <Button variant="secondary" onClick={handleUseFirstTrackCover} disabled={tracks.length === 0}>
+              从第一首歌曲获取
+            </Button>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsCoverDialogOpen(false)}>
+              取消
+            </Button>
+            <Button onClick={handleSaveCover}>保存</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
