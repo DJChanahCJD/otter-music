@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import {
@@ -21,12 +21,6 @@ interface PlaylistCategorySelectorProps {
 export function PlaylistCategorySelector({ activeCategory, onSelect, trigger }: PlaylistCategorySelectorProps) {
   const [open, setOpen] = useState(false);
 
-  // 统一分类逻辑，减少冗余 DOM
-  const categories = useMemo(() => [
-    { category: "基础", filters: [{ id: "", name: "全部" }, { id: "toplist", name: "排行榜" }] },
-    ...ALL_FILTERS
-  ], []);
-
   const handleSelect = (id: string) => {
     onSelect(id);
     setOpen(false);
@@ -44,12 +38,12 @@ export function PlaylistCategorySelector({ activeCategory, onSelect, trigger }: 
       
       <DrawerContent className="max-h-[80vh]">
         <DrawerHeader className="px-6 py-4">
-          <DrawerTitle className="text-lg font-semibold tracking-tight">分类筛选</DrawerTitle>
+          <DrawerTitle className="text-lg font-semibold tracking-tight">歌单分类</DrawerTitle>
         </DrawerHeader>
 
         <ScrollArea className="px-6 pb-12 overflow-y-auto">
           <div className="space-y-6">
-            {categories.map((group) => (
+            {ALL_FILTERS.map((group) => (
               <section key={group.category} className="space-y-3">
                 <h4 className="sticky top-0 z-10 py-1 text-[11px] font-bold uppercase tracking-widest text-muted-foreground/60 bg-background/95 backdrop-blur-sm">
                   {group.category}

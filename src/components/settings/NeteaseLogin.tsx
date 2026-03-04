@@ -114,6 +114,7 @@ export function NeteaseLogin() {
   };
 
   const handleLogout = () => {
+    if (!window.confirm("确定要退出网易云登录吗？")) return;
     localStorage.removeItem(NETEASE_COOKIE_KEY);
     localStorage.removeItem("cookie:netease");
     setUser(null);
@@ -125,32 +126,23 @@ export function NeteaseLogin() {
       <SettingItem
         icon={User}
         title="网易云账号"
-        subtitle={user ? `已登录: ${user.nickname}` : "点击登录以同步歌单"}
+        subtitle={user ? user.nickname : "点击登录以同步歌单"}
         action={
           user ? (
-            <Button variant="ghost" size="sm" onClick={handleLogout} className="text-destructive hover:text-destructive">
-              <LogOut className="w-4 h-4 mr-1" /> 退出
-            </Button>
+            <Avatar 
+              className="w-10 h-10 border cursor-pointer hover:opacity-80 transition-opacity"
+              onClick={handleLogout}
+            >
+              <AvatarImage src={user.avatarUrl} />
+              <AvatarFallback>{user.nickname[0]}</AvatarFallback>
+            </Avatar>
           ) : (
             <Button variant="secondary" size="sm" onClick={startLogin} disabled={loading}>
               {loading && <Loader2 className="w-3 h-3 mr-2 animate-spin" />} 登录
             </Button>
           )
         }
-      >
-        {user && (
-          <div className="mt-4 flex items-center gap-4 p-3 bg-muted/30 rounded-lg">
-            <Avatar className="w-12 h-12 border">
-              <AvatarImage src={user.avatarUrl} />
-              <AvatarFallback>{user.nickname[0]}</AvatarFallback>
-            </Avatar>
-            <div className="flex-1 min-w-0">
-              <div className="font-medium truncate">{user.nickname}</div>
-              <div className="text-xs text-muted-foreground truncate">{user.signature || "暂无签名"}</div>
-            </div>
-          </div>
-        )}
-      </SettingItem>
+      />
 
       <Dialog open={showDialog} onOpenChange={(open) => {
         setShowDialog(open);

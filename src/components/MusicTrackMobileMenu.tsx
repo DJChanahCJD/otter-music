@@ -269,7 +269,7 @@ export function MusicTrackMobileMenu({
               </Button>
             )}
 
-            {(track.privilege?.fee === 1 || track.privilege?.fee === 4) && (
+            {(track.privilege?.fee === 1 || track.privilege?.fee === 4) && track.privilege?.pl <= 0 && (
               <Button
                 variant="ghost"
                 className="justify-start w-full text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"
