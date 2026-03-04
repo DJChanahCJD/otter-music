@@ -38,6 +38,7 @@ function getNeteaseBadge(p?: NeteasePrivilege) {
 
 interface MusicTrackItemProps {
   track: MusicTrack | MergedMusicTrack;
+  playlistId?: string;
   index: number;
   isCurrent?: boolean;
   isPlaying?: boolean;
@@ -55,6 +56,7 @@ interface MusicTrackItemProps {
 
 export function MusicTrackItem({
   track,
+  playlistId,
   index,
   isCurrent,
   isPlaying,
@@ -168,6 +170,7 @@ export function MusicTrackItem({
       <div className="flex items-center justify-end gap-1">
         <MusicTrackMobileMenu
           track={track}
+          playlistId={playlistId}
           open={isMobileMenuOpen}
           onOpenChange={setIsMobileMenuOpen}
           onAddToNextPlay={() => {

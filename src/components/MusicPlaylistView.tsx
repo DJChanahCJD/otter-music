@@ -233,6 +233,7 @@ export function MusicPlaylistView({
         <MusicTrackList
           tracks={filteredTracks}
           onPlay={(track) => onPlay(track, tracks.findIndex(t => t.id === track.id))}
+          playlistId={playlistId}
           currentTrackId={currentTrackId}
           isPlaying={isPlaying}
           onRemove={onRemove}

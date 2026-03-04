@@ -32,6 +32,7 @@ import { useShallow } from "zustand/react/shallow";
 interface MusicTrackListProps {
   tracks: MusicTrack[];
   onPlay: (track: MusicTrack) => void;
+  playlistId?: string;
   currentTrackId?: string;
   isPlaying?: boolean;
   onRemove?: (track: MusicTrack, silent?: boolean) => void | Promise<void>;
@@ -44,6 +45,7 @@ interface MusicTrackListProps {
 
 interface RowProps {
   tracks: MusicTrack[];
+  playlistId?: string;
   currentTrackId?: string;
   isPlaying?: boolean;
   isSelectionMode: boolean;
@@ -63,6 +65,7 @@ const Row = ({
   index,
   style,
   tracks,
+  playlistId,
   currentTrackId,
   isPlaying,
   isSelectionMode,
@@ -86,6 +89,7 @@ const Row = ({
       <MusicTrackItem
         style={style}
         track={track}
+        playlistId={playlistId}
         index={index}
         isCurrent={track.id === currentTrackId}
         isPlaying={isPlaying}
@@ -131,6 +135,7 @@ const Row = ({
 export function MusicTrackList({
   tracks,
   onPlay,
+  playlistId,
   currentTrackId,
   isPlaying,
   onRemove,
@@ -260,6 +265,7 @@ export function MusicTrackList({
 
   const rowProps: RowProps = {
     tracks,
+    playlistId,
     currentTrackId,
     isPlaying,
     isSelectionMode,

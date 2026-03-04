@@ -115,6 +115,7 @@ export function FavoritesView({
           isPlaying={isPlaying}
           onRemove={(track) => onRemove(track)}
           removeLabel="取消喜欢"
+          playlistId="favorites"
         />
       </div>
     </div>
