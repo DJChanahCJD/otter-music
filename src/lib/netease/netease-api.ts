@@ -5,8 +5,9 @@ import { cachedFetch } from "@/lib/utils/cache";
 import { API_URL } from "@/lib/api/config";
 import { Capacitor, CapacitorHttp } from '@capacitor/core';
 
-const TTL_SHORT = 60 * 60 * 1000;
-const TTL_MEDIUM = 24 * 60 * 60 * 1000;
+const TTL_SHORT = 60 * 60 * 1000;           // 1 hour
+const TTL_MEDIUM = 24 * 60 * 60 * 1000;     // 1 day
+const TTL_LONG = 7 * 24 * 60 * 60 * 1000;   // 7 days
 
 // 确保移动端（即便是开发环境连着手机测）也能指向绝对路径，避免报错
 const IS_NATIVE = Capacitor.isNativePlatform();
@@ -146,7 +147,7 @@ async function fetchLocalApi<T>(endpoint: string, body?: any): Promise<T> {
 }
 
 /* =========================================================
- * 业务 API (无变更，复用底层的跨端重构)
+ * 业务 API
  * ========================================================= */
 
 export async function getSongUrl(id: string, br: number = 999000, cookie: string = '') {
@@ -195,15 +196,20 @@ export const getRecommendPlaylists = (cookie: string = '') =>
         TTL_SHORT
     );
 
-export async function getPlaylistDetail(playlistId: string, cookie: string = ''): Promise<PlaylistDetail> {
-    const res = await requestWeapi<{ playlist: any }>(
-        `${BASE_URL}/weapi/v3/playlist/detail`, 
-        { id: playlistId, offset: 0, total: true, limit: 1000, n: 1000, csrf_token: '' }, 
-        cookie
+export const getPlaylistDetail = (playlistId: string, cookie: string = '') => 
+    cachedFetch<PlaylistDetail>( 
+        `netease:playlist:${playlistId}:${cookie.slice(-16)}`, 
+        async () => { 
+            const res = await requestWeapi<{ playlist: any }>( 
+                `${BASE_URL}/weapi/v3/playlist/detail`, 
+                { id: playlistId, offset: 0, total: true, limit: 1000, n: 1000, csrf_token: '' }, 
+                cookie 
+            ); 
+            const tracks = await getTracksDetail(res.data.playlist.trackIds.map((t: any) => t.id), cookie); 
+            return { ...res.data.playlist, tracks } as PlaylistDetail; 
+        }, 
+        TTL_MEDIUM // 歌单可能会被创建者更新，使用中缓存 
     );
-    const tracks = await getTracksDetail(res.data.playlist.trackIds.map((t: any) => t.id), cookie);
-    return { ...res.data.playlist, tracks } as PlaylistDetail;
-}
 
 async function getTracksDetail(trackIds: number[], cookie: string = '') {
     const result: SongDetail[] = [];
@@ -228,31 +234,65 @@ export async function search(keyword: string, type: number = 1, page: number = 1
     const headers = buildHeaders(finalCookie, PC_USER_AGENT, getRandomDomesticIp());
     const params = new URLSearchParams({ s: keyword, type: String(type), offset: String((page - 1) * limit), limit: String(limit) });
     
-    // 直接复用我们万能的跨端 fetch
     const { data } = await crossFetch(`${BASE_URL}/api/search/pc`, { method: 'POST', headers, body: params.toString() });
     return { data: data as { result: SearchResult, code: number } };
 }
 
 export const getLyric = (id: string, cookie: string = '') => 
-    requestWeapi<{ lrc: { lyric: string }, tlyric: { lyric: string } }>(`${BASE_URL}/weapi/song/lyric`, { id: id.replace(/^(netrack_|ne_track_)/, ''), lv: -1, tv: -1 }, cookie);
+    cachedFetch( 
+        `netease:lyric:${id.replace(/^(netrack_|ne_track_)/, '')}`, 
+        () => requestWeapi<{ lrc: { lyric: string }, tlyric: { lyric: string } }>( 
+            `${BASE_URL}/weapi/song/lyric`, 
+            { id: id.replace(/^(netrack_|ne_track_)/, ''), lv: -1, tv: -1 }, 
+            cookie 
+        ), 
+        TTL_LONG // 歌词极少变动，使用长缓存 
+    ); 
 
-export const getSongDetail = async (id: string, cookie: string = '') => 
-    (await getTracksDetail([parseInt(id.replace(/^(netrack_|ne_track_)/, ''))], cookie))[0];
+export const getSongDetail = (id: string, cookie: string = '') => 
+    cachedFetch( 
+        `netease:song:${id.replace(/^(netrack_|ne_track_)/, '')}:${cookie.slice(-16)}`, 
+        async () => (await getTracksDetail([parseInt(id.replace(/^(netrack_|ne_track_)/, ''))], cookie))[0], 
+        TTL_LONG // 歌曲基础信息固定，但携带 VIP 鉴权，因此 key 加上 cookie 尾缀 
+    ); 
 
-export const getToplist = (cookie: string = '') => requestWeapi<{ list: Toplist[] }>(`${BASE_URL}/weapi/toplist/detail`, {}, cookie);
+export const getToplist = (cookie: string = '') => 
+    cachedFetch( 
+        `netease:toplist`, 
+        () => requestWeapi<{ list: Toplist[] }>(`${BASE_URL}/weapi/toplist/detail`, {}, cookie), 
+        TTL_SHORT // 榜单每日更新 
+    ); 
 
-export const getAlbum = async (id: string, cookie: string = '') => {
-    const res = await requestWeapi<AlbumDetail>(`${BASE_URL}/weapi/v1/album/${id.replace(/^(nealbum_|ne_album_)/, '')}`, {}, cookie);
-    return res.data;
-};
+export const getAlbum = (id: string, cookie: string = '') => 
+    cachedFetch( 
+        `netease:album:${id.replace(/^(nealbum_|ne_album_)/, '')}`, 
+        async () => { 
+            const res = await requestWeapi<AlbumDetail>(`${BASE_URL}/weapi/v1/album/${id.replace(/^(nealbum_|ne_album_)/, '')}`, {}, cookie); 
+            return res.data; 
+        }, 
+        TTL_LONG // 专辑发布后信息基本固定 
+    ); 
 
-export const getArtist = async (id: string, cookie: string = '') => {
-    const res = await requestWeapi<ArtistDetail>(`${BASE_URL}/weapi/v1/artist/${id.replace(/^(neartist_|ne_artist_)/, '')}`, {}, cookie);
-    return res.data;
-};
+export const getArtist = (id: string, cookie: string = '') => 
+    cachedFetch( 
+        `netease:artist:${id.replace(/^(neartist_|ne_artist_)/, '')}`, 
+        async () => { 
+            const res = await requestWeapi<ArtistDetail>(`${BASE_URL}/weapi/v1/artist/${id.replace(/^(neartist_|ne_artist_)/, '')}`, {}, cookie); 
+            return res.data; 
+        }, 
+        TTL_LONG // 歌手基础信息低频变动 
+    ); 
 
 export const getPlaylists = (cat: string = '全部', order: string = 'hot', limit: number = 35, offset: number = 0, cookie: string = '') => 
-    requestWeapi<{ playlists: UserPlaylist[] }>(`${BASE_URL}/weapi/playlist/list`, { cat, order, limit, offset, total: true }, cookie);
+    cachedFetch( 
+        `netease:playlists:${cat}:${order}:${limit}:${offset}`, 
+        () => requestWeapi<{ playlists: UserPlaylist[] }>( 
+            `${BASE_URL}/weapi/playlist/list`, 
+            { cat, order, limit, offset, total: true }, 
+            cookie 
+        ), 
+        TTL_SHORT // 广场分类歌单变动较快 
+    );
 
 export function resolveUrl(urlStr: string): ResolveUrlResult | null {
     try {
@@ -274,6 +314,21 @@ export const convertSongToMusicTrack = (song: SongDetail | any): MusicTrack => {
     const artists = song.ar || song.artists || [];
     const album = song.al || song.album || {};
 
+    // 构造 privilege 对象（如果搜索结果缺失）
+    let privilege = song.privilege;
+    if (!privilege && song.fee !== undefined) {
+        privilege = {
+            id: song.id,
+            fee: song.fee,
+            payed: 0,
+            st: song.st ?? song.status ?? 0,
+            pl: (song.fee === 1 || song.fee === 4) ? 0 : 128000, // VIP/付费歌曲默认视为不可播放，触发 Badge 显示
+            maxbr: 999000,
+            plLevel: 'standard',
+            freeTrialPrivilege: { remainTime: 0 }
+        };
+    }
+
     return {
         id: String(song.id),
         name: song.name,
@@ -283,7 +338,7 @@ export const convertSongToMusicTrack = (song: SongDetail | any): MusicTrack => {
         url_id: String(song.id),
         lyric_id: String(song.id),
         source: '_netease',
-        privilege: song.privilege,
+        privilege,
         artist_ids: artists.map((a: any) => String(a.id || '')),
         album_id: String(album.id || ''),
     };
