@@ -165,6 +165,7 @@ export function NeteaseDetail({
 
         if (type === 'playlist') {
             const res = await getPlaylistDetail(id, "");
+            if (!res) throw new Error("Playlist not found");
             rawDetail = {
                 name: res.name,
                 coverImgUrl: res.coverImgUrl,
@@ -175,6 +176,7 @@ export function NeteaseDetail({
             rawTracks = res.tracks;
         } else if (type === 'artist') {
             const res = await getArtist(id, "");
+            if (!res) throw new Error("Artist not found");
             rawDetail = {
                 name: res.artist.name,
                 coverImgUrl: res.artist.picUrl,
@@ -184,10 +186,12 @@ export function NeteaseDetail({
             rawTracks = res.hotSongs;
         } else if (type === 'album') {
             const res = await getAlbum(id, "");
+            if (!res) throw new Error("Album not found");
             console.log('Netease Album Response:', res);
             
             // 兼容可能的数据结构差异
-            const data = res.album ? res : (res.data || res.result || res);
+            const anyRes = res as any;
+            const data = anyRes.album ? anyRes : (anyRes.data || anyRes.result || anyRes);
 
             if (!data || !data.album) {
                 throw new Error("Invalid album data");

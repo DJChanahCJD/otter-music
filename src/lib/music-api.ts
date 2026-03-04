@@ -278,9 +278,10 @@ export const musicApi = {
         async () => {
           try {
             const res = await getLyric(id);
+            if (!res || !res.data) return { lyric: '', tlyric: '' };
             return {
-              lyric: res.data?.lrc?.lyric || '',
-              tlyric: res.data?.tlyric?.lyric || ''
+              lyric: res.data.lrc?.lyric || '',
+              tlyric: res.data.tlyric?.lyric || ''
             };
           } catch (e) {
             console.error('getLyric failed:', e);
