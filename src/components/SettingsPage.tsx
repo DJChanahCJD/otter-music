@@ -8,7 +8,7 @@ import { SyncConfig } from "./settings/SyncConfig";
 import { NeteaseLogin } from "./settings/NeteaseLogin";
 import { useMusicStore } from "@/store/music-store";
 import { Slider } from "./ui/slider";
-import { Palette, Volume2, Zap } from "lucide-react";
+import { Palette, Volume2, Wand2, Zap } from "lucide-react";
 import { Switch } from "./ui/switch";
 import { PlaylistImport } from "./settings/PlaylistImport";
 import { SettingItem } from "./settings/SettingItem";
@@ -37,9 +37,9 @@ export function SettingsPage({ onBack }: SettingsPageProps) {
       <div className="flex-1 p-4 pb-28 overflow-y-auto">
         <Section title="偏好设置">
           <SettingItem
-            icon={Zap}
-            title="自动匹配免费音源"
-            subtitle="自动替换网易云付费/试听歌曲为免费源（无权限时）"
+            icon={Wand2}
+            title="智能音源"
+            subtitle="🧙‍♀️自动切换到可用的免费音源"
             action={
               <Switch
                 checked={enableAutoMatch}
