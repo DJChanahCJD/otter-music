@@ -8,42 +8,60 @@ import { useDownloadStore } from "@/store/download-store";
 import { Capacitor } from "@capacitor/core";
 import { MediaSession } from "@jofr/capacitor-media-session";
 import { buildDownloadKey } from "@/lib/utils/download";
-import type { MusicSource } from "@/types/music";
+import type { MusicSource, MusicTrack } from "@/types/music";
 import toast from "react-hot-toast";
 
-/**
- * 远程重试工具函数
- * 使用 getState() 确保在异步回调中获取最新的状态/方法
- */
-async function retryWithRemote(
-  audio: HTMLAudioElement,
-  trackId: string,
-  source: MusicSource,
-  quality: number
-): Promise<void> {
+/** 远程重试工具函数 */
+async function retryWithRemote(audio: HTMLAudioElement, trackId: string, source: MusicSource, quality: number) {
   const { setIsPlaying, setIsLoading, setCurrentAudioUrl } = useMusicStore.getState();
-  
   try {
     setIsLoading(true);
-    const remoteUrl = await retry(
-      async () => {
-        const result = await musicApi.getUrl(trackId, source, quality);
-        if (!result) throw new Error("EMPTY_URL");
-        return result;
-      },
-      2,
-      800
-    );
+    const remoteUrl = await retry(async () => {
+      const result = await musicApi.getUrl(trackId, source, quality);
+      if (!result) throw new Error("EMPTY_URL");
+      return result;
+    }, 2, 800);
 
     if (audio.src !== remoteUrl) {
       setCurrentAudioUrl(remoteUrl);
       audio.src = remoteUrl;
       audio.load();
       await audio.play();
-      setIsPlaying(true); // 显式同步播放状态
+      setIsPlaying(true);
     }
   } finally {
     setIsLoading(false);
+  }
+}
+
+/** 自动匹配免费源逻辑 */
+async function handleAutoMatch(track: MusicTrack) {
+  const toastId = toast.loading("正在搜索免费音源...", { id: `auto-match-${track.id}` });
+  try {
+    const { aggregatedSources, updateTrackInQueue } = useMusicStore.getState();
+    const targetName = track.name.trim().toLowerCase();
+    const targetArtist = track.artist[0]?.trim().toLowerCase() || "";
+
+    const match = await musicApi.searchBestMatch(
+      `${track.name} ${track.artist[0] || ""}`.trim(),
+      aggregatedSources,
+      (item) =>
+        item.id !== track.id &&
+        item.name.trim().toLowerCase() === targetName &&
+        item.artist.some((a) => a.trim().toLowerCase().includes(targetArtist)),
+      5
+    );
+
+    if (!match) {
+      toast.error("未找到可用音源", { id: toastId });
+      return;
+    }
+
+    updateTrackInQueue(track.id, match);
+    toast.success(`已自动切换至: ${match.name}（${match.source}）`, { id: toastId });
+  } catch (error) {
+    console.error("Auto match failed:", error);
+    toast.error("自动匹配失败", { id: toastId });
   }
 }
 
@@ -53,21 +71,7 @@ export function useAudioEventHandlers(
   hasRecordedRef: React.MutableRefObject<boolean>
 ) {
   const toastedTrackIdRef = useRef<string | null>(null);
-  const isRepeat = useMusicStore(s => s.isRepeat);
-  const currentTrack = useMusicStore(s => s.queue[s.currentIndex]);
-  const currentTrackSource = currentTrack?.source;
-  const currentTrackId = currentTrack?.id;
-  const isPlaying = useMusicStore(s => s.isPlaying);
-  const queue = useMusicStore(s => s.queue);
-  const currentIndex = useMusicStore(s => s.currentIndex);
-  const quality = useMusicStore(s => s.quality);
-
-  const setIsPlaying = useMusicStore(s => s.setIsPlaying);
-  const setAudioCurrentTime = useMusicStore(s => s.setAudioCurrentTime);
-  const setDuration = useMusicStore(s => s.setDuration);
-  const setIsLoading = useMusicStore(s => s.setIsLoading);
-  const setCurrentAudioUrl = useMusicStore(s => s.setCurrentAudioUrl);
-  const skipToNext = useMusicStore(s => s.skipToNext);
+  const autoMatchedTrackIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     const audio = audioRef.current;
@@ -75,7 +79,7 @@ export function useAudioEventHandlers(
 
     const onTimeUpdate = throttle(() => {
       if (isSwitchingTrackRef.current) return;
-      setAudioCurrentTime(audio.currentTime);
+      useMusicStore.getState().setAudioCurrentTime(audio.currentTime);
 
       MediaSession.setPositionState({
         duration: audio.duration || 0,
@@ -85,88 +89,83 @@ export function useAudioEventHandlers(
     }, 1000);
 
     const onDurationChange = () => {
+      const state = useMusicStore.getState();
+      const currentTrack = state.queue[state.currentIndex];
       const duration = audio.duration || 0;
-      setDuration(duration);
+      
+      state.setDuration(duration);
 
-      if (currentTrackSource === '_netease' && duration > 0 && duration <= 45) {
-        if (toastedTrackIdRef.current !== currentTrackId) {
+      // 网易云试听/自动匹配逻辑
+      if (currentTrack?.source === '_netease' && duration > 0 && duration <= 45) {
+        if (toastedTrackIdRef.current !== currentTrack.id) {
           toast("试听中...", { icon: "🎵" });
-          toastedTrackIdRef.current = currentTrackId || null;
+          toastedTrackIdRef.current = currentTrack.id;
+        }
+        if (state.enableAutoMatch && autoMatchedTrackIdRef.current !== currentTrack.id) {
+          autoMatchedTrackIdRef.current = currentTrack.id;
+          void handleAutoMatch(currentTrack);
         }
       }
     };
 
     const onEnded = () => {
-      if (isRepeat) {
+      const state = useMusicStore.getState();
+      if (state.isRepeat) {
         audio.currentTime = 0;
         audio.play();
-      } else {
-        if (queue.length > 0) {
-          const nextIndex = (currentIndex + 1) % queue.length;
-          useMusicStore.getState().setCurrentIndexAndPlay(nextIndex);
-        }
+      } else if (state.queue.length > 0) {
+        state.setCurrentIndexAndPlay((state.currentIndex + 1) % state.queue.length);
       }
     };
 
     const onError = async (e: Event) => {
       console.error("Audio Error Event:", e);
-      setIsLoading(false);
+      const state = useMusicStore.getState();
+      const track = state.queue[state.currentIndex];
+      
+      state.setIsLoading(false);
+      if (track?.source) useSourceQualityStore.getState().recordFail(track.source);
 
-      if (currentTrack?.source) {
-        useSourceQualityStore.getState().recordFail(currentTrack.source);
-      }
-
-      // 仅处理 Native 环境下的下载记录失效问题
-      if (Capacitor.isNativePlatform() && (currentTrackSource as string) !== 'local') {
-        const downloadKey = buildDownloadKey(currentTrackSource, currentTrackId || '');
+      // Native 下载记录失效回退逻辑
+      if (Capacitor.isNativePlatform() && track && track.source !== 'local') {
+        const downloadKey = buildDownloadKey(track.source, track.id);
         const downloadUri = useDownloadStore.getState().getUri(downloadKey);
-
-        const isLocalFileUrl =
-          audio.src.includes('_capacitor_file_') ||
-          audio.src.startsWith('capacitor://') ||
-          audio.src.startsWith('file://');
+        const isLocalFileUrl = /_capacitor_file_|capacitor:\/\/|file:\/\//.test(audio.src);
 
         if (downloadUri && isLocalFileUrl) {
           useDownloadStore.getState().removeRecord(downloadKey);
           toast.error(`本地文件失效，尝试网络播放`, { duration: 3000 });
 
           try {
-            const br = parseInt(quality, 10);
-            await retryWithRemote(audio, currentTrackId || '', currentTrackSource, br);
-          } catch (retryError) {
-            console.error("Retry load failed:", retryError);
-            toast.error(`播放失败: ${currentTrack.name}`);
+            await retryWithRemote(audio, track.id, track.source, parseInt(state.quality, 10));
+          } catch (error) {
+            toast.error(`播放失败: ${track.name}`);
             audio.src = "";
-            setCurrentAudioUrl(null);
-            skipToNext();
+            state.setCurrentAudioUrl(null);
+            state.skipToNext();
           }
         }
       }
     };
 
     const onPause = () => {
-      if (isSwitchingTrackRef.current) return;
-      // 只有在非切歌、非正常结束的情况下暂停，才同步 UI 状态
-      if (!audio.ended && audio.error === null) {
-        setIsPlaying(false);
-      }
+      if (isSwitchingTrackRef.current || audio.ended || audio.error !== null) return;
+      useMusicStore.getState().setIsPlaying(false);
     };
 
     const onPlay = () => {
-      if (audio.paused) return;
-
-      if (hasRecordedRef.current) return;
+      if (audio.paused || hasRecordedRef.current) return;
       hasRecordedRef.current = true;
 
-      if (!isPlaying) setIsPlaying(true);
+      const state = useMusicStore.getState();
+      const track = state.queue[state.currentIndex];
 
-      useMusicStore.getState().resetFailures();
+      if (!state.isPlaying) state.setIsPlaying(true);
+      state.resetFailures();
 
-      if (currentTrack?.source) {
-        useSourceQualityStore.getState().recordSuccess(currentTrack.source);
-      }
-      if (currentTrack) {
-        useHistoryStore.getState().addToHistory(currentTrack);
+      if (track) {
+        useSourceQualityStore.getState().recordSuccess(track.source);
+        useHistoryStore.getState().addToHistory(track);
       }
     };
 
@@ -185,7 +184,7 @@ export function useAudioEventHandlers(
       audio.removeEventListener("pause", onPause);
       audio.removeEventListener("play", onPlay);
     };
-  }, [isRepeat, currentTrack, isPlaying, quality]); // 简化依赖项，由内部 Action 处理同步
+  }, []); // ✅ 核心优化：依赖数组清空，监听器只绑定一次
 
   return null;
 }

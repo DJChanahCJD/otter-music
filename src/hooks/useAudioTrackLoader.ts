@@ -124,7 +124,7 @@ export function useAudioTrackLoader(
       try {
         setIsLoading(true);
 
-        if (prevTrackRef.current?.id === currentTrackId && prevTrackRef.current?.source === currentTrackSource) {
+        if (prevTrackRef.current?.id === currentTrackId && prevTrackRef.current?.source === currentTrackSource && !isSwitchingTrackRef.current) {
           return;
         }
 

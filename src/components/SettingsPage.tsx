@@ -8,7 +8,8 @@ import { SyncConfig } from "./settings/SyncConfig";
 import { NeteaseLogin } from "./settings/NeteaseLogin";
 import { useMusicStore } from "@/store/music-store";
 import { Slider } from "./ui/slider";
-import { Palette, Volume2 } from "lucide-react";
+import { Palette, Volume2, Zap } from "lucide-react";
+import { Switch } from "./ui/switch";
 import { PlaylistImport } from "./settings/PlaylistImport";
 import { SettingItem } from "./settings/SettingItem";
 import { UpdateCheck } from "./settings/UpdateCheck";
@@ -29,12 +30,23 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 }
 
 export function SettingsPage({ onBack }: SettingsPageProps) {
-  const { volume, setVolume } = useMusicStore();
+  const { volume, setVolume, enableAutoMatch, setEnableAutoMatch } = useMusicStore();
 
   return (
     <PageLayout title="系统设置" onBack={onBack}>
       <div className="flex-1 p-4 pb-28 overflow-y-auto">
         <Section title="偏好设置">
+          <SettingItem
+            icon={Zap}
+            title="自动匹配免费音源"
+            subtitle="自动替换网易云付费/试听歌曲为免费源（无权限时）"
+            action={
+              <Switch
+                checked={enableAutoMatch}
+                onCheckedChange={setEnableAutoMatch}
+              />
+            }
+          />
           <SettingItem
             icon={Palette}
             title="主题切换"
