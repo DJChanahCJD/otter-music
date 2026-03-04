@@ -7,7 +7,6 @@ import { MusicTrack } from "@/types/music";
 import { Loader2 } from "lucide-react";
 import toast from "react-hot-toast";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
-import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
 interface MarketPlaylistDetailProps {
@@ -62,7 +61,7 @@ function PlaylistHeader({ detail }: { detail: PlaylistDetail }) {
             >
               <p className={cn(
                 "text-[11px] text-muted-foreground/80 leading-relaxed transition-all",
-                !expanded && "line-clamp-2"
+                !expanded && "line-clamp-3"
               )}>
                 {detail.description}
               </p>

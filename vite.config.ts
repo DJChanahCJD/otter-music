@@ -31,12 +31,12 @@ export default defineConfig({
         entryFileNames: 'assets/[name]-[hash].js',
         assetFileNames: 'assets/[name]-[hash].[ext]',
         manualChunks: (id) => {
-        if (id.includes('node_modules')) {
-          if (id.includes('react') || id.includes('react-dom')) {
-            return 'react-vendor'
+          if (id.includes('node_modules')) {
+            if (id.includes('react') || id.includes('react-dom')) {
+              return 'react-vendor'
+            }
           }
-        }
-      },
+        },
       },
     },
   },
@@ -54,6 +54,28 @@ export default defineConfig({
         headers: {
           'Referer': 'https://music.163.com',
           'Origin': 'https://music.163.com'
+        },
+        // 添加 configure 钩子拦截并替换 Headers
+        configure: (proxy) => {
+          proxy.on('proxyReq', (proxyReq, req) => {
+            // 1. 还原 Cookie
+            if (req.headers['x-real-cookie']) {
+              proxyReq.setHeader('Cookie', req.headers['x-real-cookie']);
+            }
+            // 2. 还原 User-Agent
+            if (req.headers['x-real-ua']) {
+              proxyReq.setHeader('User-Agent', req.headers['x-real-ua']);
+            }
+            // 3. 还原伪装 IP
+            if (req.headers['x-real-ip']) {
+              proxyReq.setHeader('X-Real-IP', req.headers['x-real-ip']);
+              proxyReq.setHeader('X-Forwarded-For', req.headers['x-real-ip']);
+            }
+
+            // 4. 清理前端发送的自定义 Header，防止被网易云识别为爬虫特征
+            proxyReq.removeHeader('x-real-cookie');
+            proxyReq.removeHeader('x-real-ua');
+          });
         }
       }
     }

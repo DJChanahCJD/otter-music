@@ -1,6 +1,17 @@
-export interface Track {
-  id: string;
-  title: string;
+/**
+ * 基础实体，统一 ID 类型
+ */
+interface BaseEntity {
+  id: number | string;
+  name: string;
+}
+
+/* =========================================================
+ * 1. 核心通用类型 (用于前端展示)
+ * ========================================================= */
+
+export interface Track extends BaseEntity {
+  title: string;        // 映射自 name
   artist: string;
   artist_id: string;
   album: string;
@@ -10,29 +21,113 @@ export interface Track {
   img_url: string;
   url?: string;
   fee?: number;
+  privilege?: NeteasePrivilege;
 }
 
 export interface PlaylistInfo {
   id: string;
-  cover_img_url: string;
   title: string;
+  cover_img_url: string;
   source_url: string;
   author?: string;
   count?: number;
 }
 
 export interface SearchResult {
-  result: Track[] | PlaylistInfo[];
-  total: number;
-  type: string;
+  songs?: SongDetail[];
+  playlists?: UserPlaylist[]; // 支持多类型搜索
+  songCount?: number;
+  hasMore?: boolean;
 }
 
-export interface CookieItem {
-  url: string;
-  name: string;
-  value?: string;
-  expirationDate?: number;
-  sameSite?: string;
+/* =========================================================
+ * 2. 网易云原生数据结构 (用于 API 响应)
+ * ========================================================= */
+
+export interface NeteaseResponse<T = any> {
+  code: number;
+  data?: T;
+  result?: T;
+  message?: string;
+  [key: string]: any;
+}
+
+export interface SongArtist extends BaseEntity {
+  tns?: string[];
+  alias?: string[];
+}
+
+export interface SongAlbum extends BaseEntity {
+  picUrl: string;
+  tns?: string[];
+}
+
+export interface SongDetail extends BaseEntity {
+  ar: SongArtist[];     // Artists
+  al: SongAlbum;        // Album
+  dt: number;           // Duration (ms)
+  fee: number;          // 资费类型
+  privilege?: NeteasePrivilege;
+  publishTime?: number;
+  st: number;           // 状态
+}
+
+/* =========================================================
+ * 3. 权限、资费与播放信息
+ * ========================================================= */
+
+export interface NeteasePrivilege {
+  id: number;
+  fee: number;          // 0-免费, 1-VIP, 4-数专, 8-非VIP低音质
+  payed: number;        // 0-未付, 1-已付
+  st: number;           // -1-无版权, 0-正常
+  pl: number;           // 播放级别
+  maxbr: number;        // 最大比特率
+  plLevel: string;      // 播放音质级别 (hires, lossless...)
+  freeTrialPrivilege: {
+    remainTime?: number;
+  };
+}
+
+export interface NeteasePlayerUrlItem {
+  id: number;
+  url: string | null;
+  br: number;           // Bitrate
+  size: number;
+  type: string;         // mp3, flac...
+  level: string;
+  freeTrialInfo: any | null;
+}
+
+/* =========================================================
+ * 4. 业务逻辑与账户相关
+ * ========================================================= */
+
+export interface PlaylistDetail extends BaseEntity {
+  coverImgUrl: string;
+  description: string;
+  trackCount: number;
+  playCount: number;
+  tracks: SongDetail[];
+  trackIds: Array<{ id: number }>;
+  creator?: UserProfile;
+}
+
+export interface UserPlaylist extends BaseEntity {
+  coverImgUrl: string;
+  trackCount: number;
+  playCount: number;
+  subscribed: boolean;
+  creator: { nickname: string; userId: number };
+}
+
+export interface UserProfile {
+  userId: number;
+  nickname: string;
+  avatarUrl: string;
+  backgroundUrl?: string;
+  signature?: string;
+  vipType?: number;
 }
 
 export interface LyricDetail {
@@ -41,194 +136,51 @@ export interface LyricDetail {
 
 export interface NeteaseLyric {
   lrc: LyricDetail;
-  tlyric?: LyricDetail;
+  tlyric?: LyricDetail; // 翻译歌词
+  romalrc?: LyricDetail; // 罗马音歌词
 }
 
-export interface NeteaseAlbumDetail {
-  id: string;             // 资源唯一标识 (UUID)
-  name: string;           // 专辑或歌单名称
-  language: string;       // 语种
-  coverImgUrl: string;    // 封面图片链接
-  company: string | null; // 发行公司
-  transName: string | null;
-  aliaName: string | null;
-  genre: string | null;
-  artists: Array<{
-    id: string;
-    name: string;
-  }>;
-}
-
-export interface NeteaseChargeInfo {
-  rate: number;          // 比特率，如 320000
-  chargeType: number;    // 付费类型：0 为免费，1 为付费/VIP
-  chargeUrl: string | null;
-  chargeMessage: string | null;
-}
-// https://music.163.com/weapi/song/enhance/privilege
-export interface NeteasePrivilege {
-  id: number;            // 歌曲 ID
-  fee: number;           // 资费类型：0-免费, 1-付费专辑, 4-购买数字专辑, 8-非VIP无法听低音质以外音质
-  payed: number;         // 是否已付费
-  st: number;            // 歌曲状态：-1 无版权, 0 正常
-  pl: number;            // 默认播放音质
-  maxbr: number;         // 最高比特率
-  maxBrLevel: string;    // 最高音质等级，如 'hires', 'lossless', 'exhigh'
-  plLevel: string;       // 播放音质等级
-  dlLevel: string;       // 下载音质等级
-  flLevel: string;       // 封面/无损音质等级
-  freeTrialPrivilege: {
-    resConsumable: boolean;
-    userConsumable: boolean;
-    remainTime?: number;
-  };
-  chargeInfoList: NeteaseChargeInfo[];
-}
-
-export interface PrivilegeResponse {
-  data: NeteasePrivilege[];
-  code: number;
-}
-
-export interface NeteasePlayerUrlItem {
-  id: number;          // 歌曲 ID
-  url: string | null;  // 播放链接（为空表示无版权或无权播放）
-  br: number;          // 比特率 (bitrate)，例如 96020
-  size: number;        // 文件大小 (bytes)
-  md5: string;         // 文件校验值
-  type: string;        // 格式，如 "m4a", "mp3"
-  level: string;       // 音质等级，如 "standard", "higher", "exhigh", "lossless", "hires"
-  encodeType: string;  // 编码类型，如 "aac", "mp3", "flac"
-  time: number;        // 歌曲总时长 (ms)
-  expi: number;        // 链接有效期（秒），通常为 1200s (20分钟)
-  fee: number;         // 资费类型
-  code: number;        // 状态码，200 为成功
-  freeTrialInfo: string | null; // 试听信息（非完整播放时存在）
-}
-
-
-
-// ========
-export interface NeteaseResponse<T = any> {
-  code: number;
-  data?: T;
-  result?: T;
-  [key: string]: any;
-}
-
-export interface SongArtist {
-  id: number;
-  name: string;
-  tns?: string[];
-  alias?: string[];
-}
-
-export interface SongAlbum {
-  id: number;
-  name: string;
-  picUrl: string;
-  tns?: string[];
-  pic_url?: string;
-  pic?: number;
-}
-
-export interface SongDetail {
-  id: number;
-  name: string;
-  pst: number;
-  t: number;
-  ar: SongArtist[];
-  al: SongAlbum;
-  dt: number; // Duration
-  pop: number;
-  st: number;
-  rt: string;
-  fee: number;
-  v: number;
-  cf?: string;
-  cp?: number;
-  mv?: number;
-  publishTime?: number;
-  // Fields for search results (sometimes different from detail)
-  artists?: SongArtist[];
-  album?: SongAlbum;
-  privilege?: NeteasePrivilege;
-}
-
-export interface SearchResult {
-  songs?: SongDetail[];
-  songCount?: number;
-  hasMore?: boolean;
-}
-
-export interface PlaylistTrackId {
-  id: number;
-  v: number;
-  t: number;
-  at: number;
-  uid: number;
-  rcmdReason: string;
-}
-
-export interface PlaylistDetail {
-  id: number;
-  name: string;
-  coverImgUrl: string;
-  description: string;
-  tags: string[];
-  trackCount: number;
-  playCount: number;
-  userId: number;
-  createTime: number;
-  updateTime: number;
-  subscribedCount: number;
-  shareCount: number;
-  commentCount: number;
-  tracks: SongDetail[];
-  trackIds: PlaylistTrackId[];
-  creator?: {
-    userId: number;
-    nickname: string;
-    avatarUrl: string;
-  };
-}
-
-export interface UserPlaylist {
-  id: number;
-  name: string;
-  coverImgUrl: string;
-  creator: {
-    userId: number;
-    nickname: string;
-  };
-  trackCount: number;
-  playCount: number;
-  subscribed: boolean;
-}
-
-export interface RecommendPlaylist {
-  id: number;
-  name: string;
+/**
+ * 推荐歌单 (首页/每日推荐)
+ */
+export interface RecommendPlaylist extends BaseEntity {
   picUrl: string;
   playCount: number;
   trackCount: number;
-  copywriter?: string;
+  copywriter?: string;    // 推荐语
 }
 
-export interface Toplist {
-  id: number;
-  name: string;
+/**
+ * 排行榜 (排行榜列表页)
+ */
+export interface Toplist extends BaseEntity {
   coverImgUrl: string;
-  updateFrequency: string;
-  ToplistType?: string;
+  updateFrequency: string; // 更新频率，如 "每周四更新"
   trackCount: number;
   playCount: number;
+  ToplistType?: string;    // 云音乐特色榜、全球榜等标识
 }
 
+/**
+ * 专辑详情 (包含专辑信息与歌曲列表)
+ */
+export interface AlbumDetail {
+  album: SongAlbum & {    // 扩展基础 Album 信息
+    description: string;
+    artist: SongArtist;
+    size: number;
+    publishTime: number;
+    company?: string;
+    subType?: string;      // 专辑、EP、Single 等
+  };
+  songs: SongDetail[];
+}
+
+/**
+ * 歌手详情 (包含歌手信息与热门歌曲)
+ */
 export interface ArtistDetail {
-  artist: {
-    id: number;
-    name: string;
+  artist: SongArtist & {  // 扩展基础 Artist 信息
     picUrl: string;
     briefDesc: string;
     musicSize: number;
@@ -238,49 +190,34 @@ export interface ArtistDetail {
   hotSongs: SongDetail[];
 }
 
-export interface AlbumDetail {
-  album: {
-    id: number;
-    name: string;
-    picUrl: string;
-    description: string;
-    artist: SongArtist;
-    size: number;
-    publishTime: number;
-    company?: string;
-    subType?: string;
-  };
-  songs: SongDetail[];
+/**
+ * 歌手简略信息 (用于列表展示)
+ */
+export interface ArtistItem extends BaseEntity {
+  picUrl: string;
+  albumSize: number;
+  musicSize: number;
+  alias?: string[];
 }
 
-export interface QrKeyResponse {
-  code: number;
-  unikey: string;
+/* =========================================================
+ * 5. 辅助与响应结果
+ * ========================================================= */
+
+export interface ResolveUrlResult {
+  type: 'playlist' | 'artist' | 'album' | 'song';
+  id: string;
 }
 
 export interface QrCheckResponse {
   code: number;
   message: string;
   cookie?: string;
-  redirectUrl?: string;
 }
 
-export interface UserProfile {
-  userId: number;
-  nickname: string;
-  avatarUrl: string;
-  backgroundUrl: string;
-  signature: string;
-  vipType: number;
-  userType: number;
-  follows: number;
-  followeds: number;
-  eventCount: number;
-  playlistCount: number;
-  playlistBeSubscribedCount: number;
-}
-
-export interface ResolveUrlResult {
-  type: 'playlist' | 'artist' | 'album' | 'song';
-  id: string;
+export interface CookieItem {
+  url: string;
+  name: string;
+  value: string;
+  expirationDate?: number;
 }

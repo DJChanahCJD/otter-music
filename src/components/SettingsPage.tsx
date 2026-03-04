@@ -13,9 +13,19 @@ import { PlaylistImport } from "./settings/PlaylistImport";
 import { SettingItem } from "./settings/SettingItem";
 import { UpdateCheck } from "./settings/UpdateCheck";
 
-
 interface SettingsPageProps {
   onBack?: () => void;
+}
+
+function Section({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div className="mb-6">
+      <h3 className="text-sm font-medium text-muted-foreground mb-2 px-1">{title}</h3>
+      <div className="space-y-3">
+        {children}
+      </div>
+    </div>
+  );
 }
 
 export function SettingsPage({ onBack }: SettingsPageProps) {
@@ -23,50 +33,43 @@ export function SettingsPage({ onBack }: SettingsPageProps) {
 
   return (
     <PageLayout title="系统设置" onBack={onBack}>
-      <div className="flex-1 p-4 space-y-3 pb-28">
-        <SettingItem
-          icon={Palette}
-          title="主题切换"
-          action={<ThemeToggle />}
-        />
-
-        <SettingItem
-          icon={Volume2}
-          title="音量调节"
-          action={
-            <div className="flex items-center gap-3">
-              <span className="text-sm text-muted-foreground w-10 text-right">{Math.round(volume * 100)}%</span>
-              <Slider
-                value={[volume * 100]}
-                onValueChange={([value]) => setVolume(value / 100)}
-                min={0}
-                max={100}
-                step={1}
-                className="w-32"
-              />
-            </div>
-          }
-        />
-
-        <NeteaseLogin />
-
-        <QualitySelect />
-
-        <AggregatedSourceSelect />
-
-        <PlaylistImport />
-        
-        {/* <SettingItem
-          icon={Server}
-          title="负载均衡"
-          onClick={() => setShowLoadBalance(true)}
-          showChevron
+      <div className="flex-1 p-4 pb-28 overflow-y-auto">
+        <Section title="偏好设置">
+          <SettingItem
+            icon={Palette}
+            title="主题切换"
+            action={<ThemeToggle />}
           />
-          <LoadBalanceDialog open={showLoadBalance} onOpenChange={setShowLoadBalance} /> */}
+          <QualitySelect />
+          <AggregatedSourceSelect />
+          <SettingItem
+            icon={Volume2}
+            title="音量调节"
+            action={
+              <div className="flex items-center gap-3">
+                <span className="text-sm text-muted-foreground w-10 text-right">{Math.round(volume * 100)}%</span>
+                <Slider
+                  value={[volume * 100]}
+                  onValueChange={([value]) => setVolume(value / 100)}
+                  min={0}
+                  max={100}
+                  step={1}
+                  className="w-32"
+                />
+              </div>
+            }
+          />
+        </Section>
 
-        <SyncConfig /> 
+        <Section title="账号数据">
+          <NeteaseLogin />
+          <SyncConfig />
+          <PlaylistImport />
+        </Section>
 
-        <UpdateCheck />
+        <Section title="关于系统">
+          <UpdateCheck />
+        </Section>
       </div>
     </PageLayout>
   );

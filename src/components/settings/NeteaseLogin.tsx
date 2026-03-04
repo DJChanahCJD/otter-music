@@ -4,26 +4,29 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { SettingItem } from "./SettingItem";
-import { getQrKey, checkQrStatus, getMyInfo } from "@/lib/netease/netease-api";
+import { getQrKey, checkQrStatus, getMyInfo, NETEASE_COOKIE_KEY } from "@/lib/netease/netease-api";
 import { UserProfile } from "@/lib/netease/netease-types";
 import toast from "react-hot-toast";
 
+const STATUS_MESSAGES = {
+  loading: "正在获取二维码...",
+  waiting: "请使用网易云 APP 扫码",
+  scanned: "扫描成功，请在手机确认",
+  expired: "二维码已过期",
+  success: "登录成功！正在获取信息...",
+};
+
+type QrStatus = keyof typeof STATUS_MESSAGES;
+
 export function NeteaseLogin() {
   const [user, setUser] = useState<UserProfile | null>(null);
-  const [loading, setLoading] = useState(false);
   const [showDialog, setShowDialog] = useState(false);
+  const [loading, setLoading] = useState(false);
   
-  // QR Code state
   const [qrUrl, setQrUrl] = useState("");
-  const [qrStatus, setQrStatus] = useState<"loading" | "waiting" | "scanned" | "expired" | "success">("loading");
-  const [unikey, setUnikey] = useState("");
+  const [qrStatus, setQrStatus] = useState<QrStatus>("loading");
   
   const timerRef = useRef<NodeJS.Timeout | null>(null);
-
-  useEffect(() => {
-    checkLoginStatus();
-    return () => clearTimer();
-  }, []);
 
   const clearTimer = () => {
     if (timerRef.current) {
@@ -32,20 +35,21 @@ export function NeteaseLogin() {
     }
   };
 
+  useEffect(() => {
+    checkLoginStatus();
+    return clearTimer;
+  }, []);
+
   const checkLoginStatus = async () => {
-    const cookie = localStorage.getItem("cookie:_netease");
-    if (cookie) {
-      try {
-        const res = await getMyInfo(cookie);
-        if (res.data?.profile) {
-          setUser(res.data.profile);
-        } else {
-          // Cookie might be invalid
-          // localStorage.removeItem("cookie:_netease");
-        }
-      } catch (e) {
-        console.error("Failed to get user info:", e);
-      }
+    const cookie = localStorage.getItem(NETEASE_COOKIE_KEY);
+    if (!cookie) return;
+
+    try {
+      const res = await getMyInfo(cookie);
+      const userProfile = res?.data?.profile || res?.profile; 
+      if (userProfile) setUser(userProfile);
+    } catch (e) {
+      console.error("Failed to get user info:", e);
     }
   };
 
@@ -56,13 +60,11 @@ export function NeteaseLogin() {
     
     try {
       const res = await getQrKey();
-      if (res.data?.unikey) {
-        const key = res.data.unikey;
-        setUnikey(key);
+      const key = res.data?.unikey;
+      if (key) {
         setQrUrl(`https://music.163.com/login?codekey=${key}`);
         setQrStatus("waiting");
         
-        // Start polling
         clearTimer();
         timerRef.current = setInterval(() => pollStatus(key), 2000);
       } else {
@@ -81,15 +83,13 @@ export function NeteaseLogin() {
   const pollStatus = async (key: string) => {
     try {
       const res = await checkQrStatus(key);
-      const code = res.data.code;
+      const code = res.data?.code || res.code;
+      const cookie = res.cookie || res.data?.cookie;
 
-      if (code === 800) {
+      if ([800, 8821].includes(code)) {
         setQrStatus("expired");
         clearTimer();
-      } else if (code === 8821) {
-        setQrStatus("expired");
-        clearTimer();
-        toast.error(res.data.message || "登录环境异常，请稍后再试");
+        if (code === 8821) toast.error(res.data?.message || res.message || "登录环境异常，请稍后再试");
       } else if (code === 801) {
         setQrStatus("waiting");
       } else if (code === 802) {
@@ -98,12 +98,12 @@ export function NeteaseLogin() {
         setQrStatus("success");
         clearTimer();
         
-        if (res.data.cookie) {
-          localStorage.setItem("cookie:_netease", res.data.cookie);
-          localStorage.setItem("cookie:netease", res.data.cookie);
+        if (cookie) {
+          localStorage.setItem(NETEASE_COOKIE_KEY, cookie);
+          localStorage.setItem("cookie:netease", cookie);
           toast.success("登录成功");
           setShowDialog(false);
-          checkLoginStatus();
+          setTimeout(checkLoginStatus, 300);
         } else {
           toast.error("登录成功但未获取到凭证");
         }
@@ -114,14 +114,10 @@ export function NeteaseLogin() {
   };
 
   const handleLogout = () => {
-    localStorage.removeItem("cookie:_netease");
+    localStorage.removeItem(NETEASE_COOKIE_KEY);
     localStorage.removeItem("cookie:netease");
     setUser(null);
     toast.success("已退出登录");
-  };
-
-  const handleRefreshQr = () => {
-    startLogin();
   };
 
   return (
@@ -133,12 +129,11 @@ export function NeteaseLogin() {
         action={
           user ? (
             <Button variant="ghost" size="sm" onClick={handleLogout} className="text-destructive hover:text-destructive">
-              <LogOut className="w-4 h-4 mr-1" />
-              退出
+              <LogOut className="w-4 h-4 mr-1" /> 退出
             </Button>
           ) : (
-            <Button variant="secondary" size="sm" onClick={startLogin}>
-              登录
+            <Button variant="secondary" size="sm" onClick={startLogin} disabled={loading}>
+              {loading && <Loader2 className="w-3 h-3 mr-2 animate-spin" />} 登录
             </Button>
           )
         }
@@ -153,9 +148,6 @@ export function NeteaseLogin() {
               <div className="font-medium truncate">{user.nickname}</div>
               <div className="text-xs text-muted-foreground truncate">{user.signature || "暂无签名"}</div>
             </div>
-            <div className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded">
-              Lv.{user.level || "?"}
-            </div>
           </div>
         )}
       </SettingItem>
@@ -167,9 +159,7 @@ export function NeteaseLogin() {
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>网易云扫码登录</DialogTitle>
-            <DialogDescription>
-              请使用网易云音乐 APP 扫码登录
-            </DialogDescription>
+            <DialogDescription>请使用网易云音乐 APP 扫码登录</DialogDescription>
           </DialogHeader>
           
           <div className="flex flex-col items-center justify-center py-6 space-y-4">
@@ -202,24 +192,15 @@ export function NeteaseLogin() {
               <div className="w-[180px] h-[180px] flex flex-col items-center justify-center border rounded-lg bg-muted/20 gap-3">
                 <ScanLine className="w-8 h-8 text-muted-foreground/50" />
                 <span className="text-sm text-muted-foreground">二维码已失效</span>
-                <Button size="sm" variant="outline" onClick={handleRefreshQr}>
-                  <RefreshCw className="w-3 h-3 mr-2" />
-                  刷新
+                <Button size="sm" variant="outline" onClick={startLogin}>
+                  <RefreshCw className="w-3 h-3 mr-2" /> 刷新
                 </Button>
               </div>
             )}
 
             <div className="text-center space-y-1">
-              <p className="text-sm font-medium">
-                {qrStatus === "loading" && "正在获取二维码..."}
-                {qrStatus === "waiting" && "请使用网易云 APP 扫码"}
-                {qrStatus === "scanned" && "扫描成功，请在手机确认"}
-                {qrStatus === "expired" && "二维码已过期"}
-                {qrStatus === "success" && "登录成功！正在跳转..."}
-              </p>
-              <p className="text-xs text-muted-foreground">
-                为了您的账号安全，我们仅保存登录凭证(Cookie)
-              </p>
+              <p className="text-sm font-medium">{STATUS_MESSAGES[qrStatus]}</p>
+              <p className="text-xs text-muted-foreground">为了您的账号安全，我们仅保存登录凭证(Cookie)</p>
             </div>
           </div>
         </DialogContent>

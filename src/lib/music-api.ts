@@ -136,7 +136,7 @@ export const musicApi = {
         key,
         async () => {
           try {
-            const res = await getSongUrl(id, br * 1000, cookieOf(source) || '');
+            const res = await getSongUrl(id, br * 1000);
             return res.data?.data?.[0]?.url || null;
           } catch (e) {
             console.error('getSongUrl failed:', e);
@@ -196,7 +196,7 @@ export const musicApi = {
         key,
         async () => {
           try {
-            const song = await getSongDetail(idStr, cookieOf(source) || '');
+            const song = await getSongDetail(idStr);
             const url = song?.al?.picUrl;
             return url ? `${url}?param=${size}y${size}` : null;
           } catch (e) {
@@ -239,7 +239,7 @@ export const musicApi = {
         key,
         async () => {
           try {
-            const res = await getLyric(id, cookieOf(source) || '');
+            const res = await getLyric(id);
             return {
               lyric: res.data?.lrc?.lyric || '',
               tlyric: res.data?.tlyric?.lyric || ''
