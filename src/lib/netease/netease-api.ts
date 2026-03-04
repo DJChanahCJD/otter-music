@@ -190,7 +190,7 @@ export const getUserPlaylists = (userId: string, cookie: string = '') =>
 
 export const getRecommendPlaylists = (cookie: string = '') => 
     cachedFetch<{ result: RecommendPlaylist[] }>(
-        `netease:recommend`, 
+        `netease:recommend:${cookie.slice(-16)}`, 
         () => fetchLocalApi('/music-api/netease/recommend', { cookie }), 
         TTL_SHORT
     );

@@ -132,6 +132,29 @@ export const musicApi = {
     };
   },
 
+  /* ---------------- 最佳匹配搜索（串行） ---------------- */
+
+  async searchBestMatch(
+    query: string,
+    sources: MusicSource[],
+    predicate: (track: MusicTrack) => boolean,
+    count = 5,
+    signal?: AbortSignal
+  ): Promise<MusicTrack | null> {
+    for (const source of sources) {
+      if (signal?.aborted) return null;
+      try {
+        const res = await this.search(query, source, 1, count, signal);
+        const match = res.items.find(predicate);
+        if (match) return match;
+      } catch (e) {
+        if (isAbort(e)) throw e;
+        console.warn(`Search failed for source: ${source}`, e);
+      }
+    }
+    return null;
+  },
+
   /* ---------------- URL ---------------- */
 
   async getUrl(id: string, source: MusicSource, br = 192): Promise<string | null> {
