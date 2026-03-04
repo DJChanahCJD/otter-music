@@ -39,7 +39,7 @@ export function MusicLayout({ children, player, tabBar, header, hidePlayer, clas
       {!hidePlayer && (
         <div className={cn(
           "flex-none z-50 absolute left-0 right-0 transition-all duration-300",
-          isTab ? "bottom-16" : "bottom-0"
+          isTab ? "bottom-(--now-playing-safe-height)" : "bottom-0"
         )}>
           {player}
         </div>

@@ -117,7 +117,7 @@ function RootLayout() {
   return (
     <>
       <MusicLayout
-        hidePlayer={isFullScreenPlayer}
+        hidePlayer={isFullScreenPlayer || !currentTrack}
         isTab={isTab}
         player={
           <MusicNowPlayingBar 

@@ -22,18 +22,26 @@ import { toast } from "react-hot-toast";
 
 const PAGE_SIZE = 35;
 
+interface MarketPlaylist {
+  id: number | string;
+  name: string;
+  coverImgUrl: string;
+  playCount: number;
+  userId?: number | string;
+}
+
 export function PlaylistMarket() {
   const navigate = useNavigate();
   const activeCategory = useMusicStore((s) => s.lastPlaylistCategory);
   const setActiveCategory = useMusicStore((s) => s.setLastPlaylistCategory);
-  const [items, setItems] = useState<any[]>([]);
+  const [items, setItems] = useState<MarketPlaylist[]>([]);
   const [loading, setLoading] = useState(true);
   
   // 更新数据结构，加入 recommend
   const [mineData, setMineData] = useState<{
-    recommend: any[];
-    created: any[];
-    subscribed: any[];
+    recommend: MarketPlaylist[];
+    created: MarketPlaylist[];
+    subscribed: MarketPlaylist[];
   } | null>(null);
   
   // 增加 recommend 选项，并设为默认
@@ -43,7 +51,7 @@ export function PlaylistMarket() {
   const [hasMore, setHasMore] = useState(true);
   const [isFetching, setIsFetching] = useState(false);
   const observerTarget = useRef<HTMLDivElement>(null);
-
+  
   const displayFilters = useMemo(() => {
     const baseFilters = [
       RECOMMEND_FILTERS[0],
@@ -90,7 +98,7 @@ export function PlaylistMarket() {
             getRecommendPlaylists(cookie).catch(() => null)
           ]);
 
-          let recommend = [];
+          let recommend: MarketPlaylist[] = [];
           if (recRes) {
             const rawRecommend = (recRes as any)?.data?.result || (recRes as any)?.result;
             if (rawRecommend && Array.isArray(rawRecommend)) {
@@ -104,15 +112,15 @@ export function PlaylistMarket() {
           }
 
           if (userRes?.code === 200) {
-            const all = userRes.playlist.map((i: any) => ({
+            const all: MarketPlaylist[] = userRes.playlist.map((i: any) => ({
               id: i.id,
               name: i.name,
               coverImgUrl: forceHttps(i.coverImgUrl),
               playCount: i.playCount,
               userId: i.userId,
             }));
-            const created = all.filter((p: any) => String(p.userId) === String(userId));
-            const subscribed = all.filter((p: any) => String(p.userId) !== String(userId));
+            const created = all.filter((p) => String(p.userId) === String(userId));
+            const subscribed = all.filter((p) => String(p.userId) !== String(userId));
             
             setMineData({ recommend, created, subscribed });
             setHasMore(false);
@@ -133,7 +141,7 @@ export function PlaylistMarket() {
             const rawList = isToplist
               ? (res.data as { list: Toplist[] }).list
               : (res.data as { playlists: UserPlaylist[] }).playlists;
-            const newItems = rawList.map((i: any) => ({
+            const newItems: MarketPlaylist[] = rawList.map((i: any) => ({
               id: i.id,
               name: i.name,
               coverImgUrl: forceHttps(i.coverImgUrl),
@@ -187,7 +195,7 @@ export function PlaylistMarket() {
     return () => observer.disconnect();
   }, [offset, hasMore, isFetching, loading, activeCategory, fetchItems]);
 
-  const renderGrid = (list: any[]) => (
+  const renderGrid = (list: MarketPlaylist[]) => (
     <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 gap-x-3 gap-y-4">
       {list.map((item) => (
         <div

@@ -50,7 +50,7 @@ export function MusicTabBar() {
   const activeTab = getActiveTab(location.pathname);
 
   return (
-    <nav className="flex items-center justify-around bg-card/95 backdrop-blur-xl border-t border-border/50 px-2 pt-2 pb-2 pb-safe">
+    <nav className="flex min-h-(--tab-bar-safe-height) items-start justify-around bg-card/95 backdrop-blur-xl border-t border-border/50 px-2 pt-2 pb-[calc(0.5rem+var(--safe-area-bottom))]">
       {tabs.map((tab) => {
         const isActive = activeTab === tab.id;
         const Icon = tab.icon;
@@ -59,7 +59,7 @@ export function MusicTabBar() {
             key={tab.id}
             to={tab.path}
             className={cn(
-              "flex flex-col items-center gap-0.5 px-3 py-1 transition-colors min-w-[56px]",
+              "flex min-h-11 min-w-[56px] flex-col items-center justify-center gap-0.5 px-3 py-1 transition-colors",
               isActive ? "text-primary" : "text-muted-foreground"
             )}
             aria-label={tab.label}
