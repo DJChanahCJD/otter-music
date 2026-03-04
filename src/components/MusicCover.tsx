@@ -29,7 +29,7 @@ export function MusicCover({
     return (
       <div
         className={cn(
-          "bg-muted flex items-center justify-center shrink-0",
+          "w-full h-full bg-muted flex items-center justify-center shrink-0",
           className
         )}
       >

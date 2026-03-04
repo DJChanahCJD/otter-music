@@ -3,12 +3,15 @@ import { UserProfile, UserPlaylist, PlaylistDetail, SongDetail, SearchResult, Re
 import { MusicTrack } from '@/types/music';
 import { cachedFetch } from "@/lib/utils/cache";
 import { API_URL } from "@/lib/api/config";
+import { Capacitor, CapacitorHttp } from '@capacitor/core';
 
-const TTL_SHORT = 60 * 60 * 1000; // 1 hour
-const TTL_MEDIUM = 24 * 60 * 60 * 1000; // 1 day
+const TTL_SHORT = 60 * 60 * 1000;
+const TTL_MEDIUM = 24 * 60 * 60 * 1000;
 
-const BASE_URL = import.meta.env.DEV ? '/api/netease' : 'https://music.163.com';
-const EAPI_BASE_URL = import.meta.env.DEV ? '/api/netease' : 'https://interface3.music.163.com';
+// 确保移动端（即便是开发环境连着手机测）也能指向绝对路径，避免报错
+const IS_NATIVE = Capacitor.isNativePlatform();
+const BASE_URL = (import.meta.env.DEV && !IS_NATIVE) ? '/api/netease' : 'https://music.163.com';
+const EAPI_BASE_URL = (import.meta.env.DEV && !IS_NATIVE) ? '/api/netease' : 'https://interface3.music.163.com';
 
 const PC_USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
 const MOBILE_USER_AGENT = 'Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 MicroMessenger/8.0.27';
@@ -22,9 +25,7 @@ export const NETEASE_COOKIE_KEY = "cookie:_netease";
 export const getStoredCookie = () => localStorage.getItem(NETEASE_COOKIE_KEY) || "";
 
 const getRandomDomesticIp = () => `113.108.${Math.floor(Math.random() * 255)}.${Math.floor(Math.random() * 255)}`;
-
 const getIpForRequest = (cookie: string) => cookie.includes('MUSIC_U') ? '' : getRandomDomesticIp();
-
 const createSecretKey = (size: number) => Array.from({ length: size }, () => '012345679abcdef'[Math.floor(Math.random() * 15)]).join('');
 
 const buildVisitorCookie = () => {
@@ -51,32 +52,72 @@ function buildCookie(rawCookie: string = ''): string {
     return `os=pc; appver=2.9.7; mode=31; ${finalCookie}`;
 }
 
+// 移动端允许写入真实 Cookie 和 UA，不再需要 X-Real- 伪装
 function buildHeaders(cookie: string, ua: string, forceIp?: string): Record<string, string> {
     const ip = forceIp || getIpForRequest(cookie);
+    const cookieStr = buildCookie(cookie);
+
+    if (IS_NATIVE) {
+        return {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'Cookie': cookieStr,
+            'User-Agent': ua,
+            'Referer': 'https://music.163.com',
+            ...(ip ? { 'X-Real-IP': ip, 'X-Forwarded-For': ip } : {})
+        };
+    }
+
     return {
         'Content-Type': 'application/x-www-form-urlencoded',
-        'X-Real-Cookie': buildCookie(cookie),
+        'X-Real-Cookie': cookieStr,
         'X-Real-UA': ua,
         ...(ip ? { 'X-Real-IP': ip, 'X-Forwarded-For': ip } : {})
     };
 }
 
 /* =========================================================
- * 底层请求函数
+ * 底层跨端请求函数 (核心逻辑)
  * ========================================================= */
+
+// ✅ 修复 3: 将底层 fetch 抽离，智能判断运行平台
+async function crossFetch(url: string, options: { method: string; headers: Record<string, string>; body: string }) {
+    if (IS_NATIVE) {
+        // 走 Capacitor 的 Native HTTP，彻底绕开 CORS
+        const res = await CapacitorHttp.request({
+            method: options.method,
+            url,
+            headers: options.headers,
+            data: options.body,
+        });
+        
+        if (res.status >= 400) throw new Error(`Native API Error: ${res.status}`);
+        
+        const rawCookie = res.headers['Set-Cookie'] || res.headers['set-cookie'] || '';
+        const cookieStr = Array.isArray(rawCookie) ? rawCookie.join('; ') : rawCookie;
+
+        return {
+            data: typeof res.data === 'string' ? JSON.parse(res.data) : res.data,
+            setCookie: cleanCookie(cookieStr)
+        };
+    }
+
+    // Web / PC 端走正常 fetch (经由 Vite 代理)
+    const response = await fetch(url, options);
+    if (!response.ok) throw new Error(`Web API Error: ${response.status}`);
+    
+    return {
+        data: await response.json(),
+        setCookie: cleanCookie(response.headers.get('set-cookie'))
+    };
+}
 
 async function requestWeapi<T = any>(url: string, data: any, cookie: string = '') {
     const finalCookie = cookie || getStoredCookie();
     const headers = buildHeaders(finalCookie, PC_USER_AGENT);
     const params = new URLSearchParams(weapi(data) as any).toString();
 
-    const response = await fetch(url, { method: 'POST', headers, body: params });
-    if (!response.ok) throw new Error(`NetEase WEAPI Error: ${response.status}`);
-    
-    return { 
-        data: await response.json() as T, 
-        cookie: cleanCookie(response.headers.get('set-cookie')) 
-    };
+    const { data: resData, setCookie } = await crossFetch(url, { method: 'POST', headers, body: params });
+    return { data: resData as T, cookie: setCookie };
 }
 
 async function requestEapi<T = any>(url: string, path: string, data: any, cookie: string = '') {
@@ -84,15 +125,13 @@ async function requestEapi<T = any>(url: string, path: string, data: any, cookie
     const headers = buildHeaders(finalCookie, MOBILE_USER_AGENT);
     const params = new URLSearchParams(eapi(path, data) as any).toString();
 
-    const response = await fetch(url, { method: 'POST', headers, body: params });
-    if (!response.ok) throw new Error(`NetEase EAPI Error: ${response.status}`);
-
-    return { data: await response.json() as T };
+    const { data: resData } = await crossFetch(url, { method: 'POST', headers, body: params });
+    return { data: resData as T };
 }
 
-// 内部代理 API 通用封装，极大减少 fetch 样板代码
 async function fetchLocalApi<T>(endpoint: string, body?: any): Promise<T> {
     const url = endpoint.startsWith('http') ? endpoint : `${API_URL}${endpoint}`;
+    // 如果你在手机端遇到本地后端也跨域的问题，可以直接用 CapacitorHttp 替换这里的 fetch
     const res = await fetch(url, {
         method: body ? 'POST' : 'GET',
         body: body ? JSON.stringify(body) : undefined,
@@ -107,12 +146,11 @@ async function fetchLocalApi<T>(endpoint: string, body?: any): Promise<T> {
 }
 
 /* =========================================================
- * 业务 API
+ * 业务 API (无变更，复用底层的跨端重构)
  * ========================================================= */
 
 export async function getSongUrl(id: string, br: number = 999000, cookie: string = '') {
     const realId = id.replace(/^(netrack_|ne_track_)/, '');
-    
     try {
         const eapiRes = await requestEapi<{ data: { url: string, br: number, size: number, freeTrialInfo?: any }[] }>(
             `${EAPI_BASE_URL}/eapi/song/enhance/player/url`,
@@ -120,7 +158,6 @@ export async function getSongUrl(id: string, br: number = 999000, cookie: string
             { ids: `[${realId}]`, br, header: { os: 'pc', appver: '2.9.7' } },
             cookie
         );
-        
         const trackData = eapiRes.data?.data?.[0];
         if (trackData?.url && !trackData.freeTrialInfo) return eapiRes;
     } catch (e) {
@@ -135,7 +172,6 @@ export async function getSongUrl(id: string, br: number = 999000, cookie: string
 }
 
 export const getQrKey = () => fetchLocalApi<any>('/music-api/netease/login/qr/key');
-
 export const checkQrStatus = (key: string) => fetchLocalApi<any>(`/music-api/netease/login/qr/check?key=${key}&timestamp=${Date.now()}`);
 
 export const getMyInfo = (cookie: string = '') => 
@@ -192,11 +228,9 @@ export async function search(keyword: string, type: number = 1, page: number = 1
     const headers = buildHeaders(finalCookie, PC_USER_AGENT, getRandomDomesticIp());
     const params = new URLSearchParams({ s: keyword, type: String(type), offset: String((page - 1) * limit), limit: String(limit) });
     
-    const response = await fetch(`${BASE_URL}/api/search/pc`, { method: 'POST', headers, body: params.toString() });
-    if (!response.ok) throw new Error(`NetEase Search API Error: ${response.status}`);
-    
-    const json = await response.json();
-    return { data: json as { result: SearchResult, code: number } };
+    // 直接复用我们万能的跨端 fetch
+    const { data } = await crossFetch(`${BASE_URL}/api/search/pc`, { method: 'POST', headers, body: params.toString() });
+    return { data: data as { result: SearchResult, code: number } };
 }
 
 export const getLyric = (id: string, cookie: string = '') => 

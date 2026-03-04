@@ -225,11 +225,7 @@ export function MusicSearchView({ onPlay, currentTrackId, isPlaying }: MusicSear
 
       <div className="flex-1 min-h-0">
         {!searchQuery.trim() ? (
-          <PlaylistMarket
-            onPlay={(track, list) => onPlay(track, list, "playlist_market")}
-            currentTrackId={currentTrackId}
-            isPlaying={isPlaying}
-          />
+          <PlaylistMarket />
         ) : (
           <MusicTrackList
             tracks={searchResults}

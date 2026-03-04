@@ -39,9 +39,11 @@ interface MusicState {
   quality: string;
   searchSource: MusicSource;
   aggregatedSources: MusicSource[];
+  lastPlaylistCategory: string;
   setQuality: (quality: string) => void;
   setSearchSource: (source: MusicSource) => void;
   setAggregatedSources: (sources: MusicSource[]) => void;
+  setLastPlaylistCategory: (category: string) => void;
 
   // --- Search State (Not Persisted) ---
   searchQuery: string;
@@ -170,9 +172,11 @@ export const useMusicStore = create<MusicState>()(
       quality: "192",
       searchSource: "all",
       aggregatedSources: ['joox', 'netease'],
+      lastPlaylistCategory: "",
       setQuality: (quality) => set({ quality }),
       setSearchSource: (searchSource) => set({ searchSource }),
       setAggregatedSources: (aggregatedSources) => set({ aggregatedSources }),
+      setLastPlaylistCategory: (lastPlaylistCategory) => set({ lastPlaylistCategory }),
 
       // --- Search State ---
       searchQuery: "", searchIntent: null, searchResults: [], searchLoading: false, searchHasMore: false, searchPage: 0,
@@ -300,6 +304,7 @@ export const useMusicStore = create<MusicState>()(
         quality: state.quality,
         searchSource: state.searchSource,
         aggregatedSources: state.aggregatedSources,
+        lastPlaylistCategory: state.lastPlaylistCategory,
       }),
     }
   )

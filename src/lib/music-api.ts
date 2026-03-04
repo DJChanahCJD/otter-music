@@ -26,14 +26,19 @@ interface RawApiTrack {
   lyric_id: string;
 }
 
+export const forceHttps = (url: string | undefined | null) => {
+    if (!url) return '';
+    return url.replace(/^http:\/\//i, 'https://');
+};
+
 const normalizeTrack = (t: RawApiTrack, source: MusicSource): MusicTrack => ({
   id: String(t.id),
   name: t.name,
   artist: Array.isArray(t.artist) ? t.artist : [t.artist],
   album: t.album,
-  pic_id: t.pic_id,
-  url_id: t.url_id,
-  lyric_id: t.lyric_id,
+  pic_id: forceHttps(t.pic_id),
+  url_id: forceHttps(t.url_id),
+  lyric_id: forceHttps(t.lyric_id),
   source,
 });
 
@@ -137,7 +142,7 @@ export const musicApi = {
         async () => {
           try {
             const res = await getSongUrl(id, br * 1000);
-            return res.data?.data?.[0]?.url || null;
+            return forceHttps(res.data?.data?.[0]?.url) || null;
           } catch (e) {
             console.error('getSongUrl failed:', e);
             return null;
@@ -186,8 +191,8 @@ export const musicApi = {
     const idStr = String(idOrUrl || '');
     if (idStr.startsWith('http')) {
       return idStr.includes('163.com')
-        ? `${idStr}?param=${size}y${size}`
-        : idStr;
+        ? forceHttps(`${idStr}?param=${size}y${size}`)
+        : forceHttps(idStr);
     }
 
     if (source === '_netease') {
@@ -198,7 +203,7 @@ export const musicApi = {
           try {
             const song = await getSongDetail(idStr);
             const url = song?.al?.picUrl;
-            return url ? `${url}?param=${size}y${size}` : null;
+            return url ? forceHttps(`${url}?param=${size}y${size}`) : null;
           } catch (e) {
             console.error('getPic failed:', e);
             return null;

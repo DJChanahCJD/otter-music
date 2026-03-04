@@ -16,6 +16,7 @@ import {
   MineRoute,
   PlaylistDetailRoute,
   LocalMusicRoute,
+  MarketPlaylistDetailRoute,
   QueueRoute,
   HistoryRoute,
   SettingsRoute
@@ -120,6 +121,7 @@ function RootLayout() {
         player={
           <MusicNowPlayingBar 
             onOpenFullScreen={() => setStoreFullScreen(true)} 
+            isTab={isTab}
           />
         }
         tabBar={<MusicTabBar />}
@@ -183,6 +185,10 @@ export const router = createBrowserRouter([
       {
         path: "local",
         element: <LocalMusicRoute />,
+      },
+      {
+        path: "playlist-market/:id",
+        element: <MarketPlaylistDetailRoute />,
       },
       {
         path: "queue",

@@ -6,29 +6,18 @@ import { Toplist, UserPlaylist } from "@/lib/netease/netease-types";
 import { cachedFetch } from "@/lib/utils/cache";
 import { MusicCover } from "@/components/MusicCover";
 import { Loader2, Headphones, LayoutGrid } from "lucide-react";
-import { MarketPlaylistDetail } from "./MarketPlaylistDetail";
 import { PlaylistCategorySelector } from "./PlaylistCategorySelector";
-import { MusicTrack } from "@/types/music";
 import { cn } from "@/lib/utils";
+import { useNavigate } from "react-router-dom";
+import { useMusicStore } from "@/store/music-store";
+import { forceHttps } from "@/lib/music-api";
 
-interface PlaylistMarketProps {
-  onPlay: (track: MusicTrack, list: MusicTrack[]) => void;
-  currentTrackId?: string;
-  isPlaying?: boolean;
-}
-
-export function PlaylistMarket({
-  onPlay,
-  currentTrackId,
-  isPlaying,
-}: PlaylistMarketProps) {
-  const [activeCategory, setActiveCategory] = useState<string>("");
+export function PlaylistMarket() {
+  const navigate = useNavigate();
+  const activeCategory = useMusicStore((s) => s.lastPlaylistCategory);
+  const setActiveCategory = useMusicStore((s) => s.setLastPlaylistCategory);
   const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedPlaylistId, setSelectedPlaylistId] = useState<string | null>(
-    null,
-  );
-  const [isDetailOpen, setIsDetailOpen] = useState(false);
 
   const [offset, setOffset] = useState(0);
   const [hasMore, setHasMore] = useState(true);
@@ -85,7 +74,7 @@ export function PlaylistMarket({
           const newItems = rawList.map((i: any) => ({
             id: i.id,
             name: i.name,
-            coverImgUrl: i.coverImgUrl,
+            coverImgUrl: forceHttps(i.coverImgUrl),
             playCount: i.playCount,
           }));
 
@@ -155,7 +144,7 @@ export function PlaylistMarket({
                     size="sm"
                     onClick={() => setActiveCategory(f.id)}
                     className={cn(
-                      "h-7 px-3 rounded-full transition-all text-xs font-medium whitespace-nowrap shrink-0",
+                      "h-8 px-3 rounded-full transition-all text-xs font-medium whitespace-nowrap shrink-0",
                       activeCategory === f.id
                         ? "bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm"
                         : "text-muted-foreground hover:text-foreground bg-secondary/30"
@@ -165,7 +154,7 @@ export function PlaylistMarket({
                   </Button>
                 ))}
                 {/* Spacer matching mask fade width to ensure last item visibility */}
-                <div className="w-12 shrink-0" />
+                <div className="w-8 shrink-0" />
              </div>
           </div>
 
@@ -177,9 +166,9 @@ export function PlaylistMarket({
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-7 w-7 p-0 rounded-full shrink-0 bg-secondary/50 hover:bg-secondary"
+                className="h-8 w-8 p-0 rounded-full shrink-0 bg-secondary/50 hover:bg-secondary"
               >
-                <LayoutGrid className="h-3.5 w-3.5 text-muted-foreground" />
+                <LayoutGrid className="h-4 w-4 text-muted-foreground" />
               </Button>
             }
           />
@@ -203,8 +192,7 @@ export function PlaylistMarket({
                   key={item.id}
                   className="group flex flex-col gap-2.5 transition-all hover:translate-y-[-4px]"
                   onClick={() => {
-                    setSelectedPlaylistId(String(item.id));
-                    setIsDetailOpen(true);
+                    navigate(`/playlist-market/${item.id}`);
                   }}
                 >
                   <div className="relative aspect-square rounded-md overflow-hidden shadow-md ring-1 ring-black/5 hover:shadow-xl transition-shadow cursor-pointer">
@@ -252,16 +240,6 @@ export function PlaylistMarket({
           </div>
         )}
       </main>
-
-      <MarketPlaylistDetail
-        playlistId={selectedPlaylistId}
-        open={isDetailOpen}
-        onOpenChange={setIsDetailOpen}
-        onBack={() => setIsDetailOpen(false)}
-        onPlay={onPlay}
-        currentTrackId={currentTrackId}
-        isPlaying={isPlaying}
-      />
     </div>
   );
 }

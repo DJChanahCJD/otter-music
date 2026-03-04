@@ -17,6 +17,7 @@ const QueuePage = lazy(() => import("@/components/QueuePage").then(m => ({ defau
 const HistoryPage = lazy(() => import("@/components/HistoryPage").then(m => ({ default: m.HistoryPage })));
 const SettingsPage = lazy(() => import("@/components/SettingsPage").then(m => ({ default: m.SettingsPage })));
 const LocalMusicPage = lazy(() => import("@/components/LocalMusicPage").then(m => ({ default: m.LocalMusicPage })));
+const MarketPlaylistDetail = lazy(() => import("@/components/PlaylistMarket/MarketPlaylistDetail").then(m => ({ default: m.MarketPlaylistDetail })));
 
 export function SearchRoute() {
   const { handlePlay } = usePlayHelper();
@@ -131,6 +132,26 @@ export function LocalMusicRoute() {
     <Suspense fallback={<PageLoader />}>
       <LocalMusicPage
         onPlay={handlePlay}
+        currentTrackId={currentTrack?.id}
+        isPlaying={isPlaying}
+      />
+    </Suspense>
+  );
+}
+
+export function MarketPlaylistDetailRoute() {
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const { handlePlay } = usePlayHelper();
+  const { queue, currentIndex, isPlaying } = useMusicStore();
+  const currentTrack = queue[currentIndex] || null;
+
+  return (
+    <Suspense fallback={<PageLoader />}>
+      <MarketPlaylistDetail
+        playlistId={id || null}
+        onBack={() => navigate(-1)}
+        onPlay={(track, list) => handlePlay(track, list, "playlist_market")}
         currentTrackId={currentTrack?.id}
         isPlaying={isPlaying}
       />

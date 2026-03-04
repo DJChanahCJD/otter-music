@@ -8,12 +8,14 @@ import { PlayerQueuePopover } from "./PlayerQueuePopover";
 import { MusicCover } from "./MusicCover";
 import { useCallback } from "react";
 import toast from "react-hot-toast";
+import { cn } from "@/lib/utils";
 
 interface MusicNowPlayingBarProps {
   onOpenFullScreen?: () => void;
+  isTab?: boolean;
 }
 
-export function MusicNowPlayingBar({ onOpenFullScreen }: MusicNowPlayingBarProps) {
+export function MusicNowPlayingBar({ onOpenFullScreen, isTab = true }: MusicNowPlayingBarProps) {
   const {
     isPlaying,
     currentAudioTime,
@@ -63,34 +65,63 @@ export function MusicNowPlayingBar({ onOpenFullScreen }: MusicNowPlayingBarProps
   const strokeDashoffset = circumference * (1 - progress / 100);
 
   if (!currentTrack) {
-    return undefined;
+    return null; // 使用 null 替代 undefined 更符合 React 规范
   }
 
   return (
-    <div className="px-3">
+    <div className={cn(isTab ? "px-3" : "w-full")}>
       <div
-        className="flex items-center gap-2 rounded-xl bg-card/95 px-2 py-1.5 shadow-md cursor-pointer border border-border/50 backdrop-blur-sm"
+        className={cn(
+          "flex items-center cursor-pointer backdrop-blur-sm transition-all duration-300",
+          isTab
+            ? "gap-2 px-2 py-1.5 rounded-xl bg-card/95 shadow-md border border-border/50"
+            : "gap-3 px-4 py-2.5 bg-background/95 border-t border-border/50 pb-[calc(0.75rem+env(safe-area-inset-bottom))]"
+        )}
         onClick={onOpenFullScreen}
       >
         {/* 专辑封面 */}
-        <div className="relative h-8 w-8 shrink-0 overflow-hidden rounded-md">
+        <div 
+          className={cn(
+            "relative shrink-0 overflow-hidden rounded-md transition-all duration-300 shadow-sm",
+            isTab ? "h-8 w-8" : "h-11 w-11"
+          )}
+        >
           <MusicCover
             src={coverUrl}
             alt={currentTrack.name}
             className="w-full h-full"
-            iconClassName="h-4 w-4"
+            iconClassName={isTab ? "h-4 w-4" : "h-5 w-5"}
           />
         </div>
 
         {/* 歌曲信息 - 单行 */}
-        <p className="flex-1 min-w-0 truncate text-sm gap-1">
-          <span className="font-medium text-foreground">{currentTrack.name}</span>
-          <span className="text-muted-foreground"> - {currentTrack.artist?.join(", ")}</span>
+        <p className="flex-1 min-w-0 truncate flex items-baseline gap-1.5">
+          <span 
+            className={cn(
+              "font-medium text-foreground transition-all duration-300",
+              isTab ? "text-sm" : "text-base"
+            )}
+          >
+            {currentTrack.name}
+          </span>
+          <span 
+            className={cn(
+              "text-muted-foreground truncate transition-all duration-300",
+              isTab ? "text-xs" : "text-sm"
+            )}
+          >
+            - {currentTrack.artist?.join(", ")}
+          </span>
         </p>
 
         {/* 圆环播放按钮 */}
-        <div className="relative w-9 h-9 shrink-0">
-          {/* SVG 圆环进度 */}
+        <div 
+          className={cn(
+            "relative shrink-0 transition-all duration-300",
+            isTab ? "w-9 h-9" : "w-11 h-11"
+          )}
+        >
+          {/* SVG 圆环进度 (利用 viewBox 自动等比缩放) */}
           <svg
             className="absolute inset-0 w-full h-full"
             viewBox="0 0 40 40"
@@ -102,8 +133,8 @@ export function MusicNowPlayingBar({ onOpenFullScreen }: MusicNowPlayingBarProps
               r={radius}
               fill="none"
               stroke="currentColor"
-              strokeWidth="2"
-              className="text-muted/30"
+              strokeWidth={isTab ? "2" : "2.5"}
+              className="text-muted/30 transition-all duration-300"
             />
             {/* 进度圆环 - 从上方开始 */}
             <circle
@@ -112,7 +143,7 @@ export function MusicNowPlayingBar({ onOpenFullScreen }: MusicNowPlayingBarProps
               r={radius}
               fill="none"
               stroke="currentColor"
-              strokeWidth="2"
+              strokeWidth={isTab ? "2" : "2.5"}
               strokeLinecap="round"
               className="text-primary transition-[stroke-dashoffset] duration-300"
               strokeDasharray={circumference}
@@ -123,7 +154,7 @@ export function MusicNowPlayingBar({ onOpenFullScreen }: MusicNowPlayingBarProps
 
           {/* 播放按钮 */}
           <button
-            className="absolute inset-0 flex items-center justify-center text-primary hover:text-primary/80 transition-colors"
+            className="absolute inset-0 flex items-center justify-center text-primary hover:text-primary/80 transition-colors focus:outline-none"
             onClick={(e) => {
               e.stopPropagation();
               togglePlay();
@@ -131,9 +162,9 @@ export function MusicNowPlayingBar({ onOpenFullScreen }: MusicNowPlayingBarProps
             aria-label={isPlaying ? "暂停" : "播放"}
           >
             {isPlaying ? (
-              <Pause className="h-4 w-4 fill-current" />
+              <Pause className={cn("fill-current transition-all duration-300", isTab ? "h-4 w-4" : "h-5 w-5")} />
             ) : (
-              <Play className="h-4 w-4 fill-current ml-0.5" />
+              <Play className={cn("fill-current ml-0.5 transition-all duration-300", isTab ? "h-4 w-4" : "h-5 w-5")} />
             )}
           </button>
         </div>
@@ -149,11 +180,14 @@ export function MusicNowPlayingBar({ onOpenFullScreen }: MusicNowPlayingBarProps
           onReshuffle={reshuffle}
           trigger={
             <button
-              className="p-1.5 text-muted-foreground hover:text-foreground transition-colors shrink-0"
+              className={cn(
+                "text-muted-foreground hover:text-foreground transition-all shrink-0 focus:outline-none",
+                isTab ? "p-1.5" : "p-2 ml-1"
+              )}
               onClick={(e) => e.stopPropagation()}
               aria-label="播放列表"
             >
-              <ListVideo className="h-4 w-4" />
+              <ListVideo className={cn("transition-all duration-300", isTab ? "h-4 w-4" : "h-[22px] w-[22px]")} />
             </button>
           }
         />

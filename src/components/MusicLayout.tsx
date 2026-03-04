@@ -38,16 +38,19 @@ export function MusicLayout({ children, player, tabBar, header, hidePlayer, clas
       {/* Now Playing Bar (Floating Island) */}
       {!hidePlayer && (
         <div className={cn(
-          "flex-none z-50 absolute left-0 right-0 bottom-16"
+          "flex-none z-50 absolute left-0 right-0 transition-all duration-300",
+          isTab ? "bottom-16" : "bottom-0"
         )}>
           {player}
         </div>
       )}
 
       {/* Tab Bar */}
-      <div className="flex-none z-40">
-        {tabBar}
-      </div>
+      {isTab && (
+        <div className="flex-none z-40">
+          {tabBar}
+        </div>
+      )}
     </div>
   );
 }

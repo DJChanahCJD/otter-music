@@ -6,7 +6,6 @@ import { PlaylistDetail } from "@/lib/netease/netease-types";
 import { MusicTrack } from "@/types/music";
 import { Loader2 } from "lucide-react";
 import toast from "react-hot-toast";
-import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 
 interface MarketPlaylistDetailProps {
@@ -15,8 +14,6 @@ interface MarketPlaylistDetailProps {
   onPlay: (track: MusicTrack, list: MusicTrack[]) => void;
   currentTrackId?: string;
   isPlaying?: boolean;
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
 }
 
 function PlaylistHeader({ detail }: { detail: PlaylistDetail }) {
@@ -79,8 +76,6 @@ export function MarketPlaylistDetail({
   onPlay,
   currentTrackId,
   isPlaying,
-  open,
-  onOpenChange,
 }: MarketPlaylistDetailProps) {
   const [loading, setLoading] = useState(true);
   const [tracks, setTracks] = useState<MusicTrack[]>([]);
@@ -88,7 +83,7 @@ export function MarketPlaylistDetail({
   const [error, setError] = useState(false);
 
   useEffect(() => {
-    if (!playlistId || !open) return;
+    if (!playlistId) return;
 
     let active = true;
     setLoading(true);
@@ -122,43 +117,45 @@ export function MarketPlaylistDetail({
     return () => {
       active = false;
     };
-  }, [playlistId, open]);
+  }, [playlistId]);
+
+  if (loading) {
+    return (
+      <PageLayout title="加载中..." onBack={onBack}>
+        <div className="flex-1 flex items-center justify-center">
+          <Loader2 className="animate-spin text-muted-foreground" />
+        </div>
+      </PageLayout>
+    );
+  }
+
+  if (error) {
+    return (
+      <PageLayout title="错误" onBack={onBack}>
+        <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground gap-4">
+          <p>加载失败</p>
+          <button onClick={onBack} className="underline">
+            返回
+          </button>
+        </div>
+      </PageLayout>
+    );
+  }
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-full sm:max-w-none p-0 border-none outline-none">
-        {loading ? (
-          <PageLayout title="加载中..." onBack={onBack}>
-            <div className="flex-1 flex items-center justify-center">
-              <Loader2 className="animate-spin text-muted-foreground" />
-            </div>
-          </PageLayout>
-        ) : error ? (
-          <PageLayout title="错误" onBack={onBack}>
-            <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground gap-4">
-              <p>加载失败</p>
-              <button onClick={onBack} className="underline">
-                返回
-              </button>
-            </div>
-          </PageLayout>
-        ) : (
-          <PageLayout title={detail?.name || "歌单详情"} onBack={onBack}>
-            <div className="flex flex-col flex-1 min-h-0">
-              {detail && <PlaylistHeader detail={detail} />}
-              <div className="flex-1 min-h-0">
-                <MusicTrackList
-                  tracks={tracks}
-                  onPlay={(track) => onPlay(track, tracks)}
-                  currentTrackId={currentTrackId}
-                  isPlaying={isPlaying}
-                  emptyMessage="歌单为空"
-                />
-              </div>
-            </div>
-          </PageLayout>
-        )}
-      </SheetContent>
-    </Sheet>
+    <PageLayout title={detail?.name || "歌单详情"} onBack={onBack}>
+      <div className="flex flex-col flex-1 min-h-0">
+        {detail && <PlaylistHeader detail={detail} />}
+        <div className="flex-1 min-h-0">
+          <MusicTrackList
+            tracks={tracks}
+            onPlay={(track) => onPlay(track, tracks)}
+            currentTrackId={currentTrackId}
+            isPlaying={isPlaying}
+            emptyMessage="歌单为空"
+          />
+        </div>
+      </div>
+    </PageLayout>
   );
 }
