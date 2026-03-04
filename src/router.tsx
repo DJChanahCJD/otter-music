@@ -21,6 +21,7 @@ import {
   HistoryRoute,
   SettingsRoute
 } from "@/routes/RouteWrappers";
+import { RouteErrorPage } from "@/components/RouteErrorPage";
 
 // --- Root Layout ---
 
@@ -161,6 +162,7 @@ export const router = createBrowserRouter([
   {
     path: "/",
     element: <RootLayout />,
+    errorElement: <RouteErrorPage />,
     children: [
       {
         index: true,
