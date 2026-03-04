@@ -25,7 +25,7 @@ import { useMusicCover } from "@/hooks/useMusicCover";
 import { MusicTrack, SearchIntent, sourceLabels } from "@/types/music";
 import { useNavigate } from "react-router-dom";
 import { useMusicStore } from "@/store/music-store";
-import { toSimplified } from "@/lib/utils/music-key";
+import { toSimplified, normalizeText } from "@/lib/utils/music-key";
 import { musicApi } from "@/lib/music-api";
 import { toastUtils } from "@/lib/utils/toast";
 import {
@@ -108,15 +108,15 @@ export function MusicTrackMobileMenu({
     onOpenChange(false);
     const toastId = toastUtils.loading("正在搜索完整版...");
     try {
-      const targetName = track.name.trim().toLowerCase();
-      const targetArtist = track.artist[0].trim().toLowerCase();
+      const targetName = normalizeText(track.name);
+      const targetArtist = normalizeText(track.artist[0]);
 
       const match = await musicApi.searchBestMatch(
         `${track.name} ${track.artist[0]}`,
         aggregatedSources,
         (item) =>
-          item.name.trim().toLowerCase() === targetName &&
-          item.artist.some((a) => a.trim().toLowerCase().includes(targetArtist)),
+          normalizeText(item.name) === targetName &&
+          item.artist.some((a) => normalizeText(a).includes(targetArtist)),
         5
       );
 

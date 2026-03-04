@@ -15,7 +15,7 @@ const SOURCE_PRIORITY: MusicSource[] = Object.entries(SOURCE_WEIGHT)
   .sort(([, a], [, b]) => b - a)
   .map(([source]) => source as MusicSource);
 
-const SOURCE_RANK = Object.fromEntries(
+export const SOURCE_RANK = Object.fromEntries(
   SOURCE_PRIORITY.map((s, i) => [s, i])
 );
 

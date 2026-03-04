@@ -8,6 +8,7 @@ import { Capacitor } from "@capacitor/core";
 import { buildDownloadKey } from "@/lib/utils/download";
 import type { MusicSource } from "@/types/music";
 import toast from "react-hot-toast";
+import { handleAutoMatch } from "@/lib/audio-match";
 
 function isTrackPlayable(
   track: { source: MusicSource; id: string } | null,
@@ -202,6 +203,16 @@ export function useAudioTrackLoader(
         if (errorMessage === "LOCAL_FILE_NOT_ACCESSIBLE") {
           toast.error(`无法访问本地文件: ${currentTrack.name}`);
         } else {
+          // 尝试自动匹配其他源
+          if (useMusicStore.getState().enableAutoMatch) {
+            try {
+              const success = await handleAutoMatch(currentTrack);
+              if (success) return;
+            } catch {
+              // 忽略匹配错误，继续原有流程
+            }
+          }
+
           toast.error(`无法播放: ${currentTrack.name}`);
         }
 

@@ -1,6 +1,6 @@
 import type { MusicSource, MusicTrack, SearchPageResult, MergedMusicTrack, SongLyric } from "@/types/music";
 import { cachedFetch } from "@/lib/utils/cache";
-import { mergeAndSortTracks } from "@/lib/utils/search-helper";
+import { mergeAndSortTracks, SOURCE_RANK } from "@/lib/utils/search-helper";
 import { getMusicApiUrl } from "./api";
 import { retry } from "@/lib/utils";
 import { Capacitor } from "@capacitor/core";
@@ -151,7 +151,13 @@ export const musicApi = {
     count = 5,
     signal?: AbortSignal
   ): Promise<MusicTrack | null> {
-    for (const source of sources) {
+    const sortedSources = [...sources].sort((a, b) => {
+      const rankA = SOURCE_RANK[a] ?? 999;
+      const rankB = SOURCE_RANK[b] ?? 999;
+      return rankA - rankB;
+    });
+
+    for (const source of sortedSources) {
       if (signal?.aborted) return null;
       try {
         const res = await this.search(query, source, 1, count, signal);

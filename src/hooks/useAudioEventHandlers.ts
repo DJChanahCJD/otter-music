@@ -8,8 +8,9 @@ import { useDownloadStore } from "@/store/download-store";
 import { Capacitor } from "@capacitor/core";
 import { MediaSession } from "@jofr/capacitor-media-session";
 import { buildDownloadKey } from "@/lib/utils/download";
-import type { MusicSource, MusicTrack } from "@/types/music";
+import type { MusicSource } from "@/types/music";
 import toast from "react-hot-toast";
+import { handleAutoMatch } from "@/lib/audio-match";
 
 /** 远程重试工具函数 */
 async function retryWithRemote(audio: HTMLAudioElement, trackId: string, source: MusicSource, quality: number) {
@@ -31,37 +32,6 @@ async function retryWithRemote(audio: HTMLAudioElement, trackId: string, source:
     }
   } finally {
     setIsLoading(false);
-  }
-}
-
-/** 自动匹配免费源逻辑 */
-async function handleAutoMatch(track: MusicTrack) {
-  const toastId = toast.loading("正在搜索免费音源...", { id: `auto-match-${track.id}` });
-  try {
-    const { aggregatedSources, updateTrackInQueue } = useMusicStore.getState();
-    const targetName = track.name.trim().toLowerCase();
-    const targetArtist = track.artist[0]?.trim().toLowerCase() || "";
-
-    const match = await musicApi.searchBestMatch(
-      `${track.name} ${track.artist[0] || ""}`.trim(),
-      aggregatedSources,
-      (item) =>
-        item.id !== track.id &&
-        item.name.trim().toLowerCase() === targetName &&
-        item.artist.some((a) => a.trim().toLowerCase().includes(targetArtist)),
-      5
-    );
-
-    if (!match) {
-      toast.error("未找到可用音源", { id: toastId });
-      return;
-    }
-
-    updateTrackInQueue(track.id, match);
-    toast.success(`已自动切换至: ${match.name}（${match.source}）`, { id: toastId });
-  } catch (error) {
-    console.error("Auto match failed:", error);
-    toast.error("自动匹配失败", { id: toastId });
   }
 }
 
