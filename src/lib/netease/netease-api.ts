@@ -171,7 +171,7 @@ export async function getSongUrl(id: string, br: number = 999000, cookie: string
     );
 }
 
-export const getQrKey = () => fetchLocalApi<any>('/music-api/netease/login/qr/key');
+export const getQrKey = () => fetchLocalApi<any>(`/music-api/netease/login/qr/key?timestamp=${Date.now()}`);
 export const checkQrStatus = (key: string) => fetchLocalApi<any>(`/music-api/netease/login/qr/check?key=${key}&timestamp=${Date.now()}`);
 
 export const getMyInfo = (cookie: string = '') => 

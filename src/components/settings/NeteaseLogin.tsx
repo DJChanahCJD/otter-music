@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { User, LogOut, RefreshCw, Check, Loader2, ScanLine } from "lucide-react";
+import { User, RefreshCw, Check, Loader2, ScanLine } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
@@ -7,6 +7,7 @@ import { SettingItem } from "./SettingItem";
 import { getQrKey, checkQrStatus, getMyInfo, NETEASE_COOKIE_KEY } from "@/lib/netease/netease-api";
 import { UserProfile } from "@/lib/netease/netease-types";
 import toast from "react-hot-toast";
+import { QRCodeSVG } from "qrcode.react";
 
 const STATUS_MESSAGES = {
   loading: "正在获取二维码...",
@@ -27,10 +28,12 @@ export function NeteaseLogin() {
   const [qrStatus, setQrStatus] = useState<QrStatus>("loading");
   
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const isPollingRef = useRef(false);
 
   const clearTimer = () => {
+    isPollingRef.current = false;
     if (timerRef.current) {
-      clearInterval(timerRef.current);
+      clearTimeout(timerRef.current);
       timerRef.current = null;
     }
   };
@@ -66,7 +69,9 @@ export function NeteaseLogin() {
         setQrStatus("waiting");
         
         clearTimer();
-        timerRef.current = setInterval(() => pollStatus(key), 2000);
+        isPollingRef.current = true;
+        // 立即开始首次轮询
+        pollStatus(key);
       } else {
         toast.error("获取二维码失败");
         setShowDialog(false);
@@ -81,8 +86,14 @@ export function NeteaseLogin() {
   };
 
   const pollStatus = async (key: string) => {
+    if (!isPollingRef.current) return;
+
     try {
       const res = await checkQrStatus(key);
+      
+      // 如果在请求期间停止了轮询，直接返回
+      if (!isPollingRef.current) return;
+
       const code = res.data?.code || res.code;
       const cookie = res.cookie || res.data?.cookie;
 
@@ -92,8 +103,10 @@ export function NeteaseLogin() {
         if (code === 8821) toast.error(res.data?.message || res.message || "登录环境异常，请稍后再试");
       } else if (code === 801) {
         setQrStatus("waiting");
+        scheduleNextPoll(key);
       } else if (code === 802) {
         setQrStatus("scanned");
+        scheduleNextPoll(key);
       } else if (code === 803) {
         setQrStatus("success");
         clearTimer();
@@ -107,10 +120,24 @@ export function NeteaseLogin() {
         } else {
           toast.error("登录成功但未获取到凭证");
         }
+      } else {
+        // 其他未知状态，继续轮询
+        scheduleNextPoll(key);
       }
     } catch (e) {
       console.error("Poll failed:", e);
+      // 出错也尝试继续轮询（除非已停止）
+      if (isPollingRef.current) {
+        scheduleNextPoll(key);
+      }
     }
+  };
+
+  const scheduleNextPoll = (key: string) => {
+    if (!isPollingRef.current) return;
+    // 2s 基础间隔 + 0~1s 随机抖动
+    const delay = 2000 + Math.random() * 1000;
+    timerRef.current = setTimeout(() => pollStatus(key), delay);
   };
 
   const handleLogout = () => {
@@ -164,10 +191,13 @@ export function NeteaseLogin() {
             {(qrStatus === "waiting" || qrStatus === "scanned") && qrUrl && (
               <div className="relative group">
                 <div className="w-[180px] h-[180px] border rounded-lg overflow-hidden bg-white p-2">
-                  <img 
-                    src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(qrUrl)}`}
-                    alt="Login QR Code"
-                    className="w-full h-full object-contain"
+                  <QRCodeSVG
+                    value={qrUrl}
+                    size={164}
+                    level="M"
+                    marginSize={0}
+                    title="网易云登录二维码"
+                    className="w-full h-full"
                   />
                 </div>
                 {qrStatus === "scanned" && (
