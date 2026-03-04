@@ -17,6 +17,8 @@ import {
   PlaylistDetailRoute,
   LocalMusicRoute,
   MarketPlaylistDetailRoute,
+  ArtistDetailRoute,
+  AlbumDetailRoute,
   QueueRoute,
   HistoryRoute,
   SettingsRoute
@@ -191,6 +193,14 @@ export const router = createBrowserRouter([
       {
         path: "playlist-market/:id",
         element: <MarketPlaylistDetailRoute />,
+      },
+      {
+        path: "artist/:id",
+        element: <ArtistDetailRoute />,
+      },
+      {
+        path: "album/:id",
+        element: <AlbumDetailRoute />,
       },
       {
         path: "queue",

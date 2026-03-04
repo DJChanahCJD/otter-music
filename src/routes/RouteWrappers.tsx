@@ -17,7 +17,7 @@ const QueuePage = lazy(() => import("@/components/QueuePage").then(m => ({ defau
 const HistoryPage = lazy(() => import("@/components/HistoryPage").then(m => ({ default: m.HistoryPage })));
 const SettingsPage = lazy(() => import("@/components/SettingsPage").then(m => ({ default: m.SettingsPage })));
 const LocalMusicPage = lazy(() => import("@/components/LocalMusicPage").then(m => ({ default: m.LocalMusicPage })));
-const MarketPlaylistDetail = lazy(() => import("@/components/PlaylistMarket/MarketPlaylistDetail").then(m => ({ default: m.MarketPlaylistDetail })));
+const NeteaseDetail = lazy(() => import("@/components/NeteaseDetail").then(m => ({ default: m.NeteaseDetail })));
 
 export function SearchRoute() {
   const { handlePlay } = usePlayHelper();
@@ -151,10 +151,53 @@ export function MarketPlaylistDetailRoute() {
 
   return (
     <Suspense fallback={<PageLoader />}>
-      <MarketPlaylistDetail
-        playlistId={id || null}
+      <NeteaseDetail
+        id={id || null}
+        type="playlist"
         onBack={() => navigate(-1)}
         onPlay={(track, list) => handlePlay(track, list, "playlist_market")}
+        currentTrackId={currentTrack?.id}
+        isPlaying={isPlaying}
+      />
+    </Suspense>
+  );
+}
+
+export function ArtistDetailRoute() {
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const { handlePlay } = usePlayHelper();
+  const { queue, currentIndex, isPlaying } = useMusicStore();
+  const currentTrack = queue[currentIndex] || null;
+
+  return (
+    <Suspense fallback={<PageLoader />}>
+      <NeteaseDetail
+        id={id || null}
+        type="artist"
+        onBack={() => navigate(-1)}
+        onPlay={(track, list) => handlePlay(track, list, "artist")}
+        currentTrackId={currentTrack?.id}
+        isPlaying={isPlaying}
+      />
+    </Suspense>
+  );
+}
+
+export function AlbumDetailRoute() {
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const { handlePlay } = usePlayHelper();
+  const { queue, currentIndex, isPlaying } = useMusicStore();
+  const currentTrack = queue[currentIndex] || null;
+
+  return (
+    <Suspense fallback={<PageLoader />}>
+      <NeteaseDetail
+        id={id || null}
+        type="album"
+        onBack={() => navigate(-1)}
+        onPlay={(track, list) => handlePlay(track, list, "album")}
         currentTrackId={currentTrack?.id}
         isPlaying={isPlaying}
       />

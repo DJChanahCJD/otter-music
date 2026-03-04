@@ -36,22 +36,24 @@ export function PlaylistMarket() {
   const setActiveCategory = useMusicStore((s) => s.setLastPlaylistCategory);
   const [items, setItems] = useState<MarketPlaylist[]>([]);
   const [loading, setLoading] = useState(true);
-  
+
   // 更新数据结构，加入 recommend
   const [mineData, setMineData] = useState<{
     recommend: MarketPlaylist[];
     created: MarketPlaylist[];
     subscribed: MarketPlaylist[];
   } | null>(null);
-  
+
   // 增加 recommend 选项，并设为默认
-  const [mineTab, setMineTab] = useState<"recommend" | "created" | "subscribed">("recommend");
+  const [mineTab, setMineTab] = useState<
+    "recommend" | "created" | "subscribed"
+  >("recommend");
 
   const [offset, setOffset] = useState(0);
   const [hasMore, setHasMore] = useState(true);
   const [isFetching, setIsFetching] = useState(false);
   const observerTarget = useRef<HTMLDivElement>(null);
-  
+
   const displayFilters = useMemo(() => {
     const baseFilters = [
       RECOMMEND_FILTERS[0],
@@ -86,7 +88,8 @@ export function PlaylistMarket() {
           }
 
           const userInfo = await getMyInfo(cookie);
-          const userId = userInfo?.data?.profile?.userId || userInfo?.profile?.userId;
+          const userId =
+            userInfo?.data?.profile?.userId || userInfo?.profile?.userId;
           if (!userId) {
             toast.error("获取用户信息失败");
             return;
@@ -95,12 +98,13 @@ export function PlaylistMarket() {
           // 并发请求：同时获取用户歌单和每日推荐
           const [userRes, recRes] = await Promise.all([
             getUserPlaylists(String(userId), cookie),
-            getRecommendPlaylists(cookie).catch(() => null)
+            getRecommendPlaylists(cookie).catch(() => null),
           ]);
 
           let recommend: MarketPlaylist[] = [];
           if (recRes) {
-            const rawRecommend = (recRes as any)?.data?.result || (recRes as any)?.result;
+            const rawRecommend =
+              (recRes as any)?.data?.result || (recRes as any)?.result;
             if (rawRecommend && Array.isArray(rawRecommend)) {
               recommend = rawRecommend.map((i: any) => ({
                 id: i.id,
@@ -119,23 +123,39 @@ export function PlaylistMarket() {
               playCount: i.playCount,
               userId: i.userId,
             }));
-            const created = all.filter((p) => String(p.userId) === String(userId));
-            const subscribed = all.filter((p) => String(p.userId) !== String(userId));
-            
+            const created = all.filter(
+              (p) => String(p.userId) === String(userId),
+            );
+            const subscribed = all.filter(
+              (p) => String(p.userId) !== String(userId),
+            );
+
             setMineData({ recommend, created, subscribed });
             setHasMore(false);
           }
         } else {
           const isToplist = category === "toplist";
-          const cacheKey = `market-playlist:${category || "all"}:${isToplist ? 0 : currentOffset}`;
+          const cacheKey = `market-playlist:${category || "all"}:${
+            isToplist ? 0 : currentOffset
+          }`;
 
           const fetcher = async () => {
             return isToplist
               ? await getToplist("")
-              : await getPlaylists(category || "全部", "hot", PAGE_SIZE, currentOffset, "");
+              : await getPlaylists(
+                  category || "全部",
+                  "hot",
+                  PAGE_SIZE,
+                  currentOffset,
+                  "",
+                );
           };
 
-          const res = await cachedFetch(cacheKey, fetcher, 1 * 24 * 60 * 60 * 1000);
+          const res = await cachedFetch(
+            cacheKey,
+            fetcher,
+            1 * 24 * 60 * 60 * 1000,
+          );
 
           if (res) {
             const rawList = isToplist
@@ -152,7 +172,9 @@ export function PlaylistMarket() {
               setItems(newItems);
               setHasMore(false);
             } else {
-              setItems((prev) => (currentOffset === 0 ? newItems : [...prev, ...newItems]));
+              setItems((prev) =>
+                currentOffset === 0 ? newItems : [...prev, ...newItems],
+              );
               if (newItems.length < PAGE_SIZE) setHasMore(false);
             }
           } else {
@@ -167,7 +189,7 @@ export function PlaylistMarket() {
         setIsFetching(false);
       }
     },
-    []
+    [],
   );
 
   useEffect(() => {
@@ -188,7 +210,7 @@ export function PlaylistMarket() {
           fetchItems(activeCategory, nextOffset);
         }
       },
-      { threshold: 0.1 }
+      { threshold: 0.1 },
     );
 
     observer.observe(element);
@@ -244,7 +266,7 @@ export function PlaylistMarket() {
                     "h-8 px-3 rounded-full transition-all text-xs font-medium whitespace-nowrap shrink-0",
                     activeCategory === f.id
                       ? "bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm"
-                      : "text-muted-foreground hover:text-foreground bg-secondary/30"
+                      : "text-muted-foreground hover:text-foreground bg-secondary/30",
                   )}
                 >
                   {f.name}
@@ -257,7 +279,11 @@ export function PlaylistMarket() {
             activeCategory={activeCategory}
             onSelect={setActiveCategory}
             trigger={
-              <Button variant="ghost" size="sm" className="h-8 w-8 p-0 rounded-full shrink-0 bg-secondary/50 hover:bg-secondary">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 w-8 p-0 rounded-full shrink-0 bg-secondary/50 hover:bg-secondary"
+              >
                 <LayoutGrid className="h-4 w-4 text-muted-foreground" />
               </Button>
             }
@@ -269,22 +295,45 @@ export function PlaylistMarket() {
         {loading ? (
           <div className="h-full flex flex-col items-center justify-center gap-3 text-muted-foreground">
             <Loader2 className="h-6 w-6 animate-spin text-primary" />
-            <span className="text-xs tracking-widest uppercase opacity-50">加载中...</span>
+            <span className="text-xs tracking-widest uppercase opacity-50">
+              加载中...
+            </span>
           </div>
         ) : activeCategory === "mine" ? (
           <div className="p-4 pb-24 space-y-6">
             {!mineData ? (
-              <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
-                <p>请先登录网易云音乐</p>
+              <div className="flex flex-col items-center justify-center py-20 text-muted-foreground space-y-4">
+                <p className="flex items-center gap-1 text-sm">
+                  请先登录网易云账号
+                </p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => navigate("/settings")}
+                >
+                  前往设置
+                </Button>
               </div>
             ) : (
               <>
                 {/* 极简文本切换栏 */}
                 <div className="flex items-center gap-6 mb-4 px-1">
                   {[
-                    { id: "recommend", label: "推荐", count: mineData.recommend.length },
-                    { id: "created", label: "创建", count: mineData.created.length },
-                    { id: "subscribed", label: "收藏", count: mineData.subscribed.length },
+                    {
+                      id: "recommend",
+                      label: "推荐",
+                      count: mineData.recommend.length,
+                    },
+                    {
+                      id: "created",
+                      label: "创建",
+                      count: mineData.created.length,
+                    },
+                    {
+                      id: "subscribed",
+                      label: "收藏",
+                      count: mineData.subscribed.length,
+                    },
                   ].map((tab) => (
                     <button
                       key={tab.id}
@@ -293,10 +342,13 @@ export function PlaylistMarket() {
                         "text-[15px] transition-all",
                         mineTab === tab.id
                           ? "font-bold text-foreground tracking-wide"
-                          : "font-medium text-muted-foreground hover:text-foreground"
+                          : "font-medium text-muted-foreground hover:text-foreground",
                       )}
                     >
-                      {tab.label} <span className="text-xs opacity-60 ml-0.5">{tab.count}</span>
+                      {tab.label}{" "}
+                      <span className="text-xs opacity-60 ml-0.5">
+                        {tab.count}
+                      </span>
                     </button>
                   ))}
                 </div>
@@ -317,7 +369,10 @@ export function PlaylistMarket() {
         ) : (
           <div className="p-4 pb-24">
             {renderGrid(items)}
-            <div ref={observerTarget} className="h-12 w-full mt-6 flex items-center justify-center opacity-80">
+            <div
+              ref={observerTarget}
+              className="h-12 w-full mt-6 flex items-center justify-center opacity-80"
+            >
               {isFetching && !loading && (
                 <div className="flex items-center gap-2 text-xs text-muted-foreground">
                   <Loader2 className="h-4 w-4 animate-spin" />
@@ -325,7 +380,9 @@ export function PlaylistMarket() {
                 </div>
               )}
               {!hasMore && items.length > 0 && (
-                <span className="text-xs text-muted-foreground/50 tracking-wide uppercase">没有更多了-_-</span>
+                <span className="text-xs text-muted-foreground/50 tracking-wide uppercase">
+                  没有更多了-_-
+                </span>
               )}
             </div>
           </div>

@@ -53,6 +53,7 @@ export interface NeteaseResponse<T = any> {
 }
 
 export interface SongArtist extends BaseEntity {
+  name: string;
   tns?: string[];
   alias?: string[];
 }
@@ -63,10 +64,11 @@ export interface SongAlbum extends BaseEntity {
 }
 
 export interface SongDetail extends BaseEntity {
-  ar: SongArtist[];     // Artists
-  al: SongAlbum;        // Album
-  dt: number;           // Duration (ms)
-  fee: number;          // 资费类型
+  name: string;        // 歌曲名称
+  ar: SongArtist[];
+  al: SongAlbum;
+  dt: number;       //  时长
+  fee: number;      // 付费类型（0-免费, 1-VIP, 4-数专, 8-非VIP低音质)
   privilege?: NeteasePrivilege;
   publishTime?: number;
   st: number;           // 状态

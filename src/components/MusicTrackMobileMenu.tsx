@@ -155,7 +155,24 @@ export function MusicTrackMobileMenu({
     }
   };
 
-  const handleSearch = (keyword: string, type: SearchIntent["type"] = "", artist?: string) => {
+  const handleSearch = (keyword: string, type: SearchIntent["type"] = "", artist?: string, id?: string) => {
+    // 优先跳转到详情页 (仅 _netease 源支持)
+    if (track.source === "_netease" && id) {
+        if (type === "artist") {
+            navigate(`/artist/${id}`);
+            onOpenChange(false);
+            setShowArtistSelection(false);
+            onNavigate?.();
+            return;
+        }
+        if (type === "album") {
+            navigate(`/album/${id}`);
+            onOpenChange(false);
+            onNavigate?.();
+            return;
+        }
+    }
+
     setSearchQuery(toSimplified(keyword));
     setSearchIntent({ type, artist });
     setSearchSource(track.source === "_netease" ? "netease" : track.source && track.source !== "local" ? track.source : "all");
@@ -225,13 +242,13 @@ export function MusicTrackMobileMenu({
 
             <ActionButton
               icon={User}
-              onClick={() => track.artist.length > 1 ? setShowArtistSelection(true) : handleSearch(track.artist[0], "artist")}
+              onClick={() => track.artist.length > 1 ? setShowArtistSelection(true) : handleSearch(track.artist[0], "artist", undefined, track.artist_ids?.[0])}
             >
               歌手：{track.artist.join(" / ")}
             </ActionButton>
 
             {track.album && (
-              <ActionButton icon={Disc} onClick={() => handleSearch(track.album!, "album", track.artist[0])}>
+              <ActionButton icon={Disc} onClick={() => handleSearch(track.album!, "album", track.artist[0], track.album_id)}>
                 专辑：{track.album}
               </ActionButton>
             )}
@@ -278,8 +295,8 @@ export function MusicTrackMobileMenu({
             <DialogTitle>选择歌手</DialogTitle>
           </DialogHeader>
           <div className="flex flex-col gap-2">
-            {track.artist.map((artist) => (
-              <Button key={artist} variant="ghost" className="justify-start w-full" onClick={() => handleSearch(artist, "artist")}>
+            {track.artist.map((artist, index) => (
+              <Button key={artist} variant="ghost" className="justify-start w-full" onClick={() => handleSearch(artist, "artist", undefined, track.artist_ids?.[index])}>
                 <User className="mr-2 h-4 w-4" />
                 {artist}
               </Button>

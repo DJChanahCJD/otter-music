@@ -5,7 +5,7 @@ import { getMusicApiUrl } from "./api";
 import { retry } from "@/lib/utils";
 import { Capacitor } from "@capacitor/core";
 import { LocalMusicPlugin } from "@/plugins/local-music";
-import { getSongUrl, getLyric, getSongDetail } from "@/lib/netease/netease-api";
+import { getSongUrl, getLyric, getSongDetail, search as neteaseSearch, convertSongToMusicTrack } from "@/lib/netease/netease-api";
 
 const getApiBase = () => `${getMusicApiUrl()}`;
 
@@ -94,6 +94,16 @@ export const musicApi = {
   ): Promise<SearchPageResult<MusicTrack>> {
 
     if (source === 'all') return this.searchAll(query, page, count, signal);
+
+    if (source === '_netease') {
+      const res = await neteaseSearch(query, 1, page, count);
+      const songs = res.data.result.songs || [];
+      const items = songs.map(convertSongToMusicTrack);
+      return {
+        items,
+        hasMore: res.data.result.hasMore ?? ((res.data.result.songCount || 0) > page * count)
+      };
+    }
 
     const json = await retry(
       () => requestJSON<RawApiTrack[]>(

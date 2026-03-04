@@ -36,7 +36,7 @@ export const searchOptions: Record<string, string> = {
   netease: "网易云音乐",
   kuwo: "酷我音乐",
   bilibili: "B站",
-  // _netease: "Netease",
+  _netease: "Netease",
 };
 
 export const sourceLabels: Record<string, string> = {
@@ -104,6 +104,8 @@ export interface MusicTrack {
   lyric_id: string;
   source: MusicSource;
   privilege?: NeteasePrivilege;
+  artist_ids?: string[];
+  album_id?: string;
 }
 
 export interface Playlist {

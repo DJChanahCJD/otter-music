@@ -241,9 +241,15 @@ export const getSongDetail = async (id: string, cookie: string = '') =>
 
 export const getToplist = (cookie: string = '') => requestWeapi<{ list: Toplist[] }>(`${BASE_URL}/weapi/toplist/detail`, {}, cookie);
 
-export const getAlbum = (id: string, cookie: string = '') => requestWeapi<AlbumDetail>(`${BASE_URL}/weapi/v1/album/${id.replace(/^(nealbum_|ne_album_)/, '')}`, {}, cookie);
+export const getAlbum = async (id: string, cookie: string = '') => {
+    const res = await requestWeapi<AlbumDetail>(`${BASE_URL}/weapi/v1/album/${id.replace(/^(nealbum_|ne_album_)/, '')}`, {}, cookie);
+    return res.data;
+};
 
-export const getArtist = (id: string, cookie: string = '') => requestWeapi<ArtistDetail>(`${BASE_URL}/weapi/v1/artist/${id.replace(/^(neartist_|ne_artist_)/, '')}`, {}, cookie);
+export const getArtist = async (id: string, cookie: string = '') => {
+    const res = await requestWeapi<ArtistDetail>(`${BASE_URL}/weapi/v1/artist/${id.replace(/^(neartist_|ne_artist_)/, '')}`, {}, cookie);
+    return res.data;
+};
 
 export const getPlaylists = (cat: string = '全部', order: string = 'hot', limit: number = 35, offset: number = 0, cookie: string = '') => 
     requestWeapi<{ playlists: UserPlaylist[] }>(`${BASE_URL}/weapi/playlist/list`, { cat, order, limit, offset, total: true }, cookie);
@@ -263,14 +269,22 @@ export function resolveUrl(urlStr: string): ResolveUrlResult | null {
     return null;
 }
 
-export const convertSongToMusicTrack = (song: SongDetail): MusicTrack => ({
-    id: String(song.id),
-    name: song.name,
-    artist: song.ar.map(a => a.name),
-    album: song.al.name,
-    pic_id: song.al.picUrl, 
-    url_id: String(song.id),
-    lyric_id: String(song.id),
-    source: '_netease',
-    privilege: song.privilege,
-});
+export const convertSongToMusicTrack = (song: SongDetail | any): MusicTrack => {
+    // 兼容搜索接口返回的 artists 和 album
+    const artists = song.ar || song.artists || [];
+    const album = song.al || song.album || {};
+
+    return {
+        id: String(song.id),
+        name: song.name,
+        artist: artists.map((a: any) => a.name),
+        album: album.name,
+        pic_id: album.picUrl, 
+        url_id: String(song.id),
+        lyric_id: String(song.id),
+        source: '_netease',
+        privilege: song.privilege,
+        artist_ids: artists.map((a: any) => String(a.id || '')),
+        album_id: String(album.id || ''),
+    };
+};
