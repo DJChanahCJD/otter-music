@@ -41,10 +41,14 @@ interface MusicState {
   searchSource: MusicSource;
   aggregatedSources: MusicSource[];
   lastPlaylistCategory: string;
+  lastMineTab: "recommend" | "created" | "subscribed";
+  enableAutoMatch: boolean;
   setQuality: (quality: string) => void;
   setSearchSource: (source: MusicSource) => void;
   setAggregatedSources: (sources: MusicSource[]) => void;
   setLastPlaylistCategory: (category: string) => void;
+  setLastMineTab: (tab: "recommend" | "created" | "subscribed") => void;
+  setEnableAutoMatch: (enable: boolean) => void;
 
   // --- Search State (Not Persisted) ---
   searchQuery: string;
@@ -177,10 +181,14 @@ export const useMusicStore = create<MusicState>()(
       searchSource: "all",
       aggregatedSources: ['joox', 'netease'],
       lastPlaylistCategory: "",
+      lastMineTab: "recommend",
+      enableAutoMatch: false,
       setQuality: (quality) => set({ quality }),
       setSearchSource: (searchSource) => set({ searchSource }),
       setAggregatedSources: (aggregatedSources) => set({ aggregatedSources }),
       setLastPlaylistCategory: (lastPlaylistCategory) => set({ lastPlaylistCategory }),
+      setLastMineTab: (lastMineTab) => set({ lastMineTab }),
+      setEnableAutoMatch: (enableAutoMatch) => set({ enableAutoMatch }),
 
       // --- Search State ---
       searchQuery: "", searchIntent: null, searchResults: [], searchLoading: false, searchHasMore: false, searchPage: 0,
@@ -309,6 +317,8 @@ export const useMusicStore = create<MusicState>()(
         searchSource: state.searchSource,
         aggregatedSources: state.aggregatedSources,
         lastPlaylistCategory: state.lastPlaylistCategory,
+        lastMineTab: state.lastMineTab,
+        enableAutoMatch: state.enableAutoMatch,
       }),
     }
   )

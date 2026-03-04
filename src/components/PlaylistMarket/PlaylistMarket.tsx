@@ -44,10 +44,8 @@ export function PlaylistMarket() {
     subscribed: MarketPlaylist[];
   } | null>(null);
 
-  // 增加 recommend 选项，并设为默认
-  const [mineTab, setMineTab] = useState<
-    "recommend" | "created" | "subscribed"
-  >("recommend");
+  const mineTab = useMusicStore((s) => s.lastMineTab);
+  const setMineTab = useMusicStore((s) => s.setLastMineTab);
 
   const [offset, setOffset] = useState(0);
   const [hasMore, setHasMore] = useState(true);
@@ -72,7 +70,7 @@ export function PlaylistMarket() {
         setItems([]);
         if (category === "mine") {
           setMineData(null);
-          setMineTab("recommend"); // 默认展示推荐
+          // 移除重置，保持用户上次选择的 Tab
         }
       }
       setIsFetching(true);
@@ -238,7 +236,6 @@ export function PlaylistMarket() {
                 {formatPlayCount(item.playCount)}
               </span>
             </div>
-            {/* 已移除右上方每日推荐的小图标，界面更加纯净 */}
           </div>
           <div className="px-0.5">
             <h3 className="text-[13px] font-medium leading-snug line-clamp-2 text-foreground/80 group-hover:text-primary transition-colors cursor-pointer">
