@@ -135,8 +135,6 @@ export function MusicPlaylistView({
         console.error("Get cover failed", e);
         toast.error("获取封面出错");
       }
-    } else if (firstTrack?.imageUrl) {
-      setCoverUrlInput(firstTrack.imageUrl);
     } else {
       toast.error("第一首歌曲没有封面");
     }
