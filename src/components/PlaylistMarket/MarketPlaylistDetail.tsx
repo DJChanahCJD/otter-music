@@ -4,7 +4,7 @@ import { MusicTrackList } from "@/components/MusicTrackList";
 import { getPlaylistDetail, convertSongToMusicTrack } from "@/lib/netease/netease-api";
 import { PlaylistDetail } from "@/lib/netease/netease-types";
 import { MusicTrack } from "@/types/music";
-import { Loader2, MoreVertical, Import } from "lucide-react";
+import { Loader2, MoreVertical, Import, SquareArrowOutUpRight } from "lucide-react";
 import toast from "react-hot-toast";
 import { cn, processBatchCPU } from "@/lib/utils";
 import {
@@ -95,6 +95,19 @@ export function MarketPlaylistDetail({
   const [error, setError] = useState(false);
   const createPlaylist = useMusicStore((state) => state.createPlaylist);
   const setPlaylistTracks = useMusicStore((state) => state.setPlaylistTracks);
+
+  const handleShare = async () => {
+    if (!detail || !playlistId) return;
+    
+    try {
+      const text = `【网易云歌单】${detail.name}\nhttps://music.163.com/#/playlist?id=${playlistId}`;
+      await navigator.clipboard.writeText(text);
+      toast.success("链接已复制");
+    } catch (err) {
+      console.error("Copy failed", err);
+      toast.error("复制失败");
+    }
+  };
 
   const handleImportPlaylist = async () => {
     if (!detail || tracks.length === 0) return;
@@ -207,9 +220,13 @@ export function MarketPlaylistDetail({
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={handleShare}>
+              <SquareArrowOutUpRight className="w-4 h-4 mr-2" />
+              分享
+            </DropdownMenuItem>
             <DropdownMenuItem onClick={handleImportPlaylist}>
               <Import className="w-4 h-4 mr-2" />
-              导入到我的歌单
+              导入歌单
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
