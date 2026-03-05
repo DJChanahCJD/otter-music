@@ -122,7 +122,8 @@ export const useMusicStore = create<MusicState>()(
         const existing = favorites.find((t) => t.id === track.id);
         if (existing && !existing.is_deleted) return "已在「我的喜欢」中";
         const nextTrack = { ...withMeta(track), is_deleted: false };
-        set({ favorites: existing ? updateList(favorites, track.id, nextTrack) : [nextTrack, ...favorites] });
+        // 即使已存在(但在回收站)，也将其移到最前面，模拟"新添加"的感觉
+        set({ favorites: [nextTrack, ...favorites.filter(t => t.id !== track.id)] });
         return null;
       },
       removeFromFavorites: (id) => set(s => ({ favorites: updateList(s.favorites, id, { is_deleted: true }) })),
