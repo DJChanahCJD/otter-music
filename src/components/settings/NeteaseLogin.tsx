@@ -1,10 +1,30 @@
 import { useState, useEffect, useRef } from "react";
-import { User, RefreshCw, Check, Loader2, ScanLine } from "lucide-react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import {
+  User,
+  RefreshCw,
+  Check,
+  Loader2,
+  ScanLine,
+  Cookie,
+  Info,
+} from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { SettingItem } from "./SettingItem";
-import { getQrKey, checkQrStatus, getMyInfo, NETEASE_COOKIE_KEY } from "@/lib/netease/netease-api";
+import {
+  getQrKey,
+  checkQrStatus,
+  getMyInfo,
+  NETEASE_COOKIE_KEY,
+} from "@/lib/netease/netease-api";
 import { UserProfile } from "@/lib/netease/netease-types";
 import toast from "react-hot-toast";
 import { QRCodeSVG } from "qrcode.react";
@@ -14,7 +34,7 @@ const STATUS_MESSAGES = {
   waiting: "请使用网易云 APP 扫码",
   scanned: "扫描成功，请在手机确认",
   expired: "二维码已过期",
-  success: "登录成功！正在获取信息...",
+  success: "登录成功，同步中...",
 };
 
 type QrStatus = keyof typeof STATUS_MESSAGES;
@@ -23,19 +43,18 @@ export function NeteaseLogin() {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [showDialog, setShowDialog] = useState(false);
   const [loading, setLoading] = useState(false);
-  
+  const [loginMode, setLoginMode] = useState<"qr" | "cookie">("qr");
+  const [cookieInput, setCookieInput] = useState("");
+
   const [qrUrl, setQrUrl] = useState("");
   const [qrStatus, setQrStatus] = useState<QrStatus>("loading");
-  
+
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const isPollingRef = useRef(false);
 
   const clearTimer = () => {
     isPollingRef.current = false;
-    if (timerRef.current) {
-      clearTimeout(timerRef.current);
-      timerRef.current = null;
-    }
+    if (timerRef.current) clearTimeout(timerRef.current);
   };
 
   useEffect(() => {
@@ -43,42 +62,43 @@ export function NeteaseLogin() {
     return clearTimer;
   }, []);
 
+  const onLoginSuccess = (cookie: string, profile: UserProfile) => {
+    localStorage.setItem(NETEASE_COOKIE_KEY, cookie);
+    localStorage.setItem("cookie:netease", cookie);
+    setUser(profile);
+    setShowDialog(false);
+  };
+
   const checkLoginStatus = async () => {
     const cookie = localStorage.getItem(NETEASE_COOKIE_KEY);
     if (!cookie) return;
-
     try {
       const res = await getMyInfo(cookie);
-      const userProfile = res?.data?.profile || res?.profile; 
-      if (userProfile) setUser(userProfile);
+      const profile = res?.profile || res?.data?.profile;
+      if (profile) setUser(profile);
     } catch (e) {
-      console.error("Failed to get user info:", e);
+      console.error("User info fetch failed:", e);
     }
   };
 
   const startLogin = async () => {
     setShowDialog(true);
+    setLoginMode("qr");
     setLoading(true);
     setQrStatus("loading");
-    
+
     try {
       const res = await getQrKey();
       const key = res.data?.unikey;
-      if (key) {
-        setQrUrl(`https://music.163.com/login?codekey=${key}`);
-        setQrStatus("waiting");
-        
-        clearTimer();
-        isPollingRef.current = true;
-        // 立即开始首次轮询
-        pollStatus(key);
-      } else {
-        toast.error("获取二维码失败");
-        setShowDialog(false);
-      }
-    } catch (e) {
-      console.error("Login init failed:", e);
-      toast.error("无法连接到服务器");
+      if (!key) throw new Error("Key is empty");
+
+      setQrUrl(`https://music.163.com/login?codekey=${key}`);
+      setQrStatus("waiting");
+      clearTimer();
+      isPollingRef.current = true;
+      pollStatus(key);
+    } catch {
+      toast.error("获取二维码失败");
       setShowDialog(false);
     } finally {
       setLoading(false);
@@ -87,57 +107,81 @@ export function NeteaseLogin() {
 
   const pollStatus = async (key: string) => {
     if (!isPollingRef.current) return;
-
     try {
       const res = await checkQrStatus(key);
-      
-      // 如果在请求期间停止了轮询，直接返回
       if (!isPollingRef.current) return;
 
       const code = res.data?.code || res.code;
       const cookie = res.cookie || res.data?.cookie;
 
-      if ([800, 8821].includes(code)) {
-        setQrStatus("expired");
-        clearTimer();
-        if (code === 8821) toast.error(res.data?.message || res.message || "登录环境异常，请稍后再试");
-      } else if (code === 801) {
-        setQrStatus("waiting");
-        scheduleNextPoll(key);
-      } else if (code === 802) {
-        setQrStatus("scanned");
-        scheduleNextPoll(key);
-      } else if (code === 803) {
-        setQrStatus("success");
-        clearTimer();
-        
-        if (cookie) {
-          localStorage.setItem(NETEASE_COOKIE_KEY, cookie);
-          localStorage.setItem("cookie:netease", cookie);
-          toast.success("登录成功");
-          setShowDialog(false);
-          setTimeout(checkLoginStatus, 300);
-        } else {
-          toast.error("登录成功但未获取到凭证");
-        }
-      } else {
-        // 其他未知状态，继续轮询
-        scheduleNextPoll(key);
+      switch (code) {
+        case 800:
+        case 8821:
+          setQrStatus("expired");
+          clearTimer();
+          if (code === 8821)
+            toast.error(res.data?.message || res.message || "登录环境异常");
+          break;
+        case 801:
+          setQrStatus("waiting");
+          scheduleNextPoll(key);
+          break;
+        case 802:
+          setQrStatus("scanned");
+          scheduleNextPoll(key);
+          break;
+        case 803:
+          setQrStatus("success");
+          clearTimer();
+          if (cookie) {
+            const infoRes = await getMyInfo(cookie);
+            const profile = infoRes?.data?.profile || infoRes?.profile;
+            if (profile) {
+              onLoginSuccess(cookie, profile);
+            } else {
+              toast.error("获取用户信息失败");
+            }
+          } else {
+            toast.error("未获取到登录凭证");
+          }
+          break;
+        default:
+          scheduleNextPoll(key);
       }
-    } catch (e) {
-      console.error("Poll failed:", e);
-      // 出错也尝试继续轮询（除非已停止）
-      if (isPollingRef.current) {
-        scheduleNextPoll(key);
-      }
+    } catch {
+      if (isPollingRef.current) scheduleNextPoll(key);
     }
   };
 
   const scheduleNextPoll = (key: string) => {
     if (!isPollingRef.current) return;
-    // 2s 基础间隔 + 0~1s 随机抖动
-    const delay = 2000 + Math.random() * 1000;
-    timerRef.current = setTimeout(() => pollStatus(key), delay);
+    timerRef.current = setTimeout(
+      () => pollStatus(key),
+      2000 + Math.random() * 500,
+    );
+  };
+
+  const handleCookieLogin = async () => {
+    if (!cookieInput.trim()) return;
+    setLoading(true);
+    try {
+      const finalCookie = cookieInput.includes("=")
+        ? cookieInput.trim()
+        : `MUSIC_U=${cookieInput.trim()}`;
+      const res = await getMyInfo(finalCookie);
+      const profile = res?.data?.profile || res?.profile;
+
+      if (profile) {
+        onLoginSuccess(finalCookie, profile);
+        setCookieInput("");
+      } else {
+        toast.error("Cookie 无效或已过期");
+      }
+    } catch {
+      toast.error("验证失败，请检查 Cookie");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleLogout = () => {
@@ -156,74 +200,171 @@ export function NeteaseLogin() {
         subtitle={user ? user.nickname : "点击登录以同步歌单"}
         action={
           user ? (
-            <Avatar 
-              className="w-10 h-10 border cursor-pointer hover:opacity-80 transition-opacity"
+            <Avatar
+              className="w-10 h-10 border shadow-sm cursor-pointer hover:opacity-80 transition-opacity"
               onClick={handleLogout}
             >
               <AvatarImage src={user.avatarUrl} />
-              <AvatarFallback>{user.nickname[0]}</AvatarFallback>
+              <AvatarFallback>{user.nickname?.[0]}</AvatarFallback>
             </Avatar>
           ) : (
-            <Button variant="secondary" size="sm" onClick={startLogin} disabled={loading}>
-              {loading && <Loader2 className="w-3 h-3 mr-2 animate-spin" />} 登录
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={startLogin}
+              disabled={loading}
+              className="px-4"
+            >
+              {loading && <Loader2 className="w-3 h-3 mr-2 animate-spin" />}{" "}
+              登录
             </Button>
           )
         }
       />
 
-      <Dialog open={showDialog} onOpenChange={(open) => {
-        setShowDialog(open);
-        if (!open) clearTimer();
-      }}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>网易云扫码登录</DialogTitle>
-            <DialogDescription>请使用网易云音乐 APP 扫码登录</DialogDescription>
+      <Dialog
+        open={showDialog}
+        onOpenChange={(open) => {
+          setShowDialog(open);
+          if (!open) {
+            clearTimer();
+            setCookieInput("");
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-[360px] p-6">
+          <DialogHeader className="mb-2">
+            <DialogTitle className="text-center text-lg">
+              {loginMode === "qr" ? "扫码登录" : "Cookie 登录"}
+            </DialogTitle>
+            <DialogDescription className="text-center text-xs">
+              {loginMode === "qr"
+                ? "打开网易云音乐 APP 扫一扫"
+                : "输入完整 Cookie 或 MUSIC_U 的值"}
+            </DialogDescription>
           </DialogHeader>
-          
-          <div className="flex flex-col items-center justify-center py-6 space-y-4">
-            {qrStatus === "loading" && (
-              <div className="w-[180px] h-[180px] flex items-center justify-center border rounded-lg bg-muted/20">
-                <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
-              </div>
-            )}
 
-            {(qrStatus === "waiting" || qrStatus === "scanned") && qrUrl && (
-              <div className="relative group">
-                <div className="w-[180px] h-[180px] border rounded-lg overflow-hidden bg-white p-2">
-                  <QRCodeSVG
-                    value={qrUrl}
-                    size={164}
-                    level="M"
-                    marginSize={0}
-                    title="网易云登录二维码"
-                    className="w-full h-full"
-                  />
+          <div className="flex flex-col items-center justify-center space-y-6">
+            {loginMode === "qr" ? (
+              <>
+                <div className="relative flex items-center justify-center w-[180px] h-[180px]">
+                  {qrStatus === "loading" && (
+                    <Loader2 className="w-8 h-8 animate-spin text-muted-foreground/50" />
+                  )}
+
+                  {(qrStatus === "waiting" ||
+                    qrStatus === "scanned" ||
+                    qrStatus === "success") &&
+                    qrUrl && (
+                      <div className="w-full h-full p-2 bg-white rounded-xl shadow-sm border border-black/5">
+                        <QRCodeSVG
+                          value={qrUrl}
+                          size={162}
+                          level="M"
+                          className="w-full h-full"
+                        />
+                      </div>
+                    )}
+
+                  {qrStatus === "scanned" && (
+                    <div className="absolute inset-0 bg-background/60 backdrop-blur-sm flex flex-col items-center justify-center rounded-xl transition-all">
+                      <Check className="w-10 h-10 text-primary mb-2 drop-shadow-sm" />
+                      <span className="font-medium text-sm">扫描成功</span>
+                      <span className="text-[11px] text-muted-foreground mt-1">
+                        请在手机上确认
+                      </span>
+                    </div>
+                  )}
+
+                  {qrStatus === "expired" && (
+                    <div className="absolute inset-0 bg-background/80 backdrop-blur-sm flex flex-col items-center justify-center rounded-xl transition-all">
+                      <ScanLine className="w-8 h-8 text-muted-foreground mb-3 opacity-50" />
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        onClick={startLogin}
+                        className="h-8 text-xs rounded-full px-4"
+                      >
+                        <RefreshCw className="w-3 h-3 mr-1.5" /> 刷新二维码
+                      </Button>
+                    </div>
+                  )}
                 </div>
-                {qrStatus === "scanned" && (
-                  <div className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center text-white backdrop-blur-[2px] rounded-lg">
-                    <Check className="w-10 h-10 mb-2 text-green-400" />
-                    <span className="font-medium">扫描成功</span>
-                    <span className="text-xs opacity-80 mt-1">请在手机上确认</span>
-                  </div>
-                )}
-              </div>
-            )}
 
-            {qrStatus === "expired" && (
-              <div className="w-[180px] h-[180px] flex flex-col items-center justify-center border rounded-lg bg-muted/20 gap-3">
-                <ScanLine className="w-8 h-8 text-muted-foreground/50" />
-                <span className="text-sm text-muted-foreground">二维码已失效</span>
-                <Button size="sm" variant="outline" onClick={startLogin}>
-                  <RefreshCw className="w-3 h-3 mr-2" /> 刷新
+                <div className="text-center space-y-1.5">
+                  <p className="text-sm font-medium text-foreground">
+                    {STATUS_MESSAGES[qrStatus]}
+                  </p>
+                  <p className="text-[11px] text-muted-foreground/70">
+                    为保障账号安全，我们仅在本地保存登录凭证
+                  </p>
+                </div>
+              </>
+            ) : (
+              <div className="w-full space-y-3">
+                <div className="relative">
+                  <Textarea
+                    placeholder="粘贴 MUSIC_U 或完整 Cookie 字符串..."
+                    value={cookieInput}
+                    onChange={(e) => setCookieInput(e.target.value)}
+                    className="min-h-[140px] font-mono text-[13px] leading-relaxed resize-none bg-muted/20 border-none focus-visible:ring-1 focus-visible:ring-primary/20 transition-all placeholder:text-muted-foreground/50 p-4 rounded-xl"
+                  />
+                  <div className="absolute bottom-3 right-3 opacity-20 pointer-events-none">
+                    <Cookie className="w-5 h-5" />
+                  </div>
+                </div>
+
+                <div className="bg-muted/30 rounded-lg p-3 space-y-1.5">
+                  <p className="text-[11px] font-medium text-muted-foreground flex items-center">
+                    <Info className="w-3 h-3 mr-1" /> 如何获取？
+                  </p>
+                  <ol className="text-[10px] text-muted-foreground/80 leading-relaxed list-decimal list-inside space-y-0.5">
+                    <li>
+                      以 PC 模式访问官网{" "}
+                      <a
+                        href="https://music.163.com/"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-primary hover:underline underline-offset-2"
+                      >
+                        music.163.com
+                      </a>{" "}
+                      并登录
+                    </li>
+                    <li>按 F12 打开开发者工具 → Application</li>
+                    <li>
+                      在 Cookies 中找到并复制{" "}
+                      <code className="bg-background px-1.5 py-0.5 rounded border text-primary font-mono text-[9px]">
+                        MUSIC_U
+                      </code>{" "}
+                      的值
+                    </li>
+                  </ol>
+                </div>
+
+                <Button
+                  className="w-full rounded-full shadow-sm"
+                  onClick={handleCookieLogin}
+                  disabled={loading || !cookieInput.trim()}
+                >
+                  {loading ? (
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  ) : (
+                    "验证并登录"
+                  )}
                 </Button>
               </div>
             )}
 
-            <div className="text-center space-y-1">
-              <p className="text-sm font-medium">{STATUS_MESSAGES[qrStatus]}</p>
-              <p className="text-xs text-muted-foreground">为了您的账号安全，我们仅保存登录凭证(Cookie)</p>
-            </div>
+            <Button
+              variant="link"
+              className="text-xs text-muted-foreground/60 hover:text-muted-foreground px-0 h-auto"
+              onClick={() => setLoginMode(loginMode === "qr" ? "cookie" : "qr")}
+            >
+              {loginMode === "qr"
+                ? "遇到问题？尝试手动输入 Cookie"
+                : "返回扫码登录"}
+            </Button>
           </div>
         </DialogContent>
       </Dialog>
