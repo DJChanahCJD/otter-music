@@ -231,10 +231,10 @@ export function FullScreenPlayer({
       <div className="shrink-0 px-8 py-4 relative z-10">
         <div className="flex items-center justify-between">
           <div className="min-w-0 flex-1">
-            <h2 className="truncate text-xl font-semibold text-foreground">
+            <h2 className="truncate text-xl font-semibold text-foreground" title={currentTrack?.name || "未知歌曲"}>
               {currentTrack?.name || "未知歌曲"}
             </h2>
-            <p className="truncate text-sm text-muted-foreground mt-1">
+            <p className="truncate text-sm text-muted-foreground mt-1" title={currentTrack?.artist?.join(", ") || "未知歌手"}>
               {currentTrack?.artist?.join(", ") || "未知歌手"}
             </p>
           </div>
@@ -310,7 +310,6 @@ export function FullScreenPlayer({
         >
           <SkipBack className="h-6 w-6 fill-current" />
         </Button>
-
         <Button
           size="icon"
           className="h-16 w-16 rounded-full bg-primary text-primary-foreground shadow-lg hover:shadow-xl transition-all active:scale-95"

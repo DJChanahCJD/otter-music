@@ -251,3 +251,13 @@
     height: 1.5rem;
   }
 }
+
+@keyframes marquee {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+.animate-marquee {
+  animation: marquee var(--duration, 20s) linear infinite;
+  will-change: transform;
+}

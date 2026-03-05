@@ -10,10 +10,10 @@ import {
   MoreHorizontal,
   Pencil,
   CopyMinus,
-  Download,
   Trash2,
   Image,
   type LucideIcon,
+  FileOutput,
 } from "lucide-react";
 
 interface PlaylistOperationsProps {
@@ -78,7 +78,7 @@ export function PlaylistOperations({
       onClick: onDeduplicate,
     },
     {
-      icon: Download,
+      icon: FileOutput,
       label: "导出歌单",
       onClick: onExport,
     },
