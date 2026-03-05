@@ -1,7 +1,7 @@
 "use client";
 
 import { createPortal } from "react-dom";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { LyricsPanel } from "./LyricsPanel";
@@ -75,6 +75,16 @@ export function FullScreenPlayer({
   const [showLyrics, setShowLyrics] = useState(false);
   const [moreDrawerOpen, setMoreDrawerOpen] = useState(false);
   const [isAddToPlaylistOpen, setIsAddToPlaylistOpen] = useState(false);
+
+  // 退出全屏时重置歌词显示状态
+  useEffect(() => {
+    if (!isFullScreen) {
+      const timer = setTimeout(() => {
+        setShowLyrics(false);
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [isFullScreen]);
 
   const { queue, quality, currentIndex, setCurrentIndexAndPlay, clearQueue, reshuffle, currentAudioUrl } = useMusicStore(
     useShallow((state) => ({
