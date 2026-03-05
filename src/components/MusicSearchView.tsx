@@ -1,4 +1,5 @@
 import { getExactKey, toSimplified } from "@/lib/utils/music-key";
+import { cn } from "@/lib/utils";
 import { musicApi } from "@/lib/music-api";
 import { useMusicStore } from "@/store/music-store";
 import { MusicTrack, MusicSource, searchOptions } from "@/types/music";
@@ -73,12 +74,6 @@ export function MusicSearchView({ onPlay, currentTrackId, isPlaying }: MusicSear
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchIntent, searchResults.length]);
 
-  // 2. 当搜索词为空且无结果时，自动聚焦输入框
-  useEffect(() => {
-    if (searchResults.length === 0 && !searchQuery.trim()) {
-      searchInputRef.current?.focus();
-    }
-  }, [searchQuery, searchResults.length]);
 
   const fetchPage = async (nextPage: number, reset = false) => {
     if (!searchQuery.trim()) return;
@@ -183,7 +178,7 @@ export function MusicSearchView({ onPlay, currentTrackId, isPlaying }: MusicSear
                 }
               }}
               placeholder="搜索歌曲 / 歌手 / 专辑"
-              className="pl-9 pr-8 h-8 text-sm"
+              className={cn("pl-9 h-8 text-sm", searchQuery && "pr-8")}
             />
             {searchQuery && (
               <button

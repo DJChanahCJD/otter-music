@@ -43,13 +43,19 @@ function RootLayout() {
 
   useEffect(() => {
     const handleBackButton = async () => {
+        // 如果有弹窗/抽屉打开，模拟 ESC 关闭
+        if (document.querySelector('[role="dialog"]') || document.querySelector('[role="alertdialog"]')) {
+            document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+            return;
+        }
+
         if (isFullScreenRef.current) {
             setStoreFullScreen(false);
         } else {
             const path = locationRef.current.pathname;
-            // 如果是主 Tab 页，退出应用
+            // 如果是主 Tab 页，最小化应用
             if (path === "/" || path === "/search" || path === "/favorites" || path === "/mine") {
-                CapacitorApp.exitApp();
+                CapacitorApp.minimizeApp();
             } else {
                 // 否则后退
                 navigate(-1);
