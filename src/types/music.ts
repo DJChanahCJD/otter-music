@@ -35,23 +35,20 @@ export const searchOptions: Record<string, string> = {
   joox: "Joox",
   netease: "网易云音乐",
   kuwo: "酷我音乐",
-  bilibili: "B站",
   _netease: "Netease",
 };
 
 export const sourceLabels: Record<string, string> = {
   joox: "Joox",
   netease: "网易",
-  _netease: "Netease",
   kuwo: "酷我",
-  bilibili: "B站",
+  _netease: "Netease",
 };
 
 export const aggregatedSourceOptions: { value: MusicSource; label: string; description: string }[] = [
   { value: 'joox', label: 'Joox', description: '腾讯海外版，专注东南亚及港台流行资源' },
   { value: 'netease', label: '网易云音乐', description: '音源稳定，小众资源多' },
   { value: 'kuwo', label: '酷我音乐', description: '版权丰富，但稳定性一般' },
-  { value: 'bilibili', label: 'B站', description: '侧重二次创作与稀有音频，建议搜索精确歌名' },
 ];
 
 export const sourceBadgeStyles: Record<string, string> = {
