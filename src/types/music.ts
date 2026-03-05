@@ -52,11 +52,11 @@ export const aggregatedSourceOptions: { value: MusicSource; label: string; descr
 ];
 
 export const sourceBadgeStyles: Record<string, string> = {
-  netease: "bg-red-50 text-red-600 border-red-200 hover:bg-red-100",
-  _netease: "bg-red-50 text-red-600 border-red-200 hover:bg-red-100",
-  kuwo: "bg-amber-50 text-amber-600 border-amber-200 hover:bg-amber-100",
-  joox: "bg-green-50 text-green-600 border-green-200 hover:bg-green-100",
-  default: "bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100",
+  netease: "text-red-500/70 border-red-500/20 bg-red-500/5 hover:bg-red-500/10",
+  _netease: "text-red-500/70 border-red-500/20 bg-red-500/5 hover:bg-red-500/10",
+  kuwo: "text-amber-500/70 border-amber-500/20 bg-amber-500/5 hover:bg-amber-500/10",
+  joox: "text-green-500/70 border-green-500/20 bg-green-500/5 hover:bg-green-500/10",
+  default: "text-muted-foreground/70 border-border bg-muted/30 hover:bg-muted/50",
 };
 
 // === Music Store Types ===

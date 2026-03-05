@@ -140,7 +140,7 @@ export function MusicTrackItem({
           <Badge
             variant="outline"
             className={cn(
-              "shrink-0 text-[9px] px-1 py-0 h-3.5 leading-none font-normal opacity-80",
+              "shrink-0 text-[9px] px-1 py-0 h-3.5 leading-none font-normal",
               sourceBadgeStyles[track.source] || sourceBadgeStyles.default
             )}
           >

@@ -66,9 +66,9 @@ export function MusicTabBar() {
           >
             <Icon
               className={cn(
-                "h-5 w-5 transition-all",
-                isActive && tab.id === "favorites" && "fill-current"
+                "h-5 w-5 transition-all"
               )}
+              strokeWidth={isActive ? 2.5 : 2}
             />
             <span className="text-[10px] font-medium">{tab.label}</span>
           </Link>
