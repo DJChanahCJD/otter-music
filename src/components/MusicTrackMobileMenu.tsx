@@ -28,6 +28,7 @@ import { useMusicStore } from "@/store/music-store";
 import { toSimplified, normalizeText } from "@/lib/utils/music-key";
 import { musicApi } from "@/lib/music-api";
 import { toastUtils } from "@/lib/utils/toast";
+import { getSongDetail } from "@/lib/netease/netease-api";
 import {
   Dialog,
   DialogContent,
@@ -155,9 +156,30 @@ export function MusicTrackMobileMenu({
     }
   };
 
-  const handleSearch = (keyword: string, type: SearchIntent["type"] = "", artist?: string, id?: string) => {
-    // 优先跳转到详情页 (仅 _netease 源支持)
-    if (track.source === "_netease" && id) {
+  const handleSearch = async (keyword: string, type: SearchIntent["type"] = "", artist?: string, id?: string) => {
+    // 优先跳转到详情页 (支持 _netease 和 netease 源，且必须有有效 ID)
+    const isNetease = track.source === "_netease" || track.source === "netease";
+    
+    // 如果是网易云源，但没有 ID，尝试获取详情
+    if (isNetease && (!id || id === "0")) {
+        const toastId = toastUtils.loading("正在获取信息...");
+        try {
+            const detail = await getSongDetail(track.id);
+            if (detail) {
+                if (type === "artist" && detail.ar?.[0]?.id) {
+                    id = String(detail.ar[0].id);
+                } else if (type === "album" && detail.al?.id) {
+                    id = String(detail.al.id);
+                }
+            }
+        } catch (e) {
+            console.error("Failed to get song detail", e);
+        } finally {
+            toastUtils.dismiss(toastId);
+        }
+    }
+
+    if (isNetease && id && id !== "0") {
         if (type === "artist") {
             navigate(`/artist/${id}`);
             onOpenChange(false);
@@ -175,7 +197,9 @@ export function MusicTrackMobileMenu({
 
     setSearchQuery(toSimplified(keyword));
     setSearchIntent({ type, artist });
-    setSearchSource(track.source === "_netease" ? "netease" : track.source && track.source !== "local" ? track.source : "all");
+    if (track.source && track.source !== "local") {
+      setSearchSource(track.source);
+    }
     setSearchResults([]);
     navigate("/search");
     onOpenChange(false);

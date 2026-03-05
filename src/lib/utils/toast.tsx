@@ -44,6 +44,7 @@ export const toastUtils = {
   success: (message: string, options?: ToastOptions) => toast.success(message, options),
   error: (message: string, options?: ToastOptions) => toast.error(message, options),
   loading: (message: string, options?: ToastOptions) => toast.loading(message, options),
+  dismiss: (id?: string) => toast.dismiss(id),
 };
 
 // 导出类型以便使用
