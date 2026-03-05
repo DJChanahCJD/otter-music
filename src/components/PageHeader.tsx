@@ -11,7 +11,7 @@ interface PageHeaderProps {
 
 export function PageHeader({ title, onBack, action }: PageHeaderProps) {
   return (
-    <div className="flex items-center justify-between px-4 pb-1 pt-[calc(0.5rem+env(safe-area-inset-top))] border-b bg-card/50 backdrop-blur-sm sticky top-0 z-10">
+    <div className="flex items-center justify-between px-4 pb-1 pt-2 border-b bg-card/50 backdrop-blur-sm sticky top-0 z-10">
       <div className="flex items-center gap-2 flex-1 min-w-0">
         <Button
           variant="ghost"

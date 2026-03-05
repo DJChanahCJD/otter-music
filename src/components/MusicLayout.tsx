@@ -15,8 +15,8 @@ interface MusicLayoutProps {
 export function MusicLayout({ children, player, tabBar, header, hidePlayer, className, isTab = true }: MusicLayoutProps) {
   return (
     <div className={cn(
-      "relative flex flex-col h-dvh overflow-hidden bg-background",
-      isTab && "pt-safe pt-11",
+      "relative flex flex-col h-dvh overflow-hidden bg-background pt-safe",
+      isTab && "pt-11",
       className
     )}>
       {/* Header */}

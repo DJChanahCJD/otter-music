@@ -170,7 +170,7 @@ export function FullScreenPlayer({
       </div>
 
       {/* Top Control Bar */}
-      <header className="shrink-0 flex items-center justify-between px-6 pt-14 pb-6 relative z-10">
+      <header className="shrink-0 flex items-center justify-between px-6 pt-[calc(1rem+env(safe-area-inset-top))] pb-6 relative z-10">
         <Button
           variant="ghost"
           size="icon"
