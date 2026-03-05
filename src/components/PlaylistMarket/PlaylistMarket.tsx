@@ -170,9 +170,14 @@ export function PlaylistMarket() {
               setItems(newItems);
               setHasMore(false);
             } else {
-              setItems((prev) =>
-                currentOffset === 0 ? newItems : [...prev, ...newItems],
-              );
+              setItems((prev) => {
+                if (currentOffset === 0) return newItems;
+                const existingIds = new Set(prev.map((p) => p.id));
+                return [
+                  ...prev,
+                  ...newItems.filter((p) => !existingIds.has(p.id)),
+                ];
+              });
               if (newItems.length < PAGE_SIZE) setHasMore(false);
             }
           } else {
