@@ -182,7 +182,7 @@ export const useMusicStore = create<MusicState>()(
       aggregatedSources: ['joox', 'netease'],
       lastPlaylistCategory: "",
       lastMineTab: "recommend",
-      enableAutoMatch: false,
+      enableAutoMatch: true,
       setQuality: (quality) => set({ quality }),
       setSearchSource: (searchSource) => set({ searchSource }),
       setAggregatedSources: (aggregatedSources) => set({ aggregatedSources }),
