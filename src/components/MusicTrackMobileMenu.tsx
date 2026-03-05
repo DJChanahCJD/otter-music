@@ -184,7 +184,7 @@ export function MusicTrackMobileMenu({
   };
 
   return (
-    <div onClick={(e) => e.stopPropagation()}>
+    <div>
       <Drawer open={open} onOpenChange={onOpenChange}>
         <DrawerTrigger asChild>
           <Button

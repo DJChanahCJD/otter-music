@@ -88,16 +88,18 @@ export function MusicTrackItem({
   return (
     <div
       style={style}
-      onClick={showCheckbox ? onSelect : onPlay}
       className={cn(
-        "group grid gap-4 items-center px-4 py-2.5 rounded-md cursor-pointer transition-all text-sm",
+        "group grid gap-4 items-center px-4 py-2.5 rounded-md transition-all text-sm",
         "grid-cols-[2rem_1fr_auto]",
         isSelected && showCheckbox ? "bg-primary/10" : "hover:bg-muted/50",
         className
       )}
     >
       {/* Column 1: Index / Checkbox / Play State */}
-      <div className="flex justify-center shrink-0">
+      <div 
+        className="flex justify-center shrink-0 cursor-pointer"
+        onClick={showCheckbox ? onSelect : onPlay}
+      >
         {showCheckbox ? (
           <Checkbox
             checked={isSelected}
@@ -126,7 +128,10 @@ export function MusicTrackItem({
       </div>
 
       {/* Column 2: Title & Artist & Album */}
-      <div className="min-w-0 flex flex-col gap-0.5">
+      <div 
+        className="min-w-0 flex flex-col gap-0.5 cursor-pointer"
+        onClick={showCheckbox ? onSelect : onPlay}
+      >
         <div className={cn("font-medium flex items-center gap-1.5", isCurrent && "text-primary")}>
           <span className="truncate" title={track.name}>
             {track.name}
