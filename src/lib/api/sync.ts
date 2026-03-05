@@ -1,64 +1,28 @@
 import { API_URL, unwrap } from "./config";
 
-const SYNC_API_URL = API_URL;
+const SYNC_API_URL = `${API_URL}/sync`;
 
-export type SyncCheckResponse = {
-  lastSyncTime: number;
-};
+export type SyncCheckResponse = { lastSyncTime: number };
+export type SyncPullResponse<T> = { data: T; lastSyncTime: number };
+export type SyncPushResponse = { lastSyncTime: number };
 
-export type SyncPullResponse = {
-  data: unknown;
-  lastSyncTime: number;
-};
+const getHeaders = (syncKey: string): HeadersInit => ({
+  "Content-Type": "application/json",
+  Authorization: `Bearer ${syncKey}`,
+});
 
-export type SyncPushResponse = {
-  lastSyncTime: number;
-};
+export const syncCheck = (syncKey: string) =>
+  unwrap<SyncCheckResponse>(fetch(`${SYNC_API_URL}/check`, { headers: getHeaders(syncKey) }));
 
-function getAuthHeaders(syncKey: string): HeadersInit {
-  return {
-    "Content-Type": "application/json",
-    Authorization: `Bearer ${syncKey}`,
-  };
-}
+// 引入泛型 <T>，调用时可传入具体类型
+export const syncPull = <T = unknown>(syncKey: string) =>
+  unwrap<SyncPullResponse<T>>(fetch(SYNC_API_URL, { headers: getHeaders(syncKey) }));
 
-/**
- * 检查同步状态
- */
-export async function syncCheck(syncKey: string): Promise<SyncCheckResponse> {
-  return unwrap<SyncCheckResponse>(
-    fetch(`${SYNC_API_URL}/sync/check`, {
-      method: "GET",
-      headers: getAuthHeaders(syncKey),
-    })
-  );
-}
-
-/**
- * 拉取同步数据
- */
-export async function syncPull(syncKey: string): Promise<SyncPullResponse> {
-  return unwrap<SyncPullResponse>(
-    fetch(`${SYNC_API_URL}/sync`, {
-      method: "GET",
-      headers: getAuthHeaders(syncKey),
-    })
-  );
-}
-
-/**
- * 推送同步数据
- */
-export async function syncPush(
-  syncKey: string,
-  data: unknown,
-  lastSyncTime: number
-): Promise<SyncPushResponse> {
-  return unwrap<SyncPushResponse>(
-    fetch(`${SYNC_API_URL}/sync`, {
+export const syncPush = <T = unknown>(syncKey: string, data: T, lastSyncTime: number) =>
+  unwrap<SyncPushResponse>(
+    fetch(SYNC_API_URL, {
       method: "POST",
-      headers: getAuthHeaders(syncKey),
+      headers: getHeaders(syncKey),
       body: JSON.stringify({ data, lastSyncTime }),
     })
   );
-}

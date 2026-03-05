@@ -1,6 +1,7 @@
 "use client";
 
 import { PageLayout } from "./PageLayout";
+import { useNavigate } from "react-router-dom";
 import { ThemeToggle } from "./ThemeToggle";
 import { QualitySelect } from "./settings/QualitySelect";
 import { AggregatedSourceSelect } from "./settings/AggregatedSourceSelect";
@@ -8,7 +9,7 @@ import { SyncConfig } from "./settings/SyncConfig";
 import { NeteaseLogin } from "./settings/NeteaseLogin";
 import { useMusicStore } from "@/store/music-store";
 import { Slider } from "./ui/slider";
-import { Palette, Volume2, Wand2, Zap } from "lucide-react";
+import { Palette, Volume2, Wand2, Trash2 } from "lucide-react";
 import { Switch } from "./ui/switch";
 import { PlaylistImport } from "./settings/PlaylistImport";
 import { SettingItem } from "./settings/SettingItem";
@@ -30,6 +31,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 }
 
 export function SettingsPage({ onBack }: SettingsPageProps) {
+  const navigate = useNavigate();
   const { volume, setVolume, enableAutoMatch, setEnableAutoMatch } = useMusicStore();
 
   return (
@@ -77,6 +79,13 @@ export function SettingsPage({ onBack }: SettingsPageProps) {
           <NeteaseLogin />
           <SyncConfig />
           <PlaylistImport />
+          <SettingItem
+            icon={Trash2}
+            title="回收站"
+            subtitle="找回误删的歌曲与歌单"
+            onClick={() => navigate("/settings/trash")}
+            showChevron
+          />
         </Section>
 
         <Section title="关于系统">

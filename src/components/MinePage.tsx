@@ -40,6 +40,7 @@ export function MinePage({ onSelectPlaylist }: MinePageProps) {
       deletePlaylist: state.deletePlaylist,
     }))
   );
+  const activePlaylists = playlists.filter((playlist) => playlist.is_deleted !== true);
 
   const [newPlaylistName, setNewPlaylistName] = useState("");
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -147,7 +148,7 @@ export function MinePage({ onSelectPlaylist }: MinePageProps) {
         </Dialog>
       </div>
 
-      {playlists.length === 0 ? (
+      {activePlaylists.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-10 text-center">
           <ListMusic className="h-10 w-10 text-muted-foreground/40 mb-2" />
           <p className="text-muted-foreground text-sm">暂无歌单</p>
@@ -155,7 +156,7 @@ export function MinePage({ onSelectPlaylist }: MinePageProps) {
         </div>
       ) : (
         <div className="space-y-2">
-          {playlists.map((playlist) => (
+          {activePlaylists.map((playlist) => (
             <div
               key={playlist.id}
               className="flex items-center gap-3 p-3 rounded-xl bg-card/50 hover:bg-card transition-colors cursor-pointer group"
@@ -189,7 +190,7 @@ export function MinePage({ onSelectPlaylist }: MinePageProps) {
                   <>
                     <p className="font-medium text-foreground truncate">{playlist.name}</p>
                     <p className="text-xs text-muted-foreground">
-                      {playlist.tracks.length} 首 · {format(playlist.createdAt, "yyyy-MM-dd")}
+                      {playlist.tracks.filter((track) => track.is_deleted !== true).length} 首 · {format(playlist.createdAt, "yyyy-MM-dd")}
                     </p>
                   </>
                 )}

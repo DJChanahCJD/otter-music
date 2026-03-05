@@ -21,7 +21,8 @@ import {
   AlbumDetailRoute,
   QueueRoute,
   HistoryRoute,
-  SettingsRoute
+  SettingsRoute,
+  TrashRoute
 } from "@/routes/RouteWrappers";
 import { RouteErrorPage } from "@/components/RouteErrorPage";
 
@@ -219,6 +220,10 @@ export const router = createBrowserRouter([
       {
         path: "settings",
         element: <SettingsRoute />,
+      },
+      {
+        path: "settings/trash",
+        element: <TrashRoute />,
       },
     ],
   },

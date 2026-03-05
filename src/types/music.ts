@@ -100,6 +100,8 @@ export interface MusicTrack {
   url_id: string;
   lyric_id: string;
   source: MusicSource;
+  update_time?: number;
+  is_deleted?: boolean;
   privilege?: NeteasePrivilege;
   artist_ids?: string[];
   album_id?: string;
@@ -110,6 +112,8 @@ export interface Playlist {
   name: string;
   tracks: MusicTrack[];
   createdAt: number;
+  update_time?: number;
+  is_deleted?: boolean;
   coverUrl?: string;
   description?: string;
 }

@@ -7,29 +7,29 @@ import type { MusicTrack, MusicSource, Playlist, SearchIntent } from '@/types/mu
 import { cleanTrack } from '@/lib/utils/music';
 import { toastUtils } from '@/lib/utils/toast';
 
+// --- Helpers ---
 const cleanPlaylist = (p: Playlist): Playlist => ({ ...p, tracks: p.tracks.map(cleanTrack) });
 const clamp = (val: number, max: number) => Math.min(Math.max(val, 0), Math.max(0, max));
-const shuffleArray = <T>(arr: T[]): T[] => {
-  const res = [...arr];
-  for (let i = res.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [res[i], res[j]] = [res[j], res[i]];
-  }
-  return res;
-};
+const shuffleArray = <T>(arr: T[]): T[] => [...arr].sort(() => Math.random() - 0.5);
+const withMeta = (track: MusicTrack): MusicTrack => ({
+  ...cleanTrack(track),
+  update_time: Date.now(),
+  is_deleted: track.is_deleted === true,
+});
+const updateList = <T extends { id: string }>(list: T[], id: string, updater: Partial<T> | ((item: T) => Partial<T>)) =>
+  list.map(item => item.id === id ? { ...item, update_time: Date.now(), ...(typeof updater === 'function' ? updater(item) : updater) } : item);
 
-interface MusicState {
-  // --- Library (Persisted) ---
+export interface MusicState {
   favorites: MusicTrack[];
   playlists: Playlist[];
-
   addToFavorites: (track: MusicTrack) => string | null;
   removeFromFavorites: (trackId: string) => void;
+  restoreFromFavorites: (trackId: string) => void;
   setFavorites: (tracks: MusicTrack[]) => void;
   isFavorite: (trackId: string) => boolean;
-
   createPlaylist: (name: string, coverUrl?: string) => string;
   deletePlaylist: (id: string) => void;
+  restorePlaylist: (id: string) => void;
   renamePlaylist: (id: string, name: string) => void;
   updatePlaylist: (id: string, data: Partial<Playlist>) => void;
   addToPlaylist: (playlistId: string, track: MusicTrack) => void;
@@ -37,7 +37,6 @@ interface MusicState {
   setPlaylistTracks: (playlistId: string, tracks: MusicTrack[]) => void;
   updateTrackInPlaylists: (trackId: string, newTrack: MusicTrack) => number;
 
-  // --- Settings (Persisted) ---
   quality: string;
   searchSource: MusicSource;
   aggregatedSources: MusicSource[];
@@ -51,7 +50,6 @@ interface MusicState {
   setLastMineTab: (tab: "recommend" | "created" | "subscribed") => void;
   setEnableAutoMatch: (enable: boolean) => void;
 
-  // --- Search State (Not Persisted) ---
   searchQuery: string;
   searchIntent: SearchIntent | null;
   searchResults: MusicTrack[];
@@ -66,25 +64,22 @@ interface MusicState {
   setSearchPage: (page: number) => void;
   resetSearch: () => void;
 
-  // --- UI State (Not Persisted) ---
   isFullScreenPlayer: boolean;
   setIsFullScreenPlayer: (isFullScreen: boolean) => void;
 
-  // --- Playback State (Persisted) ---
   volume: number;
   isRepeat: boolean;
   isShuffle: boolean;
-  currentAudioTime: number; // Persisted playback progress
+  currentAudioTime: number;
   isPlaying: boolean;
   isLoading: boolean;
-  seekTimestamp: number; // Used to trigger seek
-  seekTargetTime: number; // 用户 seek 的目标位置（与 currentAudioTime 分离）
+  seekTimestamp: number;
+  seekTargetTime: number;
   duration: number;
-  currentAudioUrl: string | null; // Current audio source URL
-  hasUserGesture: boolean; // 标记用户是否有过真正的交互（阻止自动播放）
-  consecutiveFailures: number; // 连续加载失败计数
-  maxConsecutiveFailures: number; // 最大允许连续失败次数
-
+  currentAudioUrl: string | null;
+  hasUserGesture: boolean;
+  consecutiveFailures: number;
+  maxConsecutiveFailures: number;
   setVolume: (volume: number) => void;
   toggleRepeat: () => void;
   toggleShuffle: () => void;
@@ -100,36 +95,19 @@ interface MusicState {
   incrementFailures: () => number;
   resetFailures: () => void;
 
-  // --- Playback (Queue) ---
   queue: MusicTrack[];
   originalQueue: MusicTrack[];
   currentIndex: number;
   contextId: string | null;
-
-  /** 
-   * Play a context (list of tracks). 
-   * Replaces the current queue with this list and starts playing from startIndex.
-   * contextId is used to identify the same context for shuffle mode optimization.
-   */
   playContext: (tracks: MusicTrack[], startIndex?: number, contextId?: string) => void;
-
-  /** 添加到下一首播放 */
   addToNextPlay: (track: MusicTrack) => void;
-  /** Insert a track next to current and switch to it */
   playTrackAsNext: (track: MusicTrack) => void;
-  /** Skip to next track and start playing */
   skipToNext: () => void;
-
-  /** Remove a track from the current queue */
   removeFromQueue: (trackId: string) => void;
-
   clearQueue: () => void;
   reshuffle: () => void;
   setCurrentIndex: (index: number, resetTime?: boolean) => void;
-  /** Switch to track at index and start playing */
   setCurrentIndexAndPlay: (index: number) => void;
-
-  /** Update a track in the queue (e.g. replacing a trial version with a full version) */
   updateTrackInQueue: (trackId: string, newTrack: MusicTrack) => void;
 }
 
@@ -138,183 +116,131 @@ export const useMusicStore = create<MusicState>()(
     (set, get) => ({
       // --- Library ---
       favorites: [],
-      playlists: [],
       addToFavorites: (track) => {
         if (track.source === 'local') return "本地音乐不支持喜欢";
         const { favorites } = get();
-        if (favorites.some((t) => t.id === track.id)) return "已在「我的喜欢」中";
-        set({ favorites: [track, ...favorites] });
+        const existing = favorites.find((t) => t.id === track.id);
+        if (existing && !existing.is_deleted) return "已在「我的喜欢」中";
+        const nextTrack = { ...withMeta(track), is_deleted: false };
+        set({ favorites: existing ? updateList(favorites, track.id, nextTrack) : [nextTrack, ...favorites] });
         return null;
       },
-      removeFromFavorites: (id) => set((s) => ({ favorites: s.favorites.filter(t => t.id !== id) })),
-      setFavorites: (favorites) => set({ favorites }),
-      isFavorite: (id) => get().favorites.some(t => t.id === id),
+      removeFromFavorites: (id) => set(s => ({ favorites: updateList(s.favorites, id, { is_deleted: true }) })),
+      restoreFromFavorites: (id) => set(s => ({ favorites: updateList(s.favorites, id, { is_deleted: false }) })),
+      setFavorites: (favorites) => set({ favorites: favorites.map(withMeta) }),
+      isFavorite: (id) => get().favorites.some(t => t.id === id && !t.is_deleted),
 
+      playlists: [],
       createPlaylist: (name, coverUrl) => {
         const id = uuidv4();
-        set((s) => ({ playlists: [{ id, name, tracks: [], createdAt: Date.now(), coverUrl }, ...s.playlists] }));
+        set(s => ({ playlists: [{ id, name, coverUrl, tracks: [], createdAt: Date.now(), update_time: Date.now(), is_deleted: false }, ...s.playlists] }));
         return id;
       },
-      deletePlaylist: (id) => set((s) => ({ playlists: s.playlists.filter(p => p.id !== id) })),
-      renamePlaylist: (id, name) => set((s) => ({ playlists: s.playlists.map(p => p.id === id ? { ...p, name } : p) })),
-      updatePlaylist: (id, data) => set((s) => ({
-        playlists: s.playlists.map(p => p.id === id ? { ...p, ...data } : p)
-      })),
-      addToPlaylist: (pid, track) => set((s) => {
-        if (track.source === 'local') {
-          toastUtils.info("本地音乐不支持添加歌单");
-          return s;
-        }
+      deletePlaylist: (id) => set(s => ({ playlists: updateList(s.playlists, id, { is_deleted: true }) })),
+      restorePlaylist: (id) => set(s => ({ playlists: updateList(s.playlists, id, { is_deleted: false }) })),
+      renamePlaylist: (id, name) => set(s => ({ playlists: updateList(s.playlists, id, { name, is_deleted: false }) })),
+      updatePlaylist: (id, data) => set(s => ({ playlists: updateList(s.playlists, id, { ...data, is_deleted: false }) })),
+      addToPlaylist: (pid, track) => set(s => {
+        if (track.source === 'local') { toastUtils.info("本地音乐不支持添加歌单"); return s; }
         return {
-          playlists: s.playlists.map(p => p.id === pid && !p.tracks.some(t => t.id === track.id) 
-            ? { ...p, tracks: [track, ...p.tracks] } : p)
+          playlists: updateList(s.playlists, pid, p => {
+            const nextTrack = { ...withMeta(track), is_deleted: false };
+            const exists = p.tracks.find(t => t.id === track.id);
+            return { tracks: exists ? updateList(p.tracks, track.id, nextTrack) : [nextTrack, ...p.tracks], is_deleted: false };
+          })
         };
       }),
-      removeFromPlaylist: (pid, tid) => set((s) => ({
-        playlists: s.playlists.map(p => p.id === pid ? { ...p, tracks: p.tracks.filter(t => t.id !== tid) } : p)
-      })),
-      setPlaylistTracks: (pid, tracks) => set((s) => ({
-        playlists: s.playlists.map(p => p.id === pid ? { ...p, tracks } : p)
-      })),
-
+      removeFromPlaylist: (pid, tid) => set(s => ({ playlists: updateList(s.playlists, pid, p => ({ tracks: updateList(p.tracks, tid, { is_deleted: true }) })) })),
+      setPlaylistTracks: (pid, tracks) => set(s => ({ playlists: updateList(s.playlists, pid, { tracks: tracks.map(withMeta), is_deleted: false }) })),
       updateTrackInPlaylists: (tid, newTrack) => {
-        const { playlists } = get();
         let count = 0;
-        const newPlaylists = playlists.map(p => {
-          if (p.tracks.some(t => t.id === tid)) {
+        set(s => ({
+          playlists: s.playlists.map(p => {
+            if (!p.tracks.some(t => t.id === tid)) return p;
             count++;
-            return { ...p, tracks: p.tracks.map(t => t.id === tid ? newTrack : t) };
-          }
-          return p;
-        });
-
-        if (count > 0) {
-          set({ playlists: newPlaylists });
-        }
+            return { ...p, update_time: Date.now(), tracks: updateList(p.tracks, tid, { ...withMeta(newTrack), is_deleted: false }) };
+          })
+        }));
         return count;
       },
 
       // --- Settings ---
-      quality: "192",
-      searchSource: "all",
-      aggregatedSources: ['joox', 'netease'],
-      lastPlaylistCategory: "",
-      lastMineTab: "recommend",
-      enableAutoMatch: true,
-      setQuality: (quality) => set({ quality }),
-      setSearchSource: (searchSource) => set({ searchSource }),
-      setAggregatedSources: (aggregatedSources) => set({ aggregatedSources }),
-      setLastPlaylistCategory: (lastPlaylistCategory) => set({ lastPlaylistCategory }),
-      setLastMineTab: (lastMineTab) => set({ lastMineTab }),
-      setEnableAutoMatch: (enableAutoMatch) => set({ enableAutoMatch }),
+      quality: "192", searchSource: "all", aggregatedSources: ['joox', 'netease'],
+      lastPlaylistCategory: "", lastMineTab: "recommend", enableAutoMatch: true,
+      setQuality: (quality) => set({ quality }), setSearchSource: (searchSource) => set({ searchSource }),
+      setAggregatedSources: (aggregatedSources) => set({ aggregatedSources }), setLastPlaylistCategory: (lastPlaylistCategory) => set({ lastPlaylistCategory }),
+      setLastMineTab: (lastMineTab) => set({ lastMineTab }), setEnableAutoMatch: (enableAutoMatch) => set({ enableAutoMatch }),
 
       // --- Search State ---
       searchQuery: "", searchIntent: null, searchResults: [], searchLoading: false, searchHasMore: false, searchPage: 0,
-      setSearchQuery: (searchQuery) => set({ searchQuery }),
-      setSearchIntent: (searchIntent) => set({ searchIntent }),
-      setSearchResults: (searchResults) => set({ searchResults }),
-      setSearchLoading: (searchLoading) => set({ searchLoading }),
-      setSearchHasMore: (searchHasMore) => set({ searchHasMore }),
-      setSearchPage: (searchPage) => set({ searchPage }),
+      setSearchQuery: (searchQuery) => set({ searchQuery }), setSearchIntent: (searchIntent) => set({ searchIntent }),
+      setSearchResults: (searchResults) => set({ searchResults }), setSearchLoading: (searchLoading) => set({ searchLoading }),
+      setSearchHasMore: (searchHasMore) => set({ searchHasMore }), setSearchPage: (searchPage) => set({ searchPage }),
       resetSearch: () => set({ searchQuery: "", searchIntent: null, searchResults: [], searchLoading: false, searchHasMore: false, searchPage: 0 }),
 
       // --- UI & Playback Base ---
       isFullScreenPlayer: false, setIsFullScreenPlayer: (isFullScreenPlayer) => set({ isFullScreenPlayer }),
       volume: 1.0, isRepeat: false, isShuffle: false, currentAudioTime: 0, isPlaying: false, isLoading: false,
       seekTimestamp: 0, seekTargetTime: -1, duration: 0, currentAudioUrl: null, hasUserGesture: false, consecutiveFailures: 0, maxConsecutiveFailures: 3,
-      setVolume: (volume) => set({ volume }),
-      toggleRepeat: () => set((s) => ({ isRepeat: !s.isRepeat })),
-      setAudioCurrentTime: (currentAudioTime) => set({ currentAudioTime }),
-      setDuration: (duration) => set({ duration }),
-      setIsPlaying: (isPlaying) => set({ isPlaying }),
-      togglePlay: () => set((s) => ({ hasUserGesture: true, isPlaying: !s.isPlaying })),
-      setIsLoading: (isLoading) => set({ isLoading }),
-      seek: (time) => set({ seekTargetTime: time, seekTimestamp: Date.now() }),
-      clearSeekTargetTime: () => set({ seekTargetTime: -1 }),
-      setCurrentAudioUrl: (currentAudioUrl) => set({ currentAudioUrl }),
-      setUserGesture: () => set({ hasUserGesture: true }),
+      setVolume: (volume) => set({ volume }), toggleRepeat: () => set(s => ({ isRepeat: !s.isRepeat })),
+      setAudioCurrentTime: (currentAudioTime) => set({ currentAudioTime }), setDuration: (duration) => set({ duration }),
+      setIsPlaying: (isPlaying) => set({ isPlaying }), togglePlay: () => set(s => ({ hasUserGesture: true, isPlaying: !s.isPlaying })),
+      setIsLoading: (isLoading) => set({ isLoading }), seek: (time) => set({ seekTargetTime: time, seekTimestamp: Date.now() }),
+      clearSeekTargetTime: () => set({ seekTargetTime: -1 }), setCurrentAudioUrl: (currentAudioUrl) => set({ currentAudioUrl }),
+      setUserGesture: () => set({ hasUserGesture: true }), resetFailures: () => set({ consecutiveFailures: 0 }),
       incrementFailures: () => { const f = get().consecutiveFailures + 1; set({ consecutiveFailures: f }); return f; },
-      resetFailures: () => set({ consecutiveFailures: 0 }),
 
       // --- Queue Management ---
       queue: [], originalQueue: [], currentIndex: 0, contextId: null,
 
-      toggleShuffle: () => set((s) => {
-        const newShuffle = !s.isShuffle;
-        const curIdx = clamp(s.currentIndex, s.queue.length - 1);
-        if (newShuffle) { // Turn ON
-          if (s.queue.length <= 1) return { isShuffle: true, originalQueue: s.queue, currentIndex: curIdx };
+      toggleShuffle: () => set(s => {
+        const curIdx = clamp(s.currentIndex, Math.max(0, s.queue.length - 1));
+        if (!s.isShuffle) {
+          if (s.queue.length <= 1) return { isShuffle: true, originalQueue: s.queue };
           const curTrack = s.queue[curIdx];
           const rest = s.queue.filter((_, i) => i !== curIdx);
           return { isShuffle: true, originalQueue: s.queue, queue: [curTrack, ...shuffleArray(rest)], currentIndex: 0 };
-        } else { // Turn OFF
-          const curTrack = s.queue[curIdx];
-          const newIdx = s.originalQueue.findIndex(t => t.id === curTrack?.id);
-          return { isShuffle: false, queue: s.originalQueue.length ? s.originalQueue : s.queue, currentIndex: Math.max(0, newIdx), originalQueue: [] };
         }
+        const newIdx = s.originalQueue.findIndex(t => t.id === s.queue[curIdx]?.id);
+        return { isShuffle: false, queue: s.originalQueue.length ? s.originalQueue : s.queue, currentIndex: Math.max(0, newIdx), originalQueue: [] };
       }),
 
-      playContext: (tracks, startIdx = 0, contextId) => set((s) => {
-        if (!tracks.length) return { queue: [], originalQueue: [], currentIndex: 0, currentAudioTime: 0, isPlaying: false, duration: 0, contextId: null };
+      playContext: (tracks, startIdx = 0, contextId) => set(s => {
+        if (!tracks.length) return { queue: [], originalQueue: [], currentIndex: 0, currentAudioTime: 0, isPlaying: false, contextId: null };
         const idx = clamp(startIdx, tracks.length - 1);
-        
         if (s.isShuffle) {
           if (contextId && s.contextId === contextId && startIdx !== undefined) {
             const targetIdx = s.queue.findIndex(t => t.id === tracks[startIdx].id);
             if (targetIdx !== -1) return { currentIndex: targetIdx, currentAudioTime: 0, hasUserGesture: true };
           }
           const realIdx = startIdx !== undefined ? idx : Math.floor(Math.random() * tracks.length);
-          const first = tracks[realIdx];
           const rest = shuffleArray(tracks.filter((_, i) => i !== realIdx));
-          return { queue: [first, ...rest], originalQueue: tracks, currentIndex: 0, currentAudioTime: 0, hasUserGesture: true, contextId: contextId ?? null };
+          return { queue: [tracks[realIdx], ...rest], originalQueue: tracks, currentIndex: 0, currentAudioTime: 0, hasUserGesture: true, contextId: contextId ?? null };
         }
         return { queue: tracks, originalQueue: tracks, currentIndex: idx, currentAudioTime: 0, hasUserGesture: true, contextId: contextId ?? null };
       }),
 
-      // 提取核心插入逻辑，复用于 addToNextPlay 和 playTrackAsNext
-      addToNextPlay: (track) => set((s) => insertNext(s, track, false)),
-      playTrackAsNext: (track) => set((s) => insertNext(s, track, true)),
+      addToNextPlay: (track) => set(s => insertNext(s, track, false)),
+      playTrackAsNext: (track) => set(s => insertNext(s, track, true)),
 
-      removeFromQueue: (tid) => set((s) => {
+      removeFromQueue: (tid) => set(s => {
         const idx = s.queue.findIndex(t => t.id === tid);
         if (idx === -1) return {};
         const q = s.queue.filter(t => t.id !== tid);
         if (!q.length) return { queue: [], originalQueue: [], currentIndex: 0, currentAudioTime: 0, isPlaying: false };
-        
-        return {
-          queue: q,
-          originalQueue: s.isShuffle ? (s.originalQueue || []).filter(t => t.id !== tid) : s.originalQueue,
-          currentIndex: idx < s.currentIndex ? s.currentIndex - 1 : (idx === s.currentIndex ? Math.min(s.currentIndex, q.length - 1) : s.currentIndex)
-        };
+        return { queue: q, originalQueue: s.isShuffle ? (s.originalQueue || []).filter(t => t.id !== tid) : s.originalQueue, currentIndex: idx < s.currentIndex ? s.currentIndex - 1 : Math.min(s.currentIndex, q.length - 1) };
       }),
 
       clearQueue: () => set({ queue: [], originalQueue: [], currentIndex: 0, currentAudioTime: 0, isPlaying: false, duration: 0, contextId: null }),
-      
-      reshuffle: () => set((s) => {
-        if (!s.isShuffle || s.queue.length <= 1) return s;
-        const curTrack = s.queue[s.currentIndex];
-        const srcQueue = s.originalQueue?.length ? s.originalQueue : s.queue;
-        return { queue: [curTrack, ...shuffleArray(srcQueue.filter(t => t.id !== curTrack.id))], currentIndex: 0 };
-      }),
+      reshuffle: () => set(s => s.isShuffle && s.queue.length > 1 ? { queue: [s.queue[s.currentIndex], ...shuffleArray((s.originalQueue?.length ? s.originalQueue : s.queue).filter(t => t.id !== s.queue[s.currentIndex].id))], currentIndex: 0 } : {}),
 
-      setCurrentIndex: (idx, resetTime = true) => set((s) => ({
-        currentIndex: s.queue.length ? clamp(idx, s.queue.length - 1) : 0,
-        currentAudioTime: resetTime ? 0 : s.currentAudioTime,
-      })),
+      setCurrentIndex: (idx, resetTime = true) => set(s => ({ currentIndex: s.queue.length ? clamp(idx, s.queue.length - 1) : 0, currentAudioTime: resetTime ? 0 : s.currentAudioTime })),
+      setCurrentIndexAndPlay: (idx) => set(s => ({ currentIndex: s.queue.length ? clamp(idx, s.queue.length - 1) : 0, currentAudioTime: 0, hasUserGesture: true, isPlaying: true })),
+      skipToNext: () => set(s => s.queue.length ? { currentIndex: (s.currentIndex + 1) % s.queue.length, currentAudioTime: 0 } : {}),
 
-      setCurrentIndexAndPlay: (idx) => set((s) => ({
-        currentIndex: s.queue.length ? clamp(idx, s.queue.length - 1) : 0,
-        currentAudioTime: 0, hasUserGesture: true, isPlaying: true,
-      })),
-
-      skipToNext: () => set((s) => s.queue.length ? { currentIndex: (s.currentIndex + 1) % s.queue.length, currentAudioTime: 0 } : {}),
-
-      updateTrackInQueue: (tid, newTrack) => set((s) => ({
+      updateTrackInQueue: (tid, newTrack) => set(s => ({
         queue: s.queue.map(t => t.id === tid ? newTrack : t),
         originalQueue: s.originalQueue?.map(t => t.id === tid ? newTrack : t),
-        // 如果当前播放的就是这首歌，强制刷新播放状态（保留进度或重置视需求而定，这里假设是为了听完整版，重置较好，但也可能想无缝）
-        // 若 id 相同，播放器可能不会重新加载 url。需要触发 url 更新。
-        // 由于 currentAudioUrl 是 store 状态，我们将其置空强制重新获取
         currentAudioUrl: s.queue[s.currentIndex]?.id === tid ? null : s.currentAudioUrl,
       })),
     }),
@@ -322,31 +248,20 @@ export const useMusicStore = create<MusicState>()(
       name: storeKey.MusicStore,
       storage: createJSONStorage(() => idbStorage),
       partialize: (state) => ({
-        favorites: state.favorites.map(cleanTrack),
-        playlists: state.playlists.map(cleanPlaylist),
-        queue: state.queue.map(cleanTrack),
-        currentIndex: state.currentIndex,
-        volume: state.volume,
-        isRepeat: state.isRepeat,
-        isShuffle: state.isShuffle,
-        currentAudioTime: state.currentAudioTime,
-        duration: state.duration,
-        quality: state.quality,
-        searchSource: state.searchSource,
-        aggregatedSources: state.aggregatedSources,
-        lastPlaylistCategory: state.lastPlaylistCategory,
-        lastMineTab: state.lastMineTab,
-        enableAutoMatch: state.enableAutoMatch,
+        favorites: state.favorites.map(cleanTrack), playlists: state.playlists.map(cleanPlaylist),
+        queue: state.queue.map(cleanTrack), currentIndex: state.currentIndex, volume: state.volume,
+        isRepeat: state.isRepeat, isShuffle: state.isShuffle, currentAudioTime: state.currentAudioTime, 
+        duration: state.duration, quality: state.quality, searchSource: state.searchSource,
+        aggregatedSources: state.aggregatedSources, lastPlaylistCategory: state.lastPlaylistCategory,
+        lastMineTab: state.lastMineTab, enableAutoMatch: state.enableAutoMatch,
       }),
     }
   )
 );
 
-// --- 独立抽离的插入队列逻辑 ---
+// --- Queue Helper ---
 function insertNext(state: MusicState, track: MusicTrack, playImmediately: boolean): Partial<MusicState> {
-  if (!state.queue.length) {
-    return { queue: [track], originalQueue: state.isShuffle ? [track] : [], currentIndex: 0, ...(playImmediately && { currentAudioTime: 0 }) };
-  }
+  if (!state.queue.length) return { queue: [track], originalQueue: state.isShuffle ? [track] : [], currentIndex: 0, ...(playImmediately && { currentAudioTime: 0 }) };
   
   const q = [...state.queue];
   const existIdx = q.findIndex(t => t.id === track.id);
@@ -371,10 +286,5 @@ function insertNext(state: MusicState, track: MusicTrack, playImmediately: boole
     oq.splice(oqCurIdx !== -1 ? oqCurIdx + 1 : oq.length, 0, track);
   }
 
-  return {
-    queue: q,
-    originalQueue: oq,
-    currentIndex: playImmediately ? targetIdx : curIdx,
-    ...(playImmediately && { currentAudioTime: 0 })
-  };
+  return { queue: q, originalQueue: oq, currentIndex: playImmediately ? targetIdx : curIdx, ...(playImmediately && { currentAudioTime: 0 }) };
 }

@@ -18,6 +18,7 @@ const HistoryPage = lazy(() => import("@/components/HistoryPage").then(m => ({ d
 const SettingsPage = lazy(() => import("@/components/SettingsPage").then(m => ({ default: m.SettingsPage })));
 const LocalMusicPage = lazy(() => import("@/components/LocalMusicPage").then(m => ({ default: m.LocalMusicPage })));
 const NeteaseDetail = lazy(() => import("@/components/NeteaseDetail").then(m => ({ default: m.NeteaseDetail })));
+const TrashPage = lazy(() => import("@/components/TrashPage").then(m => ({ default: m.TrashPage })));
 
 export function SearchRoute() {
   const { handlePlay } = usePlayHelper();
@@ -38,19 +39,20 @@ export function SearchRoute() {
 export function FavoritesRoute() {
   const { favorites, removeFromFavorites, queue, currentIndex, isPlaying, playContext, togglePlay } = useMusicStore();
   const currentTrack = queue[currentIndex] || null;
+  const activeFavorites = favorites.filter((track) => track.is_deleted !== true);
   
   const handlePlayInPlaylist = (track: MusicTrack | null, index?: number) => {
     if (track && index !== undefined && currentTrack?.id === track.id) {
       togglePlay();
       return;
     }
-    playContext(favorites, index, "favorites");
+    playContext(activeFavorites, index, "favorites");
   };
 
   return (
     <Suspense fallback={<PageLoader />}>
       <FavoritesView
-        tracks={favorites}
+        tracks={activeFavorites}
         onPlay={handlePlayInPlaylist}
         currentTrackId={currentTrack?.id}
         isPlaying={isPlaying}
@@ -75,19 +77,21 @@ export function PlaylistDetailRoute() {
     togglePlay 
   } = useMusicStore();
   
-  const playlist = playlists.find((p) => p.id === id);
+  const playlist = playlists.find((p) => p.id === id && p.is_deleted !== true);
   const currentTrack = queue[currentIndex] || null;
 
   if (!playlist) {
     return <div className="p-4 text-center text-muted-foreground">歌单不存在</div>;
   }
 
+  const activeTracks = playlist.tracks.filter((track) => track.is_deleted !== true);
+
   const handlePlayInPlaylist = (track: MusicTrack | null, index?: number) => {
     if (track && index !== undefined && currentTrack?.id === track.id) {
       togglePlay();
       return;
     }
-    playContext(playlist.tracks, index, `playlist-${id}`);
+    playContext(activeTracks, index, `playlist-${id}`);
   };
 
   return (
@@ -99,7 +103,7 @@ export function PlaylistDetailRoute() {
         createdAt={playlist.createdAt}
         description={playlist.description}
         coverUrl={playlist.coverUrl}
-        tracks={playlist.tracks}
+        tracks={activeTracks}
         playlistId={id}
         icon={<ListMusic className="h-8 w-8 text-primary/80" />}
         onPlay={handlePlayInPlaylist}
@@ -262,6 +266,14 @@ export function SettingsRoute() {
     return (
         <Suspense fallback={<PageLoader />}>
             <SettingsPage />
+        </Suspense>
+    );
+}
+
+export function TrashRoute() {
+    return (
+        <Suspense fallback={<PageLoader />}>
+            <TrashPage />
         </Suspense>
     );
 }
