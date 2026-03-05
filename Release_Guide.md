@@ -1,6 +1,6 @@
-# Android 发布手册（Release Guide）
+# 移动端发布手册（Release Guide）
 
-完整流程：**改版本 → 构建 → 签名 → 生成 APK**
+完整流程：**改版本 → 本地验证 → Tag 发布 → 自动构建 APK**
 
 ---
 
@@ -56,13 +56,37 @@ npm run build:android:release
 
 ---
 
+## 4️⃣ GitHub Actions 自动发布（推荐）
+
+### 触发条件
+
+- 推送 `v*` Tag（例如 `v2.0.2`）会自动触发：
+  - Android APK 构建
+  - GitHub Release 创建并上传产物
+
+### 发布命令
+
+```bash
+git tag v2.0.2
+git push origin v2.0.2
+```
+
+### Release 文案来源
+
+- 优先读取：`public/release/<tag>.md`
+- 未找到对应文件时，工作流自动使用默认文案
+
+---
+
 # ✅ 最终产物
 
-签名后的 APK 位于：
+- 本地手动发布：签名后的 APK 位于
 
 ```
 android/app/build/outputs/apk/release/
 ```
+
+- CI 自动发布：在 GitHub Release 附件中获取 APK
 
 ---
 
@@ -74,3 +98,4 @@ android/app/build/outputs/apk/release/
 * [ ] 使用正确的 `.jks`
 * [ ] 签名成功
 * [ ] 本地安装测试通过
+* [ ] 已推送 `v*` Tag 触发 CI
