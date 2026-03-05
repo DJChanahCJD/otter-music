@@ -24,6 +24,8 @@ interface RawApiTrack {
   pic_id: string;
   url_id: string;
   lyric_id: string;
+  artist_ids?: string[];
+  album_id?: string;
 }
 
 export const forceHttps = (url: string | undefined | null) => {
@@ -40,6 +42,8 @@ const normalizeTrack = (t: RawApiTrack, source: MusicSource): MusicTrack => ({
   url_id: forceHttps(t.url_id),
   lyric_id: forceHttps(t.lyric_id),
   source,
+  artist_ids: t.artist_ids,
+  album_id: t.album_id,
 });
 
 /* -------------------------------------------------- */

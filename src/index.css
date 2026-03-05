@@ -128,7 +128,7 @@
   --safe-area-right: env(safe-area-inset-right, 0px);
   --tab-bar-base-height: 56px;
   --tab-bar-safe-height: calc(var(--tab-bar-base-height) + var(--safe-area-bottom));
-  --now-playing-base-height: 62px;
+  --now-playing-base-height: 72px;
   --now-playing-safe-height: calc(var(--now-playing-base-height) + var(--safe-area-bottom));
   --bottom-stack-gap: 8px;
   --bottom-stack-height: calc(var(--tab-bar-safe-height) + var(--now-playing-base-height) + var(--bottom-stack-gap));
