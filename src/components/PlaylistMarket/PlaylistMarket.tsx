@@ -20,7 +20,7 @@ import { useMusicStore } from "@/store/music-store";
 import { forceHttps } from "@/lib/music-api";
 import { toast } from "react-hot-toast";
 
-const PAGE_SIZE = 35;
+const PAGE_SIZE = 30;
 
 interface MarketPlaylist {
   id: number | string;
@@ -229,7 +229,7 @@ export function PlaylistMarket() {
               alt={item.name}
               className="transition-transform duration-500 group-hover:scale-110"
             />
-            <div className="absolute bottom-0 left-0 right-0 h-1/3 bg-linear-to-t from-black/40 to-transparent pointer-events-none" />
+            <div className="absolute bottom-0 left-0 right-0 h-1/3 bg-linear-to-t from-black/20 to-transparent pointer-events-none" />
             <div className="absolute bottom-1.5 right-2 flex items-center gap-1 text-white/90 text-[10px] font-medium z-10">
               <Headphones className="w-3 h-3 filter drop-shadow-sm" />
               <span className="tracking-wide drop-shadow-sm">

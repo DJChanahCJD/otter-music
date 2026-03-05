@@ -283,7 +283,7 @@ export const getArtist = (id: string, cookie: string = '') =>
         TTL_LONG // 歌手基础信息低频变动 
     ); 
 
-export const getPlaylists = (cat: string = '全部', order: string = 'hot', limit: number = 35, offset: number = 0, cookie: string = '') => 
+export const getPlaylists = (cat: string = '全部', order: string = 'hot', limit: number = 30, offset: number = 0, cookie: string = '') => 
     cachedFetch( 
         `netease:playlists:${cat}:${order}:${limit}:${offset}`, 
         () => requestWeapi<{ playlists: UserPlaylist[] }>( 
