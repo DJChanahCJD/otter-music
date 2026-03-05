@@ -35,6 +35,7 @@ interface MusicState {
   addToPlaylist: (playlistId: string, track: MusicTrack) => void;
   removeFromPlaylist: (playlistId: string, trackId: string) => void;
   setPlaylistTracks: (playlistId: string, tracks: MusicTrack[]) => void;
+  updateTrackInPlaylists: (trackId: string, newTrack: MusicTrack) => number;
 
   // --- Settings (Persisted) ---
   quality: string;
@@ -175,6 +176,23 @@ export const useMusicStore = create<MusicState>()(
       setPlaylistTracks: (pid, tracks) => set((s) => ({
         playlists: s.playlists.map(p => p.id === pid ? { ...p, tracks } : p)
       })),
+
+      updateTrackInPlaylists: (tid, newTrack) => {
+        const { playlists } = get();
+        let count = 0;
+        const newPlaylists = playlists.map(p => {
+          if (p.tracks.some(t => t.id === tid)) {
+            count++;
+            return { ...p, tracks: p.tracks.map(t => t.id === tid ? newTrack : t) };
+          }
+          return p;
+        });
+
+        if (count > 0) {
+          set({ playlists: newPlaylists });
+        }
+        return count;
+      },
 
       // --- Settings ---
       quality: "192",

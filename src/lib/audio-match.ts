@@ -2,7 +2,7 @@ import { toast } from "react-hot-toast";
 import { useMusicStore } from "@/store/music-store";
 import { musicApi } from "@/lib/music-api";
 import type { MusicTrack } from "@/types/music";
-import { normalizeText } from "./utils/music-key";
+import { isNameMatch, isArtistMatch } from "./utils/music-key";
 
 /**
  * 自动匹配免费源逻辑
@@ -13,16 +13,18 @@ export async function handleAutoMatch(track: MusicTrack): Promise<boolean> {
   const toastId = toast.loading("正在搜索免费音源...", { id: `auto-match-${track.id}` });
   
   try {
-    const { aggregatedSources, updateTrackInQueue } = useMusicStore.getState();
-    const targetName = normalizeText(track.name);
-    const targetArtist = normalizeText(track.artist[0] || "");
-
+    const { aggregatedSources, updateTrackInQueue, isFavorite, favorites, setFavorites, updateTrackInPlaylists } = useMusicStore.getState();
+    
     const match = await musicApi.searchBestMatch(
       `${track.name} ${track.artist[0]}`,
       aggregatedSources,
-      (item) =>
-        normalizeText(item.name) === targetName &&
-        item.artist.some((a) => normalizeText(a).includes(targetArtist)),
+      (item) => {
+        // 1. 标准化名称匹配
+        if (!isNameMatch(track.name, item.name)) return false;
+
+        // 2. 歌手匹配 (集合交集)
+        return isArtistMatch(track.artist, item.artist);
+      },
       5
     );
 
@@ -32,7 +34,16 @@ export async function handleAutoMatch(track: MusicTrack): Promise<boolean> {
     }
 
     updateTrackInQueue(track.id, match);
-    toast.success(`已自动切换至: ${match.name}（${match.source}）`, { id: toastId });
+    const updatedPlaylistsCount = updateTrackInPlaylists(track.id, match);
+    if (isFavorite(track.id)) {
+      setFavorites(favorites.map(t => t.id === track.id ? match : t));
+    }
+
+    let msg = `已自动切换至: ${match.source}`;
+    if (updatedPlaylistsCount > 0) {
+      msg += `，并同步更新 ${updatedPlaylistsCount} 个歌单`;
+    }
+    toast.success(msg, { id: toastId });
     return true;
   } catch (error) {
     console.error("Auto match failed:", error);
