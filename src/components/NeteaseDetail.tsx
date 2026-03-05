@@ -5,7 +5,7 @@ import { getPlaylistDetail, getArtist, getAlbum, convertSongToMusicTrack } from 
 import { MusicTrack } from "@/types/music";
 import { Loader2, MoreVertical, Import, SquareArrowOutUpRight } from "lucide-react";
 import toast from "react-hot-toast";
-import { cn, processBatchCPU } from "@/lib/utils";
+import { cn, formatDateZN, processBatchCPU } from "@/lib/utils";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -31,10 +31,12 @@ interface UnifiedDetail {
   description?: string;
   creator?: string;
   trackCount: number;
+  publishTime?: number;
 }
 
 function DetailHeader({ detail }: { detail: UnifiedDetail }) {
   const [expanded, setExpanded] = useState(false);
+  const publishDate = detail.publishTime ? new Date(detail.publishTime).toLocaleDateString() : null;
 
   return (
     <div className="relative w-full overflow-hidden bg-muted/30 shrink-0">
@@ -60,14 +62,20 @@ function DetailHeader({ detail }: { detail: UnifiedDetail }) {
             {detail.name}
           </h2>
           
-          {/* 作者信息 */}
-          {detail.creator && (
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <span className="truncate">{detail.creator}</span>
+          {/* 作者信息与时间 */}
+          {(detail.creator || publishDate) && (
+            <div className="flex items-center flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
+              {detail.creator && <span className="truncate">{detail.creator}</span>}
               {/* 歌曲数量 */}
-              <span className="text-xs text-muted-foreground/60">
+              <span className="text-muted-foreground/60 shrink-0">
                 {detail.trackCount.toLocaleString()} 首
               </span>
+              {/* 发布时间 */}
+              {publishDate && (
+                <p className="text-muted-foreground/60 shrink-0">
+                  发布时间：{formatDateZN(publishDate)}
+                </p>
+              )}
             </div>
           )}
 
@@ -78,7 +86,7 @@ function DetailHeader({ detail }: { detail: UnifiedDetail }) {
               onClick={() => setExpanded(!expanded)}
             >
               <p className={cn(
-                "text-[11px] text-muted-foreground/80 leading-relaxed transition-all",
+                "text-[11px] text-muted-foreground/80 leading-relaxed transition-all whitespace-pre-wrap",
                 !expanded && "line-clamp-3"
               )}>
                 {detail.description}
@@ -203,6 +211,7 @@ export function NeteaseDetail({
                 description: data.album.description,
                 creator: data.album.artist ? `Artist: ${data.album.artist.name}` : undefined,
                 trackCount: data.songs.length,
+                publishTime: data.album.publishTime,
             };
             rawTracks = data.songs;
         }

@@ -20,6 +20,16 @@ export function formatBytes(bytes: number): string {
   return `${(bytes / Math.pow(k, i)).toFixed(2)} ${sizes[i]}`;
 }
 
+import { format } from "date-fns";
+import { zhCN } from "date-fns/locale";
+export const formatDateZN = (dateStr: string) => {
+  try {
+    return format(new Date(dateStr), "yyyy年MM月dd日", { locale: zhCN });
+  } catch {
+    return dateStr;
+  }
+};
+
 /**
  * 异步重试工具
  * @param fn 异步函数
