@@ -101,13 +101,12 @@ export function PlaylistMarket() {
 
           let recommend: MarketPlaylist[] = [];
           if (recRes) {
-            const rawRecommend =
-              recRes.result;
+            const rawRecommend = recRes.result || (recRes as any).data.result;
             if (rawRecommend && Array.isArray(rawRecommend)) {
               recommend = rawRecommend.map((i) => ({
                 id: i.id,
                 name: i.name,
-                coverImgUrl: forceHttps(i.picUrl || (i as { coverImgUrl?: string }).coverImgUrl || ""),
+                coverImgUrl: forceHttps(i.picUrl || (i as any).coverImgUrl || (i as any).coverUrl || ""),
                 playCount: i.playCount,
               }));
             }
