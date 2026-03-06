@@ -1,13 +1,11 @@
 import type { MusicSource, MusicTrack, SearchPageResult, MergedMusicTrack, SongLyric } from "@/types/music";
 import { cachedFetch } from "@/lib/utils/cache";
 import { mergeAndSortTracks, SOURCE_RANK } from "@/lib/utils/search-helper";
-import { getMusicApiUrl } from "./api";
+import { getOrderedMusicApiUrls, markMusicApiUrlFailure, markMusicApiUrlSuccess } from "./api";
 import { retry } from "@/lib/utils";
 import { Capacitor } from "@capacitor/core";
 import { LocalMusicPlugin } from "@/plugins/local-music";
 import { getSongUrl, getLyric, getSongDetail, search as neteaseSearch, convertSongToMusicTrack } from "@/lib/netease/netease-api";
-
-const getApiBase = () => `${getMusicApiUrl()}`;
 
 const TTL_SHORT = 60 * 60 * 1000; // 60 minutes
 const TTL_LONG = 7 * 24 * 60 * 60 * 1000; // 7 days
@@ -51,6 +49,7 @@ const normalizeTrack = (t: RawApiTrack, source: MusicSource): MusicTrack => ({
 /* URL Builder */
 
 const buildUrl = (
+  apiBase: string,
   params: Record<string, string | number | undefined>,
   source?: MusicSource
 ) => {
@@ -66,7 +65,7 @@ const buildUrl = (
     if (cookie) search.set('cookie', cookie);
   }
 
-  return `${getApiBase()}?${search.toString()}`;
+  return `${apiBase}?${search.toString()}`;
 };
 
 /* -------------------------------------------------- */
@@ -90,6 +89,33 @@ async function requestJSON<T>(url: string, signal?: AbortSignal): Promise<T> {
     window.clearTimeout(timer);
     signal?.removeEventListener('abort', onAbort);
   }
+}
+
+async function requestMusicApiJSON<T>(
+  params: Record<string, string | number | undefined>,
+  source: MusicSource,
+  signal?: AbortSignal
+): Promise<T> {
+  const apiBases = getOrderedMusicApiUrls();
+  let lastError: unknown;
+
+  for (const apiBase of apiBases) {
+    if (signal?.aborted) {
+      throw new DOMException('The operation was aborted.', 'AbortError');
+    }
+    const url = buildUrl(apiBase, params, source);
+    try {
+      const result = await requestJSON<T>(url, signal);
+      markMusicApiUrlSuccess(apiBase);
+      return result;
+    } catch (e) {
+      if (isAbort(e)) throw e;
+      markMusicApiUrlFailure(apiBase);
+      lastError = e;
+    }
+  }
+
+  throw lastError ?? new Error('No available music API endpoint');
 }
 
 /* ================================================== */
@@ -119,10 +145,7 @@ export const musicApi = {
     }
 
     const json = await retry(
-      () => requestJSON<RawApiTrack[]>(
-        buildUrl({ types: 'search', name: query, count, pages: page }, source),
-        signal
-      ),
+      () => requestMusicApiJSON<RawApiTrack[]>({ types: 'search', name: query, count, pages: page }, source, signal),
       2,
       500
     );
@@ -226,9 +249,7 @@ export const musicApi = {
     const res = await cachedFetch<{ url: string }>(
       key,
       async () => {
-        const json = await requestJSON<{ url?: string }>(
-          buildUrl({ types: 'url', id, br }, source)
-        );
+        const json = await requestMusicApiJSON<{ url?: string }>({ types: 'url', id, br }, source);
         return json?.url ? { url: json.url } : null;
       },
       TTL_SHORT,
@@ -271,9 +292,7 @@ export const musicApi = {
       const res = await cachedFetch<{ url: string }>(
         key,
         async () => {
-          const json = await requestJSON<{ url?: string }>(
-            buildUrl({ types: 'pic', id: idOrUrl, size }, source)
-          );
+          const json = await requestMusicApiJSON<{ url?: string }>({ types: 'pic', id: idOrUrl, size }, source);
           return json?.url ? { url: json.url } : null;
         },
         TTL_LONG,
@@ -314,9 +333,7 @@ export const musicApi = {
     return cachedFetch<SongLyric>(
       key,
       async () => {
-        const json = await requestJSON<{ lyric?: string; tlyric?: string }>(
-          buildUrl({ types: 'lyric', id }, source)
-        );
+        const json = await requestMusicApiJSON<{ lyric?: string; tlyric?: string }>({ types: 'lyric', id }, source);
         if (!json) return null;
         return { lyric: json.lyric ?? '', tlyric: json.tlyric ?? '' };
       },
