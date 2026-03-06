@@ -78,6 +78,30 @@ git push origin v2.0.2
 
 ---
 
+## 5️⃣ GitHub CI 自动签名配置（可选）
+
+若希望 GitHub Release 直接提供可安装的签名包，需配置 Secrets：
+
+1. **获取 Keystore 的 Base64 编码**（在项目根目录运行）：
+   ```powershell
+   # Windows PowerShell
+   $b64 = [Convert]::ToBase64String([IO.File]::ReadAllBytes("android/otter-music-release.jks"))
+   Set-Clipboard $b64
+   Write-Host "Base64 内容已复制到剪贴板！" -ForegroundColor Green
+   ```
+
+2. **在 GitHub 仓库添加 Secrets**：
+   进入 `Settings` -> `Secrets and variables` -> `Actions` -> `New repository secret`，添加以下 4 项：
+
+   | Name | Value | 说明 |
+   | :--- | :--- | :--- |
+   | `SIGNING_KEY` | (粘贴刚才复制的 Base64 内容) | Keystore 文件本身 |
+   | `ALIAS` | `otter-music` | 密钥别名（生成证书时指定的 alias） |
+   | `KEY_STORE_PASSWORD` | (你的密码) | Keystore 密码 |
+   | `KEY_PASSWORD` | (你的密码) | 密钥密码（通常同上） |
+
+---
+
 # ✅ 最终产物
 
 - 本地手动发布：签名后的 APK 位于

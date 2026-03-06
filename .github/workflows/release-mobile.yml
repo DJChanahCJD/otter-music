@@ -47,11 +47,21 @@ jobs:
           chmod +x gradlew
           ./gradlew assembleRelease
 
+      - name: Sign release APK
+        id: sign_app
+        uses: r0adkll/sign-android-release@v1
+        with:
+          releaseDirectory: android/app/build/outputs/apk/release
+          signingKeyBase64: ${{ secrets.SIGNING_KEY }}
+          alias: ${{ secrets.ALIAS }}
+          keyStorePassword: ${{ secrets.KEY_STORE_PASSWORD }}
+          keyPassword: ${{ secrets.KEY_PASSWORD }}
+
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
           name: android-apk
-          path: android/app/build/outputs/apk/release/*-release*.apk
+          path: ${{ steps.sign_app.outputs.signedReleaseFile }}
           if-no-files-found: error
 
   publish-release:
