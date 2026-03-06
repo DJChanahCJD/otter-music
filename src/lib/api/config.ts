@@ -40,7 +40,7 @@ const setStorage = (key: string, val: unknown) => localStorage.setItem(key, JSON
  * API 地址管理
  */
 export const getMusicApiUrls = () => 
-  getStorage<string[]>(STORAGE_KEY_MUSIC_URLS, [DEFAULT_MUSIC_API_URL, MY_PROXY_MUSIC_API_URL]);
+  getStorage<string[]>(STORAGE_KEY_MUSIC_URLS, [MY_PROXY_MUSIC_API_URL, DEFAULT_MUSIC_API_URL]);
 
 export const setMusicApiUrls = (urls: string[]) => setStorage(STORAGE_KEY_MUSIC_URLS, urls);
 
