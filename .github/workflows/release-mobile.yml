@@ -32,6 +32,12 @@ jobs:
           distribution: temurin
           java-version: '21'
 
+      # 新增步骤：确保 Android SDK 和 Build Tools (29.0.3) 已就绪
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          build-tools: "29.0.3"
+
       - name: Install dependencies
         run: npm ci
 
