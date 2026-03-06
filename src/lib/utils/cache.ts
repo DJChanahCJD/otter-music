@@ -29,16 +29,27 @@ async function saveToDisk<T>(key: string, data: T, ttl: number) {
   }
 }
 
-/** 从磁盘读取 */
+/** 从磁盘读取（含读时清理） */
 async function getFromDisk<T>(key: string): Promise<{ data: T; expired: boolean } | null> {
   try {
     const cache = await caches.open(CACHE_NAME);
-    const res = await cache.match(req(key));
+    const request = req(key);
+    const res = await cache.match(request);
+    
     if (!res) return null;
 
     const expiry = Number(res.headers.get('x-expiry') || 0);
-    const data = await res.json() as T;
-    return { data, expired: expiry < now() };
+    const isExpired = expiry < now();
+
+    // --- 读时清理逻辑 ---
+    if (isExpired) {
+      // 异步删除，不阻塞读取流程
+      cache.delete(request).catch(() => {});
+    }
+    // ------------------
+
+    const data = (await res.json()) as T;
+    return { data, expired: isExpired };
   } catch {
     return null;
   }
