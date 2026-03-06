@@ -39,7 +39,7 @@ function rsaEncrypt(text: string, pubKey: string, modulus: string): string {
   return enc;
 }
 
-export function weapi(object: any) {
+export function weapi(object: unknown) {
   const text = JSON.stringify(object);
   const secKey = createSecretKey(16);
   
@@ -59,7 +59,7 @@ export function weapi(object: any) {
   };
 }
 
-export function eapi(url: string, object: any) {
+export function eapi(url: string, object: unknown) {
   const text = typeof object === 'object' ? JSON.stringify(object) : object;
   const message = `nobody${url}use${text}md5forencrypt`;
   const digest = forge.md5

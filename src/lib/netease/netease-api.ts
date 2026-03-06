@@ -1,5 +1,5 @@
 import { weapi, eapi } from './netease-crypto';
-import { UserProfile, UserPlaylist, PlaylistDetail, SongDetail, SearchResult, RecommendPlaylist, Toplist, AlbumDetail, ArtistDetail, ResolveUrlResult, NeteasePrivilege } from './netease-types';
+import { UserProfile, UserPlaylist, PlaylistDetail, SongDetail, SearchResult, RecommendPlaylist, Toplist, AlbumDetail, ArtistDetail, ResolveUrlResult, NeteasePrivilege, NeteaseResponse, QrCheckResponse, QrKeyResponse } from './netease-types';
 import { MusicTrack } from '@/types/music';
 import { cachedFetch } from "@/lib/utils/cache";
 import { API_URL } from "@/lib/api/config";
@@ -137,25 +137,25 @@ async function crossFetch(url: string, options: { method: string; headers: Recor
     };
 }
 
-async function requestWeapi<T = any>(url: string, data: any, cookie: string = '') {
+async function requestWeapi<T = unknown>(url: string, data: Record<string, unknown>, cookie: string = '') {
     const finalCookie = cookie || getStoredCookie();
     const headers = buildHeaders(finalCookie, PC_USER_AGENT);
-    const params = new URLSearchParams(weapi(data) as any).toString();
+    const params = new URLSearchParams(weapi(data) as Record<string, string>).toString();
 
     const { data: resData, setCookie } = await crossFetch(url, { method: 'POST', headers, body: params });
     return { data: resData as T, cookie: setCookie };
 }
 
-async function requestEapi<T = any>(url: string, path: string, data: any, cookie: string = '') {
+async function requestEapi<T = unknown>(url: string, path: string, data: Record<string, unknown>, cookie: string = '') {
     const finalCookie = cookie || getStoredCookie();
     const headers = buildHeaders(finalCookie, MOBILE_USER_AGENT);
-    const params = new URLSearchParams(eapi(path, data) as any).toString();
+    const params = new URLSearchParams(eapi(path, data) as Record<string, string>).toString();
 
     const { data: resData } = await crossFetch(url, { method: 'POST', headers, body: params });
     return { data: resData as T };
 }
 
-async function fetchLocalApi<T>(endpoint: string, body?: any): Promise<T> {
+async function fetchLocalApi<T>(endpoint: string, body?: Record<string, unknown>): Promise<T> {
     const url = endpoint.startsWith('http') ? endpoint : `${API_URL}${endpoint}`;
     const controller = new AbortController();
     const timer = window.setTimeout(() => controller.abort(), NETWORK_TIMEOUT_MS);
@@ -180,7 +180,7 @@ async function fetchLocalApi<T>(endpoint: string, body?: any): Promise<T> {
 export async function getSongUrl(id: string, br: number = 999000, cookie: string = '') {
     const realId = id.replace(/^(netrack_|ne_track_)/, '');
     try {
-        const eapiRes = await requestEapi<{ data: { url: string, br: number, size: number, freeTrialInfo?: any }[] }>(
+        const eapiRes = await requestEapi<{ data: { url: string, br: number, size: number, freeTrialInfo?: unknown }[] }>(
             `${EAPI_BASE_URL}/eapi/song/enhance/player/url`,
             '/api/song/enhance/player/url',
             { ids: `[${realId}]`, br, header: { os: 'pc', appver: '2.9.7' } },
@@ -188,7 +188,7 @@ export async function getSongUrl(id: string, br: number = 999000, cookie: string
         );
         const trackData = eapiRes.data?.data?.[0];
         if (trackData?.url && !trackData.freeTrialInfo) return eapiRes;
-    } catch (e) {
+    } catch {
         console.warn(`[NetEase] EAPI failed for ${realId}, falling back to WEAPI...`);
     }
 
@@ -199,8 +199,8 @@ export async function getSongUrl(id: string, br: number = 999000, cookie: string
     );
 }
 
-export const getQrKey = () => fetchLocalApi<any>(`/music-api/netease/login/qr/key?timestamp=${Date.now()}`);
-export const checkQrStatus = (key: string) => fetchLocalApi<any>(`/music-api/netease/login/qr/check?key=${key}&timestamp=${Date.now()}`);
+export const getQrKey = () => fetchLocalApi<NeteaseResponse<QrKeyResponse>>(`/music-api/netease/login/qr/key?timestamp=${Date.now()}`);
+export const checkQrStatus = (key: string) => fetchLocalApi<NeteaseResponse<QrCheckResponse>>(`/music-api/netease/login/qr/check?key=${key}&timestamp=${Date.now()}`);
 
 export const getMyInfo = (cookie: string = '') => 
     cachedFetch<{ data?: { profile: UserProfile }; profile?: UserProfile }>(
@@ -227,12 +227,12 @@ export const getPlaylistDetail = (playlistId: string, cookie: string = '') =>
     cachedFetch<PlaylistDetail>( 
         `netease:playlist:${playlistId}:${cookie.slice(-16)}`, 
         async () => { 
-            const res = await requestWeapi<{ playlist: any }>( 
+            const res = await requestWeapi<{ playlist: PlaylistDetail & { trackIds: { id: number }[] } }>( 
                 `${BASE_URL}/weapi/v3/playlist/detail`, 
                 { id: playlistId, offset: 0, total: true, limit: 1000, n: 1000, csrf_token: '' }, 
                 cookie 
             ); 
-            const tracks = await getTracksDetail(res.data.playlist.trackIds.map((t: any) => t.id), cookie); 
+            const tracks = await getTracksDetail(res.data.playlist.trackIds.map((t: { id: number }) => t.id), cookie); 
             return { ...res.data.playlist, tracks } as PlaylistDetail; 
         }, 
         TTL_MEDIUM // 歌单可能会被创建者更新，使用中缓存 
@@ -336,7 +336,19 @@ export function resolveUrl(urlStr: string): ResolveUrlResult | null {
     return null;
 }
 
-export const convertSongToMusicTrack = (song: SongDetail | any): MusicTrack => {
+// 定义联合入参类型，包含标准 SongDetail 和非标准搜索返回结构
+type RawSongItem = Partial<SongDetail> & {
+    ar?: { name: string; id?: string | number }[];
+    artists?: { name: string; id?: string | number }[];
+    al?: { name?: string; picUrl?: string; id?: string | number };
+    album?: { name?: string; picUrl?: string; id?: string | number };
+    fee?: number;
+    st?: number;
+    status?: number;
+    privilege?: NeteasePrivilege;
+};
+
+export const convertSongToMusicTrack = (song: RawSongItem): MusicTrack => {
     // 兼容搜索接口返回的 artists 和 album
     const artists = song.ar || song.artists || [];
     const album = song.al || song.album || {};
@@ -345,7 +357,7 @@ export const convertSongToMusicTrack = (song: SongDetail | any): MusicTrack => {
     let privilege = song.privilege;
     if (!privilege && song.fee !== undefined) {
         privilege = {
-            id: song.id,
+            id: Number(song.id),
             fee: song.fee,
             payed: 0,
             st: song.st ?? song.status ?? 0,
@@ -358,15 +370,15 @@ export const convertSongToMusicTrack = (song: SongDetail | any): MusicTrack => {
 
     return {
         id: String(song.id),
-        name: song.name,
-        artist: artists.map((a: any) => a.name),
-        album: album.name,
-        pic_id: album.picUrl, 
+        name: song.name || '',
+        artist: artists.map((a: { name: string }) => a.name),
+        album: album.name || '',
+        pic_id: album.picUrl || '', 
         url_id: String(song.id),
         lyric_id: String(song.id),
         source: '_netease',
         privilege,
-        artist_ids: artists.map((a: any) => String(a.id || '')),
+        artist_ids: artists.map((a: { id?: string | number }) => String(a.id || '')),
         album_id: String(album.id || ''),
     };
 };

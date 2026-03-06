@@ -24,7 +24,7 @@ export const idbStorage: StateStorage = {
         await set(name, localValue)
         // 迁移成功后清理 localStorage
         localStorage.removeItem(name)
-        console.log(`[Storage] Migrated ${name} from localStorage to IndexedDB`)
+        // console.log(`[Storage] Migrated ${name} from localStorage to IndexedDB`)
         return localValue
       } catch (error) {
         console.error(`[Storage] Failed to migrate ${name}:`, error)

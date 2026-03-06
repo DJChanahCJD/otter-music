@@ -30,7 +30,7 @@ export const useDownloadStore = create<DownloadStoreState>((set, get) => ({
   init: async () => {
     try {
       const diskRecords = await loadDownloadRecordsFromDisk()
-      console.log('从磁盘加载下载记录:', diskRecords)
+      // console.log('从磁盘加载下载记录:', diskRecords)
 
       if (diskRecords && typeof diskRecords === 'object') {
         set({ records: diskRecords })

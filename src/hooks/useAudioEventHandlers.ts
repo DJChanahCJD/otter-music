@@ -108,7 +108,7 @@ export function useAudioEventHandlers(
 
           try {
             await retryWithRemote(audio, track.id, track.source, parseInt(state.quality, 10));
-          } catch (error) {
+          } catch {
             toast.error(`播放失败: ${track.name}`);
             audio.src = "";
             state.setCurrentAudioUrl(null);
@@ -154,7 +154,7 @@ export function useAudioEventHandlers(
       audio.removeEventListener("pause", onPause);
       audio.removeEventListener("play", onPlay);
     };
-  }, []); // ✅ 核心优化：依赖数组清空，监听器只绑定一次
+  }, [audioRef, isSwitchingTrackRef, hasRecordedRef]);
 
   return null;
 }

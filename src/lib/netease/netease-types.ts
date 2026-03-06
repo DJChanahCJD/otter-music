@@ -44,12 +44,22 @@ export interface SearchResult {
  * 2. 网易云原生数据结构 (用于 API 响应)
  * ========================================================= */
 
-export interface NeteaseResponse<T = any> {
+export interface NeteaseResponse<T = unknown> {
   code: number;
   data?: T;
   result?: T;
   message?: string;
-  [key: string]: any;
+}
+
+export interface QrKeyResponse {
+  code: number;
+  unikey: string;
+}
+
+export interface QrCheckResponse {
+  code: number;
+  message: string;
+  cookie?: string;
 }
 
 export interface SongArtist extends BaseEntity {
@@ -98,7 +108,7 @@ export interface NeteasePlayerUrlItem {
   size: number;
   type: string;         // mp3, flac...
   level: string;
-  freeTrialInfo: any | null;
+  freeTrialInfo: unknown | null;
 }
 
 /* =========================================================

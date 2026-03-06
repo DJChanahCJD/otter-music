@@ -1,10 +1,10 @@
 
 import { describe, it, expect } from 'vitest';
 import { formatMediaTime, cleanTrack, deduplicateTracks } from './music';
-import { MusicTrack, MergedMusicTrack } from '@/types/music';
+import { MusicTrack, MergedMusicTrack, MusicSource } from '@/types/music';
 
 // Mock MusicTrack data helper
-const createTrack = (id: string, name: string, artist: string[] = ['Test Artist'], source: any = 'netease'): MusicTrack => ({
+const createTrack = (id: string, name: string, artist: string[] = ['Test Artist'], source: MusicSource = 'netease'): MusicTrack => ({
   id,
   name,
   artist,
@@ -39,7 +39,7 @@ describe('music utils', () => {
       };
       
       const cleaned = cleanTrack(track);
-      expect((cleaned as any).variants).toBeUndefined();
+      expect('variants' in cleaned).toBe(false);
       expect(cleaned.id).toBe('1');
     });
   });

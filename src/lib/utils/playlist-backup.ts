@@ -83,7 +83,7 @@ export async function importPlaylist(file: File): Promise<{ name: string, tracks
         const data = JSON.parse(content);
         
         // 校验数据格式
-        let tracks: any[] = [];
+        let tracks: unknown[] = [];
         let name = file.name.replace(/\.json$/i, "");
 
         if (Array.isArray(data)) {
@@ -122,7 +122,7 @@ export async function importPlaylist(file: File): Promise<{ name: string, tracks
            toastUtils.error(`已过滤 ${tracks.length - validTracks.length} 条无效数据`);
         }
 
-        resolve({ name, tracks });
+        resolve({ name, tracks: tracks as MusicTrack[] });
       } catch (error) {
         reject(error);
       }
