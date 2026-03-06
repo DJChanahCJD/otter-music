@@ -1,6 +1,7 @@
 import { type ApiResponse } from "@/types/index";
 
 export const API_URL = "https://otter-music-web.pages.dev";
+export const API_TIMEOUT_MS = 10000;
 
 /**
  * 统一处理后端 ok / fail 响应
@@ -49,4 +50,12 @@ export function getMusicApiUrl(): string {
   const urls = getMusicApiUrls();
   if (urls.length === 0) return DEFAULT_MUSIC_API_URL;
   return urls[Math.floor(Math.random() * urls.length)];
+}
+
+export function fetchWithTimeout(input: RequestInfo | URL, init: RequestInit = {}, timeout = API_TIMEOUT_MS) {
+  const controller = new AbortController();
+  const timer = window.setTimeout(() => controller.abort(), timeout);
+  return fetch(input, { ...init, signal: controller.signal }).finally(() => {
+    window.clearTimeout(timer);
+  });
 }

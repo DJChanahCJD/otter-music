@@ -1,4 +1,4 @@
-import { API_URL, unwrap } from "./config";
+import { API_URL, fetchWithTimeout, unwrap } from "./config";
 
 const SYNC_API_URL = `${API_URL}/sync`;
 
@@ -12,15 +12,15 @@ const getHeaders = (syncKey: string): HeadersInit => ({
 });
 
 export const syncCheck = (syncKey: string) =>
-  unwrap<SyncCheckResponse>(fetch(`${SYNC_API_URL}/check`, { headers: getHeaders(syncKey) }));
+  unwrap<SyncCheckResponse>(fetchWithTimeout(`${SYNC_API_URL}/check`, { headers: getHeaders(syncKey) }));
 
 // 引入泛型 <T>，调用时可传入具体类型
 export const syncPull = <T = unknown>(syncKey: string) =>
-  unwrap<SyncPullResponse<T>>(fetch(SYNC_API_URL, { headers: getHeaders(syncKey) }));
+  unwrap<SyncPullResponse<T>>(fetchWithTimeout(SYNC_API_URL, { headers: getHeaders(syncKey) }));
 
 export const syncPush = <T = unknown>(syncKey: string, data: T, lastSyncTime: number) =>
   unwrap<SyncPushResponse>(
-    fetch(SYNC_API_URL, {
+    fetchWithTimeout(SYNC_API_URL, {
       method: "POST",
       headers: getHeaders(syncKey),
       body: JSON.stringify({ data, lastSyncTime }),

@@ -11,6 +11,7 @@ const getApiBase = () => `${getMusicApiUrl()}`;
 
 const TTL_SHORT = 60 * 60 * 1000; // 60 minutes
 const TTL_LONG = 7 * 24 * 60 * 60 * 1000; // 7 days
+const REQUEST_TIMEOUT_MS = 10000;
 
 const cookieOf = (source: MusicSource) => localStorage.getItem(`cookie:${source}`);
 
@@ -72,14 +73,22 @@ const buildUrl = (
 /* fetch wrapper */
 
 async function requestJSON<T>(url: string, signal?: AbortSignal): Promise<T> {
+  const controller = new AbortController();
+  const timer = window.setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+  const onAbort = () => controller.abort();
+  signal?.addEventListener('abort', onAbort, { once: true });
+
   try {
-    const res = await fetch(url, { signal });
+    const res = await fetch(url, { signal: controller.signal });
     if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
     return await res.json();
   } catch (e) {
     if (isAbort(e)) throw e;
     console.error('Request failed:', url, e);
     throw e;
+  } finally {
+    window.clearTimeout(timer);
+    signal?.removeEventListener('abort', onAbort);
   }
 }
 

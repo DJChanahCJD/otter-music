@@ -16,6 +16,7 @@ const EAPI_BASE_URL = (import.meta.env.DEV && !IS_NATIVE) ? '/api/netease' : 'ht
 
 const PC_USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
 const MOBILE_USER_AGENT = 'Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 MicroMessenger/8.0.27';
+const NETWORK_TIMEOUT_MS = 12000;
 
 export const NETEASE_COOKIE_KEY = "cookie:_netease";
 
@@ -82,14 +83,37 @@ function buildHeaders(cookie: string, ua: string, forceIp?: string): Record<stri
 
 // ✅ 修复 3: 将底层 fetch 抽离，智能判断运行平台
 async function crossFetch(url: string, options: { method: string; headers: Record<string, string>; body: string }) {
+    const withTimeout = <T>(promise: Promise<T>, timeout = NETWORK_TIMEOUT_MS) =>
+        new Promise<T>((resolve, reject) => {
+            const timer = window.setTimeout(() => reject(new Error(`Request timeout: ${timeout}ms`)), timeout);
+            promise.then(
+                (value) => {
+                    window.clearTimeout(timer);
+                    resolve(value);
+                },
+                (error) => {
+                    window.clearTimeout(timer);
+                    reject(error);
+                }
+            );
+        });
+
+    const parseNativeJson = (payload: unknown) => {
+        if (typeof payload !== 'string') return payload;
+        try {
+            return JSON.parse(payload);
+        } catch {
+            throw new Error('Invalid JSON response from NetEase API');
+        }
+    };
+
     if (IS_NATIVE) {
-        // 走 Capacitor 的 Native HTTP，彻底绕开 CORS
-        const res = await CapacitorHttp.request({
+        const res = await withTimeout(CapacitorHttp.request({
             method: options.method,
             url,
             headers: options.headers,
             data: options.body,
-        });
+        }));
         
         if (res.status >= 400) throw new Error(`Native API Error: ${res.status}`);
         
@@ -97,13 +121,14 @@ async function crossFetch(url: string, options: { method: string; headers: Recor
         const cookieStr = Array.isArray(rawCookie) ? rawCookie.join('; ') : rawCookie;
 
         return {
-            data: typeof res.data === 'string' ? JSON.parse(res.data) : res.data,
+            data: parseNativeJson(res.data),
             setCookie: cleanCookie(cookieStr)
         };
     }
 
-    // Web / PC 端走正常 fetch (经由 Vite 代理)
-    const response = await fetch(url, options);
+    const controller = new AbortController();
+    const timer = window.setTimeout(() => controller.abort(), NETWORK_TIMEOUT_MS);
+    const response = await fetch(url, { ...options, signal: controller.signal }).finally(() => window.clearTimeout(timer));
     if (!response.ok) throw new Error(`Web API Error: ${response.status}`);
     
     return {
@@ -132,13 +157,15 @@ async function requestEapi<T = any>(url: string, path: string, data: any, cookie
 
 async function fetchLocalApi<T>(endpoint: string, body?: any): Promise<T> {
     const url = endpoint.startsWith('http') ? endpoint : `${API_URL}${endpoint}`;
-    // 如果你在手机端遇到本地后端也跨域的问题，可以直接用 CapacitorHttp 替换这里的 fetch
+    const controller = new AbortController();
+    const timer = window.setTimeout(() => controller.abort(), NETWORK_TIMEOUT_MS);
     const res = await fetch(url, {
         method: body ? 'POST' : 'GET',
         body: body ? JSON.stringify(body) : undefined,
         headers: body ? { 'Content-Type': 'application/json' } : undefined,
         credentials: 'include',
-    });
+        signal: controller.signal,
+    }).finally(() => window.clearTimeout(timer));
     if (!res.ok) {
         const err = await res.json().catch(() => ({}));
         throw new Error(err.error || `Local API Error: ${res.status}`);
