@@ -79,10 +79,12 @@ export function FullScreenPlayer({
   const [isAddToPlaylistOpen, setIsAddToPlaylistOpen] = useState(false);
   
   const [hslColor, setHslColor] = useState<[number, number, number] | null>(null);
+  const [prevCoverUrl, setPrevCoverUrl] = useState(coverUrl);
 
-  useEffect(() => {
+  if (coverUrl !== prevCoverUrl) {
+    setPrevCoverUrl(coverUrl);
     setHslColor(null);
-  }, [coverUrl]);
+  }
 
   useEffect(() => {
     if (!isFullScreen) {
@@ -117,7 +119,7 @@ export function FullScreenPlayer({
     try {
       await navigator.clipboard.writeText(`【OtterMusic】${currentTrack.name} - ${currentTrack.artist.join(", ")}\n${currentAudioUrl}`);
       toast.success("已复制到剪贴板");
-    } catch (err) {
+    } catch {
       toast.error("复制失败，请重试");
     }
   };
