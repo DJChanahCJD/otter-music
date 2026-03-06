@@ -29,14 +29,13 @@ function toneDownColor(rgba: string) {
   const matches = rgba.match(/\d+/g);
   if (!matches || matches.length < 3) return rgba;
 
-  const [r, g, b] = matches.map(Number);
+  const [r, g, b] = matches.slice(0, 3).map(Number);
 
-  // 降亮度因子
   const factor = 0.55;
 
-  const nr = Math.round(r * factor);
-  const ng = Math.round(g * factor);
-  const nb = Math.round(b * factor);
+  const nr = Math.min(255, Math.round(r * factor * 1.05));
+  const ng = Math.min(255, Math.round(g * factor * 1.05));
+  const nb = Math.min(255, Math.round(b * factor * 1.05));
 
   return `rgba(${nr}, ${ng}, ${nb}, 1)`;
 }
@@ -187,7 +186,7 @@ export function FullScreenPlayer({
         {/* 封面模糊背景 */}
         {coverUrl && (
           <div
-            className="absolute inset-0 scale-125 blur-3xl opacity-30 transition-all duration-1000"
+            className="absolute inset-0 scale-125 blur-3xl opacity-40 transition-all duration-1000 will-change-transform"
             style={{
               backgroundImage: `url(${coverUrl})`,
               backgroundSize: "cover",
@@ -216,7 +215,7 @@ export function FullScreenPlayer({
         <div className="absolute inset-0 bg-linear-to-t from-black/95 via-black/40 to-black/10" />
 
         {/* 进阶噪点纹理 (提升质感) */}
-        <div className="absolute inset-0 opacity-[0.03] mix-blend-overlay pointer-events-none" 
+        <div className="absolute inset-0 opacity-[0.02] mix-blend-overlay pointer-events-none" 
           style={{ 
             backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")` 
           }} 
@@ -228,7 +227,7 @@ export function FullScreenPlayer({
         <Button
           variant="ghost"
           size="icon"
-          className="h-12 w-12 text-muted-foreground hover:bg-muted/40 hover:text-foreground"
+          className="h-12 w-12 text-white/60 hover:bg-muted/40 hover:text-foreground"
           onClick={onClose}
         >
           <ChevronDown className="h-6 w-6" />
@@ -241,7 +240,7 @@ export function FullScreenPlayer({
         <Button
           variant="ghost"
           size="icon"
-          className="h-12 w-12 text-muted-foreground hover:bg-muted/40 hover:text-foreground"
+          className="h-12 w-12 text-white/60 hover:bg-muted/40 hover:text-foreground"
           onClick={handleShare}
           title="分享"
         >
