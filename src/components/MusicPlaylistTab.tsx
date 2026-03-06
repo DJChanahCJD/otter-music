@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { ListMusic, SquarePlus, MoreHorizontal, Trash2, Pencil } from "lucide-react";
-import { cn } from "@/lib/utils";
 import { useMusicStore } from "@/store/music-store";
 import { useShallow } from "zustand/react/shallow";
 import { Button } from "./ui/button";

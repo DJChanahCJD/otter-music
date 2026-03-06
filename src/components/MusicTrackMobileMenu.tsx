@@ -64,7 +64,7 @@ const replaceInList = (list: MusicTrack[], oldId: string, newTrack: MusicTrack) 
   return { replaced, newList };
 };
 
-const ActionButton = ({ onClick, icon: Icon, children, className }: any) => (
+const ActionButton = ({ onClick, icon: Icon, children, className }: { onClick?: () => void; icon: React.ElementType; children: ReactNode; className?: string }) => (
   <Button variant="ghost" className={cn("justify-start w-full", className)} onClick={onClick}>
     <Icon className="mr-2 h-4 w-4" /> {children}
   </Button>

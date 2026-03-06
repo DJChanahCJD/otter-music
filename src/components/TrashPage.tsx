@@ -12,7 +12,7 @@ import { format } from "date-fns";
 function DeletedItem({ 
   icon: Icon, title, subtitle, date, onRestore 
 }: { 
-  icon: any, title: string, subtitle: string, date?: number, onRestore: () => void 
+  icon: React.ElementType, title: string, subtitle: string, date?: number, onRestore: () => void 
 }) {
   return (
     <div className="group flex items-center p-3 rounded-xl hover:bg-muted/40 transition-all">
@@ -42,7 +42,7 @@ function DeletedItem({
 }
 
 // 统一的空状态组件
-function EmptyState({ icon: Icon, text }: { icon: any, text: string }) {
+function EmptyState({ icon: Icon, text }: { icon: React.ElementType, text: string }) {
   return (
     <div className="flex flex-col items-center justify-center h-full text-muted-foreground/50 py-16">
       <Icon className="h-12 w-12 mb-3 stroke-[1.5]" />

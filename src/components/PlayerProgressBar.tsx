@@ -18,7 +18,6 @@ export function PlayerProgressBar({
   className,
 }: PlayerProgressBarProps) {
   const barRef = React.useRef<HTMLDivElement>(null);
-  const [hoverTime, setHoverTime] = React.useState<number | null>(null);
   const [isDragging, setIsDragging] = React.useState(false);
   const [dragTime, setDragTime] = React.useState(0);
   const dragTimeRef = React.useRef(0);
@@ -82,11 +81,6 @@ export function PlayerProgressBar({
       <div
         ref={barRef}
         className="group relative w-full py-3 cursor-pointer select-none flex items-center z-10"
-        onMouseMove={(e) => {
-          const p = getPercent(e.clientX);
-          setHoverTime(p * duration);
-        }}
-        onMouseLeave={() => setHoverTime(null)}
         onMouseDown={(e) => handleStart(e.clientX)}
         onTouchStart={(e) => handleStart(e.touches[0].clientX)}
       >

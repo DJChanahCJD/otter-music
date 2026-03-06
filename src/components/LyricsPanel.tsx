@@ -129,7 +129,7 @@ const LyricLineView = memo(function LyricLineView({
 
 export function LyricsPanel({ track, currentTime, active = true }: LyricsPanelProps) {
   const [lyrics, setLyrics] = useState<LyricLine[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [isUserScrolling, setIsUserScrolling] = useState(false);
   const [centerLineIndex, setCenterLineIndex] = useState(-1);
 
@@ -212,17 +212,10 @@ export function LyricsPanel({ track, currentTime, active = true }: LyricsPanelPr
   }, [handleScroll]);
 
   useEffect(() => {
-    setLyrics([]);
-    setLoading(true);
-  }, [trackId, lyricId, source]);
-
-  useEffect(() => {
     if (!trackId || !lyricId || !source) return;
     if (!active) return;
 
     let cancelled = false;
-
-    setLoading(true);
 
     musicApi
       .getLyric(lyricId, source)

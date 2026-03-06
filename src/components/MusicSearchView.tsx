@@ -5,13 +5,12 @@ import { useMusicStore } from "@/store/music-store";
 import { MusicTrack, MusicSource, searchOptions } from "@/types/music";
 import { Search, Loader2, X } from "lucide-react";
 import { Input } from "./ui/input"
-import { Select } from "./ui/select"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select"
 import { useRef, useEffect } from "react";
 import toast from "react-hot-toast";
 import { useShallow } from "zustand/react/shallow";
 import { MusicTrackList } from "./MusicTrackList";
 import { Button } from "./ui/button";
-import { SelectTrigger, SelectValue, SelectContent, SelectItem } from "./ui/select";
 import { toastUtils } from "@/lib/utils/toast";
 import { PlaylistMarket } from "./PlaylistMarket/PlaylistMarket";
 
@@ -153,7 +152,7 @@ export function MusicSearchView({ onPlay, currentTrackId, isPlaying }: MusicSear
       }
 
     } catch (e) {
-      if ((e as any)?.name !== "AbortError") toast.error("搜索失败，请稍后重试");
+      if ((e as Error)?.name !== "AbortError") toast.error("搜索失败，请稍后重试");
     } finally {
       if (version === versionRef.current) setSearchLoading(false);
     }

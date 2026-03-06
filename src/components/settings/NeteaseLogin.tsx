@@ -89,7 +89,7 @@ export function NeteaseLogin() {
 
     try {
       const res = await getQrKey();
-      const key = res.data?.unikey;
+      const key = res?.data?.unikey;
       if (!key) throw new Error("Key is empty");
 
       setQrUrl(`https://music.163.com/login?codekey=${key}`);
@@ -111,8 +111,8 @@ export function NeteaseLogin() {
       const res = await checkQrStatus(key);
       if (!isPollingRef.current) return;
 
-      const code = res.data?.code || res.code;
-      const cookie = res.cookie || res.data?.cookie;
+      const code = res.code;
+      const cookie = res.data?.cookie;
 
       switch (code) {
         case 800:
