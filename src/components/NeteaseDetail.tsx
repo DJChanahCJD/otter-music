@@ -4,7 +4,7 @@ import { MusicTrackList } from "@/components/MusicTrackList";
 import { getPlaylistDetail, getArtist, getAlbum, convertSongToMusicTrack } from "@/lib/netease/netease-api";
 import { SongDetail } from "@/lib/netease/netease-types";
 import { MusicTrack } from "@/types/music";
-import { Loader2, MoreVertical, Import, SquareArrowOutUpRight } from "lucide-react";
+import { MoreVertical, Import, SquareArrowOutUpRight } from "lucide-react";
 import toast from "react-hot-toast";
 import { formatDateZN, processBatchCPU } from "@/lib/utils";
 import {
@@ -15,6 +15,9 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { useMusicStore } from "@/store/music-store";
+
+import { MusicCover } from "@/components/MusicCover";
+import { DetailSkeleton } from "@/components/skeletons/DetailSkeleton";
 
 interface NeteaseDetailProps {
   id: string | null;
@@ -47,7 +50,7 @@ function DetailHeader({ detail }: { detail: UnifiedDetail }) {
       
       <div className="relative z-10 p-5 flex gap-4 items-center">
         {/* 封面图 (稍微缩小以显得更精致) */}
-        <img 
+        <MusicCover 
           src={detail.coverImgUrl} 
           alt={detail.name} 
           className="shrink-0 w-24 h-24 rounded-xl object-cover shadow-md ring-1 ring-white/10" 
@@ -172,13 +175,7 @@ export function NeteaseDetail({
   }, [id, type]);
 
   if (state.loading) {
-    return (
-      <PageLayout title="加载中..." onBack={onBack}>
-        <div className="flex-1 flex items-center justify-center">
-          <Loader2 className="animate-spin text-muted-foreground" />
-        </div>
-      </PageLayout>
-    );
+    return <DetailSkeleton onBack={onBack} />;
   }
 
   if (state.error) {

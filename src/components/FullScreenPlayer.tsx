@@ -18,27 +18,8 @@ import { downloadMusicTrack } from "@/lib/utils/download";
 import { useMusicStore } from "@/store/music-store";
 import { useShallow } from "zustand/react/shallow";
 import toast from "react-hot-toast";
-import { FastAverageColor } from "fast-average-color";
-
-/**
- * 压暗颜色并降低饱和度
- * @param rgba - 原始 RGBA 字符串
- * @returns 压暗后的 RGBA 字符串
- */
-function toneDownColor(rgba: string) {
-  const matches = rgba.match(/\d+/g);
-  if (!matches || matches.length < 3) return rgba;
-
-  const [r, g, b] = matches.slice(0, 3).map(Number);
-
-  const factor = 0.55;
-
-  const nr = Math.min(255, Math.round(r * factor * 1.05));
-  const ng = Math.min(255, Math.round(g * factor * 1.05));
-  const nb = Math.min(255, Math.round(b * factor * 1.05));
-
-  return `rgba(${nr}, ${ng}, ${nb}, 1)`;
-}
+import { ColorExtractor } from "react-color-extractor";
+import { pickBestColor } from "@/lib/utils/color";
 
 interface ModeIconProps {
   isRepeat: boolean;
@@ -96,30 +77,16 @@ export function FullScreenPlayer({
   const [showLyrics, setShowLyrics] = useState(false);
   const [moreDrawerOpen, setMoreDrawerOpen] = useState(false);
   const [isAddToPlaylistOpen, setIsAddToPlaylistOpen] = useState(false);
-  const [dominantColor, setDominantColor] = useState<string>("rgba(24, 24, 27, 1)"); // 默认深锌色
-  // 提取封面主色调
+  
+  const [hslColor, setHslColor] = useState<[number, number, number] | null>(null);
+
   useEffect(() => {
-    if (!coverUrl) {
-      return;
-    }
-    const fac = new FastAverageColor();
-    fac.getColorAsync(coverUrl, { algorithm: "dominant" })
-      .then((color) => {
-        setDominantColor(toneDownColor(color.rgba));
-      })
-      .catch((e) => {
-        console.error("提取主色失败:", e);
-        setDominantColor("rgba(24, 24, 27, 1)");
-      })
-      .finally(() => fac.destroy());
+    setHslColor(null);
   }, [coverUrl]);
 
-  // 退出全屏时重置歌词显示状态
   useEffect(() => {
     if (!isFullScreen) {
-      const timer = setTimeout(() => {
-        setShowLyrics(false);
-      }, 500);
+      const timer = setTimeout(() => setShowLyrics(false), 500);
       return () => clearTimeout(timer);
     }
   }, [isFullScreen]);
@@ -146,28 +113,18 @@ export function FullScreenPlayer({
   };
 
   const handleShare = async () => {
-    if (!currentTrack || !currentAudioUrl) {
-      toast.error("暂无歌曲或音频链接");
-      return;
-    }
+    if (!currentTrack || !currentAudioUrl) return toast.error("暂无歌曲或音频链接");
     try {
-      const shareText = `【OtterMusic】${currentTrack.name} - ${currentTrack.artist.join(", ")}\n${currentAudioUrl}`;
-      await navigator.clipboard.writeText(shareText);
+      await navigator.clipboard.writeText(`【OtterMusic】${currentTrack.name} - ${currentTrack.artist.join(", ")}\n${currentAudioUrl}`);
       toast.success("已复制到剪贴板");
     } catch (err) {
-      console.error("复制失败:", err);
       toast.error("复制失败，请重试");
     }
   };
 
   if (!isMounted) return null;
 
-  const getModeTitle = () => {
-    if (isRepeat) return "单曲循环";
-    if (isShuffle) return "随机播放";
-    return "列表循环";
-  };
-
+  const modeTitle = isRepeat ? "单曲循环" : isShuffle ? "随机播放" : "列表循环";
   const handleModeToggle = () => {
     if (!isShuffle && !isRepeat) onToggleRepeat();
     else if (isRepeat) { onToggleRepeat(); onToggleShuffle(); }
@@ -177,228 +134,111 @@ export function FullScreenPlayer({
   return createPortal(
     <div
       className={cn(
-        "fixed inset-0 z-50 bg-zinc-950 transition-transform duration-500 ease-in-out flex flex-col dark",
+        "fixed inset-0 z-50 transition-transform duration-500 ease-in-out flex flex-col dark",
         isFullScreen ? "translate-y-0" : "translate-y-full"
       )}
     >
-      {/* 纯净沉浸式动态背景 */}
-      <div className="absolute inset-0 z-[-1] overflow-hidden pointer-events-none">
-        {/* 封面模糊背景 */}
-        {coverUrl && (
+      {coverUrl && (
+        <div className="hidden">
+          <ColorExtractor
+            src={coverUrl}
+            maxColors={10}
+            getColors={(colors: string[]) => setHslColor(pickBestColor(colors))}
+            onError={() => setHslColor(null)}
+          />
+        </div>
+      )}
+
+      {/* 背景渲染层 */}
+      <div className="absolute inset-0 z-[-1] overflow-hidden bg-zinc-950">
+        {hslColor ? (
           <div
-            className="absolute inset-0 scale-125 blur-3xl opacity-40 transition-all duration-1000 will-change-transform"
+            className="absolute inset-0 transition-colors duration-1000 ease-in-out"
             style={{
-              backgroundImage: `url(${coverUrl})`,
-              backgroundSize: "cover",
-              backgroundPosition: "center",
+              background: `linear-gradient(to bottom, hsl(${hslColor[0]}, ${hslColor[1]}%, ${hslColor[2]}%), hsl(${hslColor[0]}, ${hslColor[1]}%, ${Math.max(5, hslColor[2] - 8)}%))`
             }}
           />
+        ) : (
+          /* 极简深色兜底背景 - 优化版 */
+          <div className="absolute inset-0 transition-all duration-1000 ease-in-out bg-zinc-950">
+            {/* 深邃的对角线渐变底色 */}
+            <div className="absolute inset-0 bg-linear-to-br from-zinc-800/40 via-zinc-950 to-black" />
+            
+            {/* 顶部柔和的聚光灯光晕 */}
+            <div 
+              className="absolute top-0 left-1/2 -translate-x-1/2 w-screen max-w-2xl h-[60vh] opacity-40 pointer-events-none"
+              style={{ background: 'radial-gradient(circle at 50% 0%, rgba(255,255,255,0.06) 0%, transparent 70%)' }}
+            />
+          </div>
         )}
 
-        {/* 顶部主光源 (模拟舞台灯光) */}
-        <div
-          className="absolute -inset-[20%] opacity-50 transition-all duration-1000 ease-out"
-          style={{
-            background: `radial-gradient(circle at 50% -10%, ${dominantColor} 0%, transparent 65%)`,
-          }}
-        />
-
-        {/* 底部氛围光 */}
-        <div
-          className="absolute -inset-[20%] opacity-25 transition-all duration-1000 ease-out delay-100"
-          style={{
-            background: `radial-gradient(circle at 50% 120%, ${dominantColor} 0%, transparent 70%)`,
-          }}
-        />
-
-        {/* 全局文字与控件保护层（从下到上的深色渐变） */}
-        <div className="absolute inset-0 bg-linear-to-t from-black/95 via-black/40 to-black/10" />
-
-        {/* 进阶噪点纹理 (提升质感) */}
-        <div className="absolute inset-0 opacity-[0.02] mix-blend-overlay pointer-events-none" 
-          style={{ 
-            backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")` 
-          }} 
+        {/* 统一的质感噪点层 (覆盖在提取色和默认色之上，增加整体高级感) */}
+        <div 
+          className="absolute inset-0 opacity-[0.02] mix-blend-overlay pointer-events-none" 
+          style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")` }} 
         />
       </div>
 
-      {/* Top Control Bar */}
       <header className="shrink-0 flex items-center justify-between px-6 pt-[calc(1rem+env(safe-area-inset-top))] pb-6 relative z-10">
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-12 w-12 text-white/60 hover:bg-muted/40 hover:text-foreground"
-          onClick={onClose}
-        >
+        <Button variant="ghost" size="icon" className="h-12 w-12 text-white/60 hover:bg-white/10 hover:text-white" onClick={onClose}>
           <ChevronDown className="h-6 w-6" />
         </Button>
-        <div className="text-center">
-          <p className="text-xs uppercase tracking-widest text-white/50">
-            {!showLyrics && getModeTitle()}
-          </p>
-        </div>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-12 w-12 text-white/60 hover:bg-muted/40 hover:text-foreground"
-          onClick={handleShare}
-          title="分享"
-        >
+        <p className="text-xs uppercase tracking-widest text-white/50">{!showLyrics && modeTitle}</p>
+        <Button variant="ghost" size="icon" className="h-12 w-12 text-white/60 hover:bg-white/10 hover:text-white" onClick={handleShare}>
           <SquareArrowOutUpRight className="h-5 w-5" />
         </Button>
       </header>
 
-      {/* Main Content Area */}
-      <div
-        className="flex-1 flex flex-col items-center justify-center px-2 relative z-10 overflow-hidden cursor-pointer"
-        onClick={() => setShowLyrics(!showLyrics)}
-      >
+      <div className="flex-1 flex flex-col items-center justify-center px-2 relative z-10 overflow-hidden cursor-pointer" onClick={() => setShowLyrics(!showLyrics)}>
         {showLyrics ? (
           <div className="w-full h-full">
-            <LyricsPanel
-              track={currentTrack}
-              currentTime={currentTime}
-              active={isFullScreen}
-            />
+            <LyricsPanel track={currentTrack} currentTime={currentTime} active={isFullScreen} />
           </div>
         ) : (
-          <div
-            className={cn(
-              "relative aspect-square w-72 max-w-[320px] overflow-hidden rounded-3xl shadow-2xl transition-transform duration-500",
-              isPlaying ? "scale-100" : "scale-[0.95]"
-            )}
-          >
-            <MusicCover
-              src={coverUrl}
-              alt={currentTrack?.name}
-              className="h-full w-full"
-              iconClassName="h-16 w-16 text-white/30"
-            />
+          <div className={cn("relative aspect-square w-72 max-w-[320px] overflow-hidden rounded-3xl shadow-xl shadow-black/40 transition-transform duration-500 ring-1 ring-white/5", isPlaying ? "scale-100" : "scale-[0.95]")}>
+            <MusicCover src={coverUrl} alt={currentTrack?.name} className="h-full w-full object-cover" iconClassName="h-16 w-16 text-white/30" />
           </div>
         )}
       </div>
 
-      {/* Song Info */}
       <div className="shrink-0 px-8 py-4 relative z-10">
         <div className="flex items-center justify-between">
           <div className="min-w-0 flex-1">
-            <h2 className="truncate text-xl font-semibold text-white" title={currentTrack?.name || "未知歌曲"}>
-              {currentTrack?.name || "未知歌曲"}
-            </h2>
-            <p className="truncate text-sm text-white/60 mt-1" title={currentTrack?.artist?.join(", ") || "未知歌手"}>
-              {currentTrack?.artist?.join(", ") || "未知歌手"}
-            </p>
+            <h2 className="truncate text-xl font-semibold text-white">{currentTrack?.name || "未知歌曲"}</h2>
+            <p className="truncate text-sm text-white/60 mt-1">{currentTrack?.artist?.join(", ") || "未知歌手"}</p>
           </div>
           <div className="flex items-center gap-1 shrink-0">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-10 w-10 text-white/70 hover:bg-white/10 hover:text-white"
-              onClick={(e) => { e.stopPropagation(); onToggleLike?.(); }}
-            >
-              <Heart
-                className={cn(
-                  "h-6 w-6 transition-all",
-                  isFavorite && "fill-primary text-primary"
-                )}
-              />
+            <Button variant="ghost" size="icon" className="h-10 w-10 text-white/70 hover:bg-white/10 hover:text-white" onClick={(e) => { e.stopPropagation(); onToggleLike?.(); }}>
+              <Heart className={cn("h-6 w-6 transition-all", isFavorite && "fill-primary text-primary")} />
             </Button>
             {currentTrack && (
               <>
-                <MusicTrackMobileMenu
-                  track={currentTrack}
-                  open={moreDrawerOpen}
-                  onOpenChange={setMoreDrawerOpen}
-                  onAddToPlaylist={() => setIsAddToPlaylistOpen(true)}
-                  onDownload={() => downloadMusicTrack(currentTrack, parseInt(quality))}
-                  isFavorite={isFavorite}
-                  onToggleLike={onToggleLike}
-                  triggerClassName="h-10 w-10 text-white/70 hover:bg-white/10 hover:text-white"
-                  onNavigate={onClose}
-                />
-                <AddToPlaylistDialog
-                  open={isAddToPlaylistOpen}
-                  onOpenChange={setIsAddToPlaylistOpen}
-                  track={currentTrack}
-                />
+                <MusicTrackMobileMenu track={currentTrack} open={moreDrawerOpen} onOpenChange={setMoreDrawerOpen} onAddToPlaylist={() => setIsAddToPlaylistOpen(true)} onDownload={() => downloadMusicTrack(currentTrack, parseInt(quality))} isFavorite={isFavorite} onToggleLike={onToggleLike} triggerClassName="h-10 w-10 text-white/70 hover:bg-white/10 hover:text-white" onNavigate={onClose} />
+                <AddToPlaylistDialog open={isAddToPlaylistOpen} onOpenChange={setIsAddToPlaylistOpen} track={currentTrack} />
               </>
             )}
           </div>
         </div>
       </div>
 
-      {/* Progress Bar */}
       <div className="shrink-0 px-8 relative z-10">
-        <PlayerProgressBar
-          currentTime={currentTime}
-          duration={duration}
-          onSeek={onSeek}
-          className="relative"
-        />
+        <PlayerProgressBar currentTime={currentTime} duration={duration} onSeek={onSeek} className="relative" />
       </div>
 
-      {/* Bottom Controls */}
       <div className="shrink-0 flex items-center justify-between px-8 py-6 pb-[calc(2rem+env(safe-area-inset-bottom))] relative z-10">
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-12 w-12 transition-colors text-white/70 hover:text-white hover:bg-white/10"
-          onClick={handleModeToggle}
-          title={getModeTitle()}
-        >
+        <Button variant="ghost" size="icon" className="h-12 w-12 transition-colors text-white/70 hover:text-white hover:bg-white/10" onClick={handleModeToggle}>
           <ModeIcon isRepeat={isRepeat} isShuffle={isShuffle} />
         </Button>
-
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-12 w-12 text-white/70 hover:bg-white/10 hover:text-white"
-          onClick={onPrev}
-        >
+        <Button variant="ghost" size="icon" className="h-12 w-12 text-white/70 hover:bg-white/10 hover:text-white" onClick={onPrev}>
           <SkipBack className="h-6 w-6 fill-current" />
         </Button>
-        <Button
-          size="icon"
-          className="h-16 w-16 rounded-full bg-white text-black shadow-lg hover:scale-105 transition-all active:scale-95"
-          onClick={onTogglePlay}
-          disabled={isLoading}
-        >
-          {isLoading ? (
-            <Spinner className="h-7 w-7 text-black" />
-          ) : isPlaying ? (
-            <Pause className="h-7 w-7 fill-current" />
-          ) : (
-            <Play className="h-7 w-7 fill-current ml-1" />
-          )}
+        <Button size="icon" className="h-16 w-16 rounded-full bg-white text-black shadow-lg hover:scale-105 transition-all active:scale-95" onClick={onTogglePlay} disabled={isLoading}>
+          {isLoading ? <Spinner className="h-7 w-7 text-black" /> : isPlaying ? <Pause className="h-7 w-7 fill-current" /> : <Play className="h-7 w-7 fill-current ml-1" />}
         </Button>
-
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-12 w-12 text-white/70 hover:bg-white/10 hover:text-white"
-          onClick={onNext}
-        >
+        <Button variant="ghost" size="icon" className="h-12 w-12 text-white/70 hover:bg-white/10 hover:text-white" onClick={onNext}>
           <SkipForward className="h-6 w-6 fill-current" />
         </Button>
-
-        <PlayerQueuePopover
-          queue={queue}
-          currentIndex={currentIndex}
-          isPlaying={isPlaying}
-          isShuffle={isShuffle}
-          onPlay={playTrack}
-          onClear={handleClearQueue}
-          onReshuffle={reshuffle}
-          trigger={
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-12 w-12 text-white/70 hover:bg-white/10 hover:text-white"
-            >
-              <ListVideo className="h-5 w-5" />
-            </Button>
-          }
-        />
+        <PlayerQueuePopover queue={queue} currentIndex={currentIndex} isPlaying={isPlaying} isShuffle={isShuffle} onPlay={playTrack} onClear={handleClearQueue} onReshuffle={reshuffle} trigger={<Button variant="ghost" size="icon" className="h-12 w-12 text-white/70 hover:bg-white/10 hover:text-white"><ListVideo className="h-5 w-5" /></Button>} />
       </div>
     </div>,
     document.body

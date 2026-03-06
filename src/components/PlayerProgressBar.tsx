@@ -84,18 +84,25 @@ export function PlayerProgressBar({
         onMouseDown={(e) => handleStart(e.clientX)}
         onTouchStart={(e) => handleStart(e.touches[0].clientX)}
       >
-        <div className="relative w-full h-1.5 group-hover:h-2 transition-all">
-          <div className="absolute inset-0 bg-muted/80 rounded-full" />
+        <div className="relative w-full h-1.5 group-hover:h-2 transition-all rounded-full bg-white/20">
           <div
             className={cn(
-              "absolute inset-y-0 left-0 bg-primary rounded-full",
+              "absolute inset-y-0 left-0 bg-white rounded-full flex items-center justify-end shadow-[0_0_10px_rgba(255,255,255,0.3)]",
               !isDragging && "transition-all"
             )}
             style={{ width: `${displayProgress}%` }}
-          />
+          >
+            {/* 拖拽/悬停时显示的小圆点指示器 */}
+            <div 
+              className={cn(
+                "w-3 h-3 bg-white rounded-full shadow-md translate-x-1.5 transition-opacity duration-200",
+                isDragging ? "opacity-100 scale-110" : "opacity-0 group-hover:opacity-100"
+              )} 
+            />
+          </div>
         </div>
       </div>
-      <div className="flex justify-between text-xs text-muted-foreground mt-1 px-0.5">
+      <div className="flex justify-between text-xs text-white/60 font-medium mt-1.5 px-0.5 tracking-wider">
         <span>{formatMediaTime(isDragging ? dragTime : currentTime)}</span>
         <span>{formatMediaTime(duration)}</span>
       </div>
