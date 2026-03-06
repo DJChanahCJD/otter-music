@@ -111,8 +111,8 @@ export function NeteaseLogin() {
       const res = await checkQrStatus(key);
       if (!isPollingRef.current) return;
 
-      const code = res.code;
-      const cookie = res.data?.cookie;
+      const code = res.data?.code;
+      const cookie = res.cookie;
 
       switch (code) {
         case 800:

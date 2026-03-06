@@ -200,7 +200,7 @@ export async function getSongUrl(id: string, br: number = 999000, cookie: string
 }
 
 export const getQrKey = () => fetchLocalApi<NeteaseResponse<QrKeyResponse>>(`/music-api/netease/login/qr/key?timestamp=${Date.now()}`);
-export const checkQrStatus = (key: string) => fetchLocalApi<NeteaseResponse<QrCheckResponse>>(`/music-api/netease/login/qr/check?key=${key}&timestamp=${Date.now()}`);
+export const checkQrStatus = (key: string) => fetchLocalApi<QrCheckResponse>(`/music-api/netease/login/qr/check?key=${key}&timestamp=${Date.now()}`);
 
 export const getMyInfo = (cookie: string = '') => 
     cachedFetch<{ data?: { profile: UserProfile }; profile?: UserProfile }>(

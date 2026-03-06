@@ -222,11 +222,13 @@ export interface ResolveUrlResult {
 }
 
 export interface QrCheckResponse {
-  code: number;
   message: string;
   cookie?: string;
+  data?: {
+    code: number;
+    message: string;
+  };
 }
-
 export interface CookieItem {
   url: string;
   name: string;
