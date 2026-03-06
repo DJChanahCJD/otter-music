@@ -1,5 +1,5 @@
 import { useMusicStore } from "@/store/music-store";
-import { aggregatedSourceOptions } from "@/types/music";
+import { aggregatedSourceOptions, MusicSource } from "@/types/music";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useState } from "react";
 import { Radio } from "lucide-react";
@@ -11,12 +11,12 @@ export function AggregatedSourceSelect() {
 
   const toggleSource = (value: string) => {
     const current = aggregatedSources;
-    if (current.includes(value as any)) {
+    if (current.includes(value as MusicSource)) {
       if (current.length > 1) {
         setAggregatedSources(current.filter(s => s !== value));
       }
     } else {
-      setAggregatedSources([...current, value as any]);
+      setAggregatedSources([...current, value as MusicSource]);
     }
   };
 

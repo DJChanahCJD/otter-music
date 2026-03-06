@@ -102,24 +102,24 @@ export function PlaylistMarket() {
           let recommend: MarketPlaylist[] = [];
           if (recRes) {
             const rawRecommend =
-              (recRes as any)?.data?.result || (recRes as any)?.result;
+              recRes.result;
             if (rawRecommend && Array.isArray(rawRecommend)) {
-              recommend = rawRecommend.map((i: any) => ({
+              recommend = rawRecommend.map((i) => ({
                 id: i.id,
                 name: i.name,
-                coverImgUrl: forceHttps(i.picUrl || i.coverImgUrl),
+                coverImgUrl: forceHttps(i.picUrl || (i as { coverImgUrl?: string }).coverImgUrl || ""),
                 playCount: i.playCount,
               }));
             }
           }
 
           if (userRes?.code === 200) {
-            const all: MarketPlaylist[] = userRes.playlist.map((i: any) => ({
+            const all: MarketPlaylist[] = userRes.playlist.map((i) => ({
               id: i.id,
               name: i.name,
               coverImgUrl: forceHttps(i.coverImgUrl),
               playCount: i.playCount,
-              userId: i.userId,
+              userId: i.creator.userId,
             }));
             const created = all.filter(
               (p) => String(p.userId) === String(userId),
@@ -159,11 +159,12 @@ export function PlaylistMarket() {
             const rawList = isToplist
               ? (res.data as { list: Toplist[] }).list
               : (res.data as { playlists: UserPlaylist[] }).playlists;
-            const newItems: MarketPlaylist[] = rawList.map((i: any) => ({
+            const newItems: MarketPlaylist[] = rawList.map((i: Toplist | UserPlaylist) => ({
               id: i.id,
               name: i.name,
               coverImgUrl: forceHttps(i.coverImgUrl),
               playCount: i.playCount,
+              userId: 'creator' in i ? i.creator.userId : undefined,
             }));
 
             if (isToplist) {
@@ -339,7 +340,7 @@ export function PlaylistMarket() {
                   ].map((tab) => (
                     <button
                       key={tab.id}
-                      onClick={() => setMineTab(tab.id as any)}
+                      onClick={() => setMineTab(tab.id as "recommend" | "created" | "subscribed")}
                       className={cn(
                         "text-[15px] transition-all",
                         mineTab === tab.id
