@@ -101,7 +101,7 @@ export function PlaylistMarket() {
 
           let recommend: MarketPlaylist[] = [];
           if (recRes) {
-            const rawRecommend = recRes.result || (recRes as any).data.result;
+            const rawRecommend = recRes.result || recRes.data?.result;
             if (rawRecommend && Array.isArray(rawRecommend)) {
               recommend = rawRecommend.map((i) => ({
                 id: i.id,
