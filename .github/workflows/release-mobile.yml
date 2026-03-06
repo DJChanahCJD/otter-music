@@ -47,6 +47,9 @@ jobs:
       - name: Build web assets
         run: npm run build
 
+      - name: Generate Assets (Icons & Splash)
+        run: npm run resources
+
       - name: Sync Capacitor Android
         run: npx cap sync android
 
