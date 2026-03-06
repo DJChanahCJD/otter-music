@@ -117,8 +117,8 @@ export function PlaylistMarket() {
             const all: MarketPlaylist[] = userRes.playlist.map((i) => ({
               id: i.id,
               name: i.name,
-              coverImgUrl: forceHttps(i.coverImgUrl),
-              playCount: i.playCount,
+              coverImgUrl: forceHttps(i.coverImgUrl || (i as any).coverUrl || (i as any).picUrl),
+              playCount: i.playCount || 0,
               userId: i.creator.userId,
             }));
             const created = all.filter(
@@ -162,9 +162,9 @@ export function PlaylistMarket() {
             const newItems: MarketPlaylist[] = rawList.map((i: Toplist | UserPlaylist) => ({
               id: i.id,
               name: i.name,
-              coverImgUrl: forceHttps(i.coverImgUrl),
-              playCount: i.playCount,
-              userId: 'creator' in i ? i.creator.userId : undefined,
+              coverImgUrl: forceHttps(i.coverImgUrl || (i as any).coverUrl || (i as any).picUrl),
+              playCount: i.playCount || 0,
+              userId: (i as any).creator?.userId,
             }));
 
             if (isToplist) {
