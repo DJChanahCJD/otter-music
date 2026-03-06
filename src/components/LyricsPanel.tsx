@@ -32,17 +32,15 @@ function formatTime(seconds: number): string {
 
 function parseSimpleLrc(lrc: string): { time: number; text: string }[] {
   const lines: { time: number; text: string }[] = [];
-  const timeRegex = TIME_EXP; // 使用全局正则表达式
+  const timeRegex = TIME_EXP; 
 
   for (const line of lrc.split("\n")) {
     const timeMatches = [...line.matchAll(timeRegex)];
     
     if (timeMatches.length > 0) {
-      // 移除该行所有的时间标签，提取纯文本
       const text = line.replace(timeRegex, "").trim();
       
       if (text) {
-        // 为每一个匹配到的时间标签推入相同的歌词文本
         for (const m of timeMatches) {
           const time = Number(m[1]) * 60 + Number(m[2]) + Number(m[3].padEnd(3, "0")) / 1000;
           lines.push({ time, text });
@@ -51,7 +49,6 @@ function parseSimpleLrc(lrc: string): { time: number; text: string }[] {
     }
   }
   
-  // 必须按时间排序，因为多标签展开后顺序会被打乱
   return lines.sort((a, b) => a.time - b.time);
 }
 
@@ -321,17 +318,25 @@ export function LyricsPanel({ track, currentTime, active = true }: LyricsPanelPr
   const centerLine = centerLineIndex >= 0 ? lyrics[centerLineIndex] : null;
 
   return (
-    <div className="h-full flex flex-col relative">
-      <ScrollArea className="h-full" viewportRef={viewportRef}>
+    <div className="h-full flex flex-col relative overflow-hidden">
+      {/* 使用 CSS Mask 实现上下渐隐效果 */}
+      <ScrollArea 
+        className="h-full w-full" 
+        viewportRef={viewportRef}
+        style={{
+          maskImage: "linear-gradient(to bottom, transparent 0%, black 15%, black 85%, transparent 100%)",
+          WebkitMaskImage: "linear-gradient(to bottom, transparent 0%, black 15%, black 85%, transparent 100%)"
+        }}
+      >
         {LyricsList}
       </ScrollArea>
 
       {isUserScrolling && centerLine && (
-        <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 flex items-center px-4 pointer-events-none">
+        <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 flex items-center px-4 pointer-events-none z-10">
           <span className="text-xs text-white/70 font-medium min-w-[40px]">
             {formatTime(centerLine.time)}
           </span>
-          <div className="flex-1 h-px bg-white/20 mx-2" />
+          <div className="flex-1 h-px bg-white/20 mx-2 shadow-[0_0_10px_rgba(255,255,255,0.3)]" />
           <button
             onClick={(e) => {
               e.stopPropagation();
