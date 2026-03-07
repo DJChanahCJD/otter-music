@@ -13,6 +13,7 @@ import { MusicTrackList } from "./MusicTrackList";
 import { Button } from "./ui/button";
 import { toastUtils } from "@/lib/utils/toast";
 import { PlaylistMarket } from "./PlaylistMarket/PlaylistMarket";
+import { mergeAndSortTracks } from "@/lib/utils/search-helper";
 
 interface MusicSearchViewProps {
   onPlay: (track: MusicTrack, list: MusicTrack[], contextId?: string) => void;
@@ -100,7 +101,7 @@ export function MusicSearchView({ onPlay, currentTrackId, isPlaying }: MusicSear
       if (version !== versionRef.current) return; // 过期响应
 
       // 排序逻辑：如果是专辑搜索，优先把同名专辑放到前面
-      let items = res.items;
+      let items = source === "all" ? res.items : mergeAndSortTracks(res.items);
       if (searchIntent?.type === 'album') {
         const q = toSimplified(searchQuery);
         const targetArtist = searchIntent.artist ? toSimplified(searchIntent.artist) : null;
