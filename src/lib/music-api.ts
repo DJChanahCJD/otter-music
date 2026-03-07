@@ -1,11 +1,11 @@
-import type { MusicSource, MusicTrack, SearchPageResult, MergedMusicTrack, SongLyric } from "@/types/music";
+import type { MusicSource, MusicTrack, SearchPageResult, MergedMusicTrack, SongLyric, SearchIntent } from "@/types/music";
 import { cachedFetch } from "@/lib/utils/cache";
 import { mergeAndSortTracks, SOURCE_RANK } from "@/lib/utils/search-helper";
 import { getOrderedMusicApiUrls, markMusicApiUrlFailure, markMusicApiUrlSuccess } from "./api";
 import { retry } from "@/lib/utils";
 import { Capacitor } from "@capacitor/core";
 import { LocalMusicPlugin } from "@/plugins/local-music";
-import { getSongUrl, getLyric, getSongDetail, search as neteaseSearch, convertSongToMusicTrack } from "@/lib/netease/netease-api";
+import { getSongUrl, getLyric, getSongDetail, search as neteaseSearch, convertSongToMusicTrack, searchSuggest } from "@/lib/netease/netease-api";
 
 const TTL_SHORT = 60 * 60 * 1000; // 60 minutes
 const TTL_LONG = 7 * 24 * 60 * 60 * 1000; // 7 days
@@ -129,7 +129,8 @@ export const musicApi = {
     source: MusicSource = 'joox',
     page = 1,
     count = 20,
-    signal?: AbortSignal
+    signal?: AbortSignal,
+    searchIntent?: SearchIntent
   ): Promise<SearchPageResult<MusicTrack>> {
 
     if (source === 'all') return this.searchAll(query, page, count, signal);
@@ -144,6 +145,10 @@ export const musicApi = {
       };
     }
 
+    if (searchIntent?.type === 'album') {
+      source += "_album";
+    }
+
     const json = await retry(
       () => requestMusicApiJSON<RawApiTrack[]>({ types: 'search', name: query, count, pages: page }, source, signal),
       2,
@@ -151,7 +156,7 @@ export const musicApi = {
     );
 
     const items = json.map(t => normalizeTrack(t, source));
-    return { items, hasMore: items.length >= count };
+    return { items, hasMore: items.length === count };
   },
 
   /* ---------------- 全网搜索 ---------------- */
@@ -161,11 +166,12 @@ export const musicApi = {
     page = 1,
     count = 20,
     signal?: AbortSignal,
-    sources: MusicSource[] = ['joox', 'netease']
+    sources: MusicSource[] = ['joox', 'netease'],
+    searchIntent?: SearchIntent
   ): Promise<SearchPageResult<MergedMusicTrack>> {
 
     const results = await Promise.all(
-      sources.map(s => this.search(query, s, page, count, signal))
+      sources.map(s => this.search(query, s, page, count, signal, searchIntent))
     );
 
     if (signal?.aborted) return { items: [], hasMore: false };
@@ -174,7 +180,7 @@ export const musicApi = {
 
     return {
       items: merged,
-      hasMore: results.some(r => r.hasMore)
+      hasMore: results.every(r => r.hasMore)
     };
   },
 
@@ -339,5 +345,29 @@ export const musicApi = {
       },
       TTL_LONG,
     );
+  },
+
+  /* ---------------- 搜索建议 ---------------- */
+
+  async getSearchSuggestions(query: string): Promise<string[]> {
+    if (!query.trim()) return [];
+    try {
+      const s = await searchSuggest(query.trim());
+      if (!s) {
+        return [];
+      }
+      const suggestions: string[] = [];
+
+      // 提取建议，优先顺序：歌手 > 歌曲 > 专辑
+      if (Array.isArray(s.artists)) suggestions.push(...s.artists.map(a => a.name));
+      if (Array.isArray(s.songs)) suggestions.push(...s.songs.map(s => `${s.name} ${s.artists?.[0]?.name || ''}`.trim()));
+      if (Array.isArray(s.albums)) suggestions.push(...s.albums.map(a => `${a.name} ${a.artist?.name || ''}`.trim()));
+
+      // 去重并限制数量
+      return Array.from(new Set(suggestions));
+    } catch (e) {
+      console.warn('Search suggest failed:', e);
+      return [];
+    }
   }
 };

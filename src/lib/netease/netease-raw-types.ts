@@ -179,3 +179,11 @@ export interface CookieItem {
   value: string;
   expirationDate?: number;
 }
+
+export interface SearchSuggestResult {
+  songs?: Array<{ id: number; name: string; artists: Array<{ id: number; name: string; picUrl?: string }>; album: { id: number; name: string; status: number; copyrightId: number } }>;
+  artists?: Array<{ id: number; name: string; picUrl: string; alias: string[] }>;
+  albums?: Array<{ id: number; name: string; artist: { name: string; picUrl: string }; status: number; copyrightId: number }>;
+  playlists?: Array<{ id: number; name: string; coverImgUrl: string; creator: { nickname: string }; trackCount: number; playCount: number; bookCount: number }>;
+  order?: string[];
+}

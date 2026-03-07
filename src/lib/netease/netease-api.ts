@@ -13,6 +13,7 @@ import type {
     Toplist,
     UserPlaylist,
     UserProfile,
+    SearchSuggestResult,
 } from './netease-raw-types';
 import type { MarketPlaylist, NeteaseSongLike, QrStatusResult } from "./netease-models";
 import {
@@ -359,27 +360,33 @@ export const getArtist = (id: string, cookie: string = '') =>
         TTL_LONG // 歌手基础信息低频变动 
     ); 
 
-export const getPlaylists = async (
-    cat: string = '全部',
-    order: string = 'hot',
-    limit: number = 30,
-    offset: number = 0,
-    cookie: string = ''
-): Promise<MarketPlaylist[]> => {
-    const res = await cachedFetch<MarketPlaylist[]>(
-        `netease:v2:playlists:${cat}:${order}:${limit}:${offset}`,
+export const getPlaylists = (cat: string = '全部', order: string = 'hot', limit: number = 30, offset: number = 0, cookie: string = '') => 
+    cachedFetch( 
+        `netease:playlists:${cat}:${order}:${limit}:${offset}`, 
         async () => {
-            const r = await requestWeapi<{ playlists: UserPlaylist[] }>(
+            const res = await requestWeapi<{ playlists: UserPlaylist[] }>(
                 `${BASE_URL}/weapi/playlist/list`,
                 { cat, order, limit, offset, total: true },
                 cookie
             );
-            return r.data.playlists.map(toMarketPlaylistFromUserPlaylist);
+            return res.data.playlists.map(toMarketPlaylistFromUserPlaylist);
+        },
+        TTL_SHORT // 广场分类歌单变动较快 
+    );
+
+export const searchSuggest = (keyword: string, cookie: string = '') =>
+    cachedFetch<SearchSuggestResult>(
+        `netease:suggest:${keyword}`,
+        async () => {
+            const res = await requestWeapi<{ result: SearchSuggestResult }>(
+                `${BASE_URL}/weapi/search/suggest/web`,
+                { s: keyword },
+                cookie
+            );
+            return res.data?.result || {};
         },
         TTL_SHORT
     );
-    return res ?? [];
-};
 
 export function resolveUrl(urlStr: string): ResolveUrlResult | null {
     try {
