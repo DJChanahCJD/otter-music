@@ -137,6 +137,7 @@ export function MusicSearchView({ onPlay, currentTrackId, isPlaying }: MusicSear
         });
       }
 
+      const currentLength = reset ? 0 : searchResults.length;
       const filtered = items.filter(t => {
         const key = getExactKey(t);
         if (seenRef.current.has(key)) return false;
@@ -145,7 +146,8 @@ export function MusicSearchView({ onPlay, currentTrackId, isPlaying }: MusicSear
       });
 
       setSearchResults(reset ? filtered : [...searchResults, ...filtered]);
-      setSearchHasMore(res.hasMore);
+      const newLength = currentLength + filtered.length;
+      setSearchHasMore(res.hasMore && newLength > currentLength);
       setSearchPage(nextPage);
 
       if (reset && filtered.length === 0) {
