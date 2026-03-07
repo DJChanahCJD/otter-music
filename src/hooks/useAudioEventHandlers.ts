@@ -82,13 +82,7 @@ export function useAudioEventHandlers(
       const state = useMusicStore.getState();
       if (state.isRepeat) {
         audio.currentTime = 0;
-        const replayPromise = audio.play();
-        if (replayPromise !== undefined) {
-          replayPromise.catch((error) => {
-            console.error("Repeat play failed:", error);
-            useMusicStore.getState().setIsPlaying(false);
-          });
-        }
+        audio.play();
       } else if (state.queue.length > 0) {
         state.setCurrentIndexAndPlay((state.currentIndex + 1) % state.queue.length);
       }

@@ -182,17 +182,9 @@ export function useAudioTrackLoader(
 
           audio.currentTime = currentAudioTime;
 
-          const shouldAutoPlay = useMusicStore.getState().isPlaying;
-          if (!shouldAutoPlay) {
-            toast.dismiss(toastId);
-            return;
-          }
-
           const playPromise = audio.play();
           if (playPromise !== undefined) {
             playPromise.catch((error) => {
-              if (requestId !== requestIdRef.current) return;
-              if (!useMusicStore.getState().isPlaying) return;
               console.error("Auto-play failed:", error);
               setIsPlaying(false);
             });
