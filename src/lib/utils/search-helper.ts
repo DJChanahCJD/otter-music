@@ -1,5 +1,5 @@
-import type { MusicSource, MusicTrack, MergedMusicTrack } from '@/types/music';
-import { normalizeText, normalizeArtists, getExactKey } from './music-key';
+import type { MusicSource, MusicTrack, MergedMusicTrack, SearchIntent } from '@/types/music';
+import { normalizeText, normalizeArtists, getExactKey, toSimplified } from './music-key';
 import { useSourceQualityStore } from '@/store/source-quality-store';
 
 /* 常量 */
@@ -96,7 +96,7 @@ function clusterTracks(tracks: (MergedMusicTrack & PreparedTrack)[]): (MergedMus
           // 选更好的主曲
           const better =
             item.name.length < c.name.length ||
-            SOURCE_RANK[item.source] < SOURCE_RANK[c.source]
+              SOURCE_RANK[item.source] < SOURCE_RANK[c.source]
               ? item
               : c;
 
@@ -197,4 +197,29 @@ export function mergeAndSortTracks(tracks: MusicTrack[], query = ''): MergedMusi
   const unique = dedupeExact(prepared);
   const clustered = clusterTracks(unique);
   return diversifiedSort(clustered, query);
+}
+
+export function applySearchIntentSort(items: MergedMusicTrack[], intent: SearchIntent | null, query: string = "") {
+  if (!intent) return items;
+
+  const q = toSimplified(query);
+  const targetArtist = intent.artist ? toSimplified(intent.artist) : null;
+
+  return [...items].sort((a, b) => {
+    const getWeight = (track: MergedMusicTrack) => {
+      let weight = 0;
+      const albumMatched = toSimplified(track.album) === q;
+      const artistMatched = track.artist.some(art => toSimplified(art) === (targetArtist || q));
+
+      if (intent.type === 'album') {
+        if (albumMatched && artistMatched) weight = 3; // 专辑+歌手全匹配
+        else if (albumMatched) weight = 2;              // 仅专辑匹配
+      } else if (intent.type === 'artist') {
+        if (artistMatched) weight = 2;                 // 歌手匹配
+      }
+      return weight;
+    };
+
+    return getWeight(b) - getWeight(a); // 权重降序排列
+  });
 }

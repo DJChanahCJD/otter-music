@@ -22,7 +22,7 @@ export function GlobalMusicPlayer() {
   useAudioTrackLoader(audioRef, isSwitchingTrackRef, hasRecordedRef);
   useAudioPlaybackControl(audioRef, isSwitchingTrackRef);
   useAudioEventHandlers(audioRef, isSwitchingTrackRef, hasRecordedRef);
-  useMediaSessionIntegration(coverUrl);
+  useMediaSessionIntegration(audioRef, coverUrl);
 
   return (
     <audio

@@ -196,7 +196,11 @@ export function MusicTrackMobileMenu({
     }
 
     setSearchQuery(toSimplified(keyword));
-    setSearchIntent({ type, artist });
+    if (type) {
+        setSearchIntent({ type: type as SearchIntent["type"], artist, id, name: keyword });
+    } else {
+        setSearchIntent(null);
+    }
     if (track.source && track.source !== "local") {
       setSearchSource(track.source);
     }

@@ -1,17 +1,17 @@
-import type { MusicSource, MusicTrack, SearchPageResult, MergedMusicTrack, SongLyric } from "@/types/music";
+import type { MusicSource, MusicTrack, SearchPageResult, MergedMusicTrack, SongLyric, SearchIntent, SearchSuggestionItem } from "@/types/music";
 import { cachedFetch } from "@/lib/utils/cache";
 import { mergeAndSortTracks, SOURCE_RANK } from "@/lib/utils/search-helper";
 import { getOrderedMusicApiUrls, markMusicApiUrlFailure, markMusicApiUrlSuccess } from "./api";
 import { retry } from "@/lib/utils";
 import { Capacitor } from "@capacitor/core";
 import { LocalMusicPlugin } from "@/plugins/local-music";
-import { getSongUrl, getLyric, getSongDetail, search as neteaseSearch, convertSongToMusicTrack } from "@/lib/netease/netease-api";
+import { getSongUrl, getLyric, getSongDetail, search as neteaseSearch, convertSongToMusicTrack, searchSuggest } from "@/lib/netease/netease-api";
 
 const TTL_SHORT = 60 * 60 * 1000; // 60 minutes
 const TTL_LONG = 7 * 24 * 60 * 60 * 1000; // 7 days
 const REQUEST_TIMEOUT_MS = 10000;
 
-const cookieOf = (source: MusicSource) => localStorage.getItem(`cookie:${source}`);
+const cookieOf = (source: string) => localStorage.getItem(`cookie:${source.replace('_album', '')}`);
 
 const isAbort = (e: unknown) => e instanceof Error && e.name === 'AbortError';
 
@@ -28,8 +28,8 @@ interface RawApiTrack {
 }
 
 export const forceHttps = (url: string | undefined | null) => {
-    if (!url) return '';
-    return url.replace(/^http:\/\//i, 'https://');
+  if (!url) return '';
+  return url.replace(/^http:\/\//i, 'https://');
 };
 
 const normalizeTrack = (t: RawApiTrack, source: MusicSource): MusicTrack => ({
@@ -129,10 +129,11 @@ export const musicApi = {
     source: MusicSource = 'joox',
     page = 1,
     count = 20,
-    signal?: AbortSignal
+    signal?: AbortSignal,
+    searchIntent?: SearchIntent | null
   ): Promise<SearchPageResult<MusicTrack>> {
 
-    if (source === 'all') return this.searchAll(query, page, count, signal);
+    if (source === 'all') return this.searchAll(query, page, count, signal, undefined, searchIntent);
 
     if (source === '_netease') {
       const res = await neteaseSearch(query, 1, page, count);
@@ -144,14 +145,19 @@ export const musicApi = {
       };
     }
 
+    let requestSource: string = source;
+    if (searchIntent?.type === 'album') {
+      requestSource += "_album";
+    }
+
     const json = await retry(
-      () => requestMusicApiJSON<RawApiTrack[]>({ types: 'search', name: query, count, pages: page }, source, signal),
+      () => requestMusicApiJSON<RawApiTrack[]>({ types: 'search', name: query, count, pages: page }, requestSource as MusicSource, signal),
       2,
       500
     );
 
     const items = json.map(t => normalizeTrack(t, source));
-    return { items, hasMore: items.length >= count };
+    return { items, hasMore: items.length === count };
   },
 
   /* ---------------- 全网搜索 ---------------- */
@@ -161,11 +167,12 @@ export const musicApi = {
     page = 1,
     count = 20,
     signal?: AbortSignal,
-    sources: MusicSource[] = ['joox', 'netease']
+    sources: MusicSource[] = ['joox', 'netease'],
+    searchIntent?: SearchIntent | null
   ): Promise<SearchPageResult<MergedMusicTrack>> {
 
     const results = await Promise.all(
-      sources.map(s => this.search(query, s, page, count, signal))
+      sources.map(s => this.search(query, s, page, count, signal, searchIntent))
     );
 
     if (signal?.aborted) return { items: [], hasMore: false };
@@ -174,7 +181,7 @@ export const musicApi = {
 
     return {
       items: merged,
-      hasMore: results.some(r => r.hasMore)
+      hasMore: results.every(r => r.hasMore)
     };
   },
 
@@ -339,5 +346,73 @@ export const musicApi = {
       },
       TTL_LONG,
     );
+  },
+
+  /* ---------------- 搜索建议 ---------------- */
+
+  async getSearchSuggestions(query: string): Promise<SearchSuggestionItem[]> {
+    const q = query.trim();
+    if (!q) return [];
+
+    try {
+      const s = await searchSuggest(q);
+      if (!s) return [];
+
+      const suggestions: SearchSuggestionItem[] = [];
+      const seen = new Set<string>();
+
+      /** 添加建议并去重 + 限制数量 */
+      const pushUnique = (
+        text: string,
+        type: SearchSuggestionItem["type"],
+        id?: string | number
+      ) => {
+        if (suggestions.length >= 10) return; // 提前终止
+
+        const key = `${type}:${text}`;
+        if (seen.has(key)) return;
+
+        seen.add(key);
+        suggestions.push({
+          text,
+          type,
+          id: id ? String(id) : undefined,
+          source: "_netease",
+        });
+      };
+
+      // 歌手
+      for (const a of s.artists || []) {
+        pushUnique(a.name, "artist", a.id);
+      }
+
+      // 歌曲
+      for (const song of s.songs || []) {
+        pushUnique(
+          `${song.name} ${song.artists?.[0]?.name ?? ""}`.trim(),
+          "song",
+          song.id
+        );
+      }
+
+      // 专辑
+      for (const a of s.albums || []) {
+        pushUnique(
+          `${a.name} ${a.artist?.name ?? ""}`.trim(),
+          "album",
+          a.id
+        );
+      }
+
+      // 歌单
+      for (const p of s.playlists || []) {
+        pushUnique(p.name, "playlist", p.id);
+      }
+
+      return suggestions;
+    } catch (e) {
+      console.warn("Search suggest failed:", e);
+      return [];
+    }
   }
 };

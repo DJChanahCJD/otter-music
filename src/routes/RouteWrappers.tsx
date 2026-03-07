@@ -4,11 +4,12 @@ import { useMusicStore } from "@/store/music-store";
 import { useHistoryStore } from "@/store/history-store";
 import { usePlayHelper } from "@/hooks/usePlayHelper";
 import { PageLoader } from "@/components/PageLoader";
-import { MusicTrack } from "@/types/music";
 import { PageLayout } from "@/components/PageLayout";
 import { ListMusic } from "lucide-react";
 
-// Lazy load components
+// ==========================================
+// 1. 懒加载路由组件 (保持极速首屏)
+// ==========================================
 const MusicSearchView = lazy(() => import("@/components/MusicSearchView").then(m => ({ default: m.MusicSearchView })));
 const MusicPlaylistView = lazy(() => import("@/components/MusicPlaylistView").then(m => ({ default: m.MusicPlaylistView })));
 const FavoritesView = lazy(() => import("@/components/FavoritesView").then(m => ({ default: m.FavoritesView })));
@@ -20,84 +21,84 @@ const LocalMusicPage = lazy(() => import("@/components/LocalMusicPage").then(m =
 const NeteaseDetail = lazy(() => import("@/components/NeteaseDetail").then(m => ({ default: m.NeteaseDetail })));
 const TrashPage = lazy(() => import("@/components/TrashPage").then(m => ({ default: m.TrashPage })));
 
-export function SearchRoute() {
-  const { handlePlay } = usePlayHelper();
-  const { queue, currentIndex, isPlaying } = useMusicStore();
-  const currentTrack = queue[currentIndex] || null;
+// ==========================================
+// 2. 核心优化 Hooks & HOC
+// ==========================================
 
-  return (
-    <Suspense fallback={<PageLoader />}>
-      <MusicSearchView
-        onPlay={handlePlay}
-        currentTrackId={currentTrack?.id}
-        isPlaying={isPlaying}
-      />
-    </Suspense>
-  );
+/** * 精确订阅播放状态 
+ * 避免组件因为 queue 数组本身的变化（如添加/删除歌曲）而产生无意义的重渲染
+ */
+function usePlaybackState() {
+  const currentTrackId = useMusicStore(s => s.queue[s.currentIndex]?.id);
+  const isPlaying = useMusicStore(s => s.isPlaying);
+  return { currentTrackId, isPlaying };
 }
 
-export function FavoritesRoute() {
-  const { favorites, removeFromFavorites, queue, currentIndex, isPlaying, playContext, togglePlay } = useMusicStore();
-  const currentTrack = queue[currentIndex] || null;
-  const activeFavorites = favorites.filter((track) => track.is_deleted !== true);
-  
-  const handlePlayInPlaylist = (track: MusicTrack | null, index?: number) => {
-    if (track && index !== undefined && currentTrack?.id === track.id) {
-      togglePlay();
-      return;
-    }
-    playContext(activeFavorites, index, "favorites");
+/** 消除 Suspense 模板代码的高阶组件 */
+function withSuspense<P extends object>(Component: React.ComponentType<P>) {
+  return function RouteComponent(props: P) {
+    return (
+      <Suspense fallback={<PageLoader />}>
+        <Component {...props} />
+      </Suspense>
+    );
   };
-
-  return (
-    <Suspense fallback={<PageLoader />}>
-      <FavoritesView
-        tracks={activeFavorites}
-        onPlay={handlePlayInPlaylist}
-        currentTrackId={currentTrack?.id}
-        isPlaying={isPlaying}
-        onRemove={(track) => removeFromFavorites(track.id)}
-      />
-    </Suspense>
-  );
 }
 
-export function PlaylistDetailRoute() {
+// ==========================================
+// 3. 路由组件实现
+// ==========================================
+
+export const SearchRoute = withSuspense(() => {
+  const { handlePlay } = usePlayHelper();
+  const { currentTrackId, isPlaying } = usePlaybackState();
+
+  return (
+    <MusicSearchView
+      onPlay={handlePlay}
+      currentTrackId={currentTrackId}
+      isPlaying={isPlaying}
+    />
+  );
+});
+
+export const FavoritesRoute = withSuspense(() => {
+  const favorites = useMusicStore(s => s.favorites);
+  const activeFavorites = favorites.filter(t => !t.is_deleted);
+  const { currentTrackId, isPlaying } = usePlaybackState();
+
+  return (
+    <FavoritesView
+      tracks={activeFavorites}
+      currentTrackId={currentTrackId}
+      isPlaying={isPlaying}
+      onPlay={(track, index) => {
+        const store = useMusicStore.getState();
+        if (track && currentTrackId === track.id) return store.togglePlay();
+        const idx = index ?? activeFavorites.findIndex(t => t.id === track?.id);
+        store.playContext(activeFavorites, Math.max(0, idx), "favorites");
+      }}
+      onRemove={(track) => useMusicStore.getState().removeFromFavorites(track.id)}
+    />
+  );
+});
+
+export const PlaylistDetailRoute = withSuspense(() => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { 
-    playlists, 
-    removeFromPlaylist, 
-    renamePlaylist, 
-    deletePlaylist,
-    queue, 
-    currentIndex, 
-    isPlaying, 
-    playContext, 
-    togglePlay 
-  } = useMusicStore();
-  
-  const playlist = playlists.find((p) => p.id === id && p.is_deleted !== true);
-  const currentTrack = queue[currentIndex] || null;
+  // 精确查找特定歌单
+  const playlist = useMusicStore(s => s.playlists.find(p => p.id === id && !p.is_deleted));
+  const { currentTrackId, isPlaying } = usePlaybackState();
 
   if (!playlist) {
     return <div className="p-4 text-center text-muted-foreground">歌单不存在</div>;
   }
 
-  const activeTracks = playlist.tracks.filter((track) => track.is_deleted !== true);
-
-  const handlePlayInPlaylist = (track: MusicTrack | null, index?: number) => {
-    if (track && index !== undefined && currentTrack?.id === track.id) {
-      togglePlay();
-      return;
-    }
-    playContext(activeTracks, index, `playlist-${id}`);
-  };
+  const activeTracks = playlist.tracks.filter(t => !t.is_deleted);
 
   return (
-    <Suspense fallback={<PageLoader />}>
-      <PageLayout title={playlist.name}>
-        <MusicPlaylistView
+    <PageLayout title={playlist.name}>
+      <MusicPlaylistView
         title={playlist.name}
         showTitle={false}
         createdAt={playlist.createdAt}
@@ -106,174 +107,109 @@ export function PlaylistDetailRoute() {
         tracks={activeTracks}
         playlistId={id}
         icon={<ListMusic className="h-8 w-8 text-primary/80" />}
-        onPlay={handlePlayInPlaylist}
-        onRemove={(t) => removeFromPlaylist(id!, t.id)}
-        onRename={renamePlaylist}
-        onDelete={(pid) => {
-            deletePlaylist(pid);
-            navigate(-1);
+        onPlay={(track, index) => {
+          const store = useMusicStore.getState();
+          if (track && currentTrackId === track.id) return store.togglePlay();
+          const idx = index ?? activeTracks.findIndex(t => t.id === track?.id);
+          store.playContext(activeTracks, Math.max(0, idx), `playlist-${id}`);
         }}
-        currentTrackId={currentTrack?.id}
+        onRemove={(t) => useMusicStore.getState().removeFromPlaylist(id!, t.id)}
+        onRename={(pid, newName) => useMusicStore.getState().renamePlaylist(pid, newName)}
+        onDelete={(pid) => {
+          useMusicStore.getState().deletePlaylist(pid);
+          navigate(-1);
+        }}
+        currentTrackId={currentTrackId}
         isPlaying={isPlaying}
       />
-      </PageLayout>
-    </Suspense>
+    </PageLayout>
   );
-}
+});
 
-export function MineRoute() {
+export const MineRoute = withSuspense(() => {
+  const navigate = useNavigate();
+  return <MinePage onSelectPlaylist={(id) => navigate(`/playlist/${id}`)} />;
+});
+
+export const LocalMusicRoute = withSuspense(() => {
+  const { handlePlay } = usePlayHelper();
+  const { currentTrackId, isPlaying } = usePlaybackState();
+
+  return (
+    <LocalMusicPage
+      onPlay={handlePlay}
+      currentTrackId={currentTrackId}
+      isPlaying={isPlaying}
+    />
+  );
+});
+
+// -- 网易云API详情路由复用逻辑 --
+const createNeteaseRoute = (type: "playlist" | "artist" | "album", contextType: string) => {
+  return withSuspense(() => {
+    const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
+    const { handlePlay } = usePlayHelper();
+    const { currentTrackId, isPlaying } = usePlaybackState();
+
     return (
-        <Suspense fallback={<PageLoader />}>
-            <MinePage onSelectPlaylist={(id) => navigate(`/playlist/${id}`)} />
-        </Suspense>
-    );
-}
-
-export function LocalMusicRoute() {
-  const { handlePlay } = usePlayHelper();
-  const { queue, currentIndex, isPlaying } = useMusicStore();
-  const currentTrack = queue[currentIndex] || null;
-
-  return (
-    <Suspense fallback={<PageLoader />}>
-      <LocalMusicPage
-        onPlay={handlePlay}
-        currentTrackId={currentTrack?.id}
-        isPlaying={isPlaying}
-      />
-    </Suspense>
-  );
-}
-
-export function MarketPlaylistDetailRoute() {
-  const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
-  const { handlePlay } = usePlayHelper();
-  const { queue, currentIndex, isPlaying } = useMusicStore();
-  const currentTrack = queue[currentIndex] || null;
-
-  return (
-    <Suspense fallback={<PageLoader />}>
       <NeteaseDetail
         id={id || null}
-        type="playlist"
+        type={type}
         onBack={() => navigate(-1)}
-        onPlay={(track, list) => handlePlay(track, list, "playlist_market")}
-        currentTrackId={currentTrack?.id}
+        onPlay={(track, list) => handlePlay(track, list, contextType)}
+        currentTrackId={currentTrackId}
         isPlaying={isPlaying}
       />
-    </Suspense>
-  );
-}
+    );
+  });
+};
 
-export function ArtistDetailRoute() {
-  const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
-  const { handlePlay } = usePlayHelper();
-  const { queue, currentIndex, isPlaying } = useMusicStore();
-  const currentTrack = queue[currentIndex] || null;
+export const MarketPlaylistDetailRoute = createNeteaseRoute("playlist", "playlist_market");
+export const ArtistDetailRoute = createNeteaseRoute("artist", "artist");
+export const AlbumDetailRoute = createNeteaseRoute("album", "album");
+
+export const QueueRoute = withSuspense(() => {
+  const queue = useMusicStore(s => s.queue);
+  const { currentTrackId, isPlaying } = usePlaybackState();
 
   return (
-    <Suspense fallback={<PageLoader />}>
-      <NeteaseDetail
-        id={id || null}
-        type="artist"
-        onBack={() => navigate(-1)}
-        onPlay={(track, list) => handlePlay(track, list, "artist")}
-        currentTrackId={currentTrack?.id}
-        isPlaying={isPlaying}
-      />
-    </Suspense>
+    <QueuePage
+      queue={queue}
+      currentTrackId={currentTrackId}
+      isPlaying={isPlaying}
+      onPlay={(track, index) => {
+        const store = useMusicStore.getState();
+        if (track && currentTrackId === track.id) return store.togglePlay();
+        const idx = index ?? queue.findIndex(t => t.id === track?.id);
+        store.playContext(queue, Math.max(0, idx), "queue");
+      }}
+      onRemove={(track) => useMusicStore.getState().removeFromQueue(track.id)}
+      onClear={() => useMusicStore.getState().clearQueue()}
+    />
   );
-}
+});
 
-export function AlbumDetailRoute() {
-  const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
-  const { handlePlay } = usePlayHelper();
-  const { queue, currentIndex, isPlaying } = useMusicStore();
-  const currentTrack = queue[currentIndex] || null;
+export const HistoryRoute = withSuspense(() => {
+  const history = useHistoryStore(s => s.history);
+  const { currentTrackId, isPlaying } = usePlaybackState();
 
   return (
-    <Suspense fallback={<PageLoader />}>
-      <NeteaseDetail
-        id={id || null}
-        type="album"
-        onBack={() => navigate(-1)}
-        onPlay={(track, list) => handlePlay(track, list, "album")}
-        currentTrackId={currentTrack?.id}
-        isPlaying={isPlaying}
-      />
-    </Suspense>
+    <HistoryPage
+      history={history}
+      currentTrackId={currentTrackId}
+      isPlaying={isPlaying}
+      onPlay={(track, index) => {
+        const store = useMusicStore.getState();
+        if (track && currentTrackId === track.id) return store.togglePlay();
+        const idx = index ?? history.findIndex(t => t.id === track?.id);
+        store.playContext(history, Math.max(0, idx), "history");
+      }}
+      onRemove={(track) => useHistoryStore.getState().removeFromHistory(track.id)}
+      onClear={() => useHistoryStore.getState().clearHistory()}
+    />
   );
-}
+});
 
-export function QueueRoute() {
-  const { queue, currentIndex, isPlaying, playContext, togglePlay, clearQueue, removeFromQueue } = useMusicStore();
-  const currentTrack = queue[currentIndex] || null;
-
-  const handlePlayInQueue = (track: MusicTrack | null, index?: number) => {
-    if (track && index !== undefined && currentTrack?.id === track.id) {
-      togglePlay();
-      return;
-    }
-    playContext(queue, index, "queue");
-  };
-
-  return (
-    <Suspense fallback={<PageLoader />}>
-      <QueuePage
-        queue={queue}
-        currentTrackId={currentTrack?.id}
-        isPlaying={isPlaying}
-        onPlay={handlePlayInQueue}
-        onRemove={(track) => removeFromQueue(track.id)}
-        onClear={clearQueue}
-      />
-    </Suspense>
-  );
-}
-
-export function HistoryRoute() {
-    const { history, removeFromHistory, clearHistory } = useHistoryStore();
-    const { playContext, togglePlay, queue, currentIndex, isPlaying } = useMusicStore();
-    const currentTrack = queue[currentIndex] || null;
-
-    const handlePlayInHistory = (track: MusicTrack | null, index?: number) => {
-        if (track && index !== undefined && currentTrack?.id === track.id) {
-          togglePlay();
-          return;
-        }
-        playContext(history, index, "history");
-    };
-
-    return (
-        <Suspense fallback={<PageLoader />}>
-          <HistoryPage
-            history={history}
-            currentTrackId={currentTrack?.id}
-            isPlaying={isPlaying}
-            onPlay={handlePlayInHistory}
-            onRemove={(track) => removeFromHistory(track.id)}
-            onClear={clearHistory}
-          />
-        </Suspense>
-    );
-}
-
-export function SettingsRoute() {
-    return (
-        <Suspense fallback={<PageLoader />}>
-            <SettingsPage />
-        </Suspense>
-    );
-}
-
-export function TrashRoute() {
-    return (
-        <Suspense fallback={<PageLoader />}>
-            <TrashPage />
-        </Suspense>
-    );
-}
+export const SettingsRoute = withSuspense(() => <SettingsPage />);
+export const TrashRoute = withSuspense(() => <TrashPage />);

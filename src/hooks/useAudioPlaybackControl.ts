@@ -10,17 +10,20 @@ export function useAudioPlaybackControl(
 
   useEffect(() => {
     const audio = audioRef.current;
-    if (!audio || !audio.src) return;
+    if (!audio) return;
+
+    if (!isPlaying) {
+      if (!audio.paused) audio.pause();
+      return;
+    }
 
     if (isSwitchingTrackRef.current) return;
-
-    if (isPlaying && audio.paused) {
+    if (!audio.src) return;
+    if (audio.paused) {
       audio.play().catch((e) => {
         console.error("Resume play failed:", e);
         setIsPlaying(false);
       });
-    } else if (!isPlaying && !audio.paused) {
-      audio.pause();
     }
   }, [isPlaying, setIsPlaying]); // eslint-disable-line react-hooks/exhaustive-deps
 }

@@ -1,18 +1,22 @@
-import { getExactKey, toSimplified } from "@/lib/utils/music-key";
+import { getExactKey } from "@/lib/utils/music-key";
 import { cn } from "@/lib/utils";
+import { useEffect, useRef, useState } from "react";
+import { useDebounce } from "@/hooks/use-debounce";
+import { SearchSuggestions } from "./SearchSuggestions";
 import { musicApi } from "@/lib/music-api";
 import { useMusicStore } from "@/store/music-store";
-import { MusicTrack, MusicSource, searchOptions } from "@/types/music";
+import { MusicTrack, MusicSource, searchOptions, SearchSuggestionItem } from "@/types/music";
 import { Search, Loader2, X } from "lucide-react";
 import { Input } from "./ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select"
-import { useRef, useEffect } from "react";
 import toast from "react-hot-toast";
 import { useShallow } from "zustand/react/shallow";
 import { MusicTrackList } from "./MusicTrackList";
 import { Button } from "./ui/button";
 import { toastUtils } from "@/lib/utils/toast";
 import { PlaylistMarket } from "./PlaylistMarket/PlaylistMarket";
+import { applySearchIntentSort, mergeAndSortTracks } from "@/lib/utils/search-helper";
+import { useNavigate } from "react-router-dom";
 
 interface MusicSearchViewProps {
   onPlay: (track: MusicTrack, list: MusicTrack[], contextId?: string) => void;
@@ -61,6 +65,46 @@ export function MusicSearchView({ onPlay, currentTrackId, isPlaying }: MusicSear
   const versionRef = useRef(0);
   const seenRef = useRef(new Set<string>());
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const navigate = useNavigate();
+
+  /* ---------------- 搜索建议 ---------------- */
+  const [suggestions, setSuggestions] = useState<SearchSuggestionItem[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [activeSuggestionIndex, setActiveSuggestionIndex] = useState(-1);
+  const debouncedSearchQuery = useDebounce(searchQuery, 300);
+
+  useEffect(() => {
+    const fetchSuggestions = async () => {
+      if (!debouncedSearchQuery.trim()) {
+        setSuggestions([]);
+        return;
+      }
+      try {
+        const results = await musicApi.getSearchSuggestions(debouncedSearchQuery);
+        setSuggestions(results);
+        setActiveSuggestionIndex(-1);
+      } catch (e) {
+        console.error("Failed to fetch suggestions", e);
+      }
+    };
+    fetchSuggestions();
+  }, [debouncedSearchQuery]);
+
+  const handleSelectSuggestion = (suggestion: SearchSuggestionItem) => {
+    if (suggestion.type === 'playlist' && suggestion.id) {
+      navigate(`/netease-playlist/${suggestion.id}`);
+      setShowSuggestions(false);
+      return;
+    }
+
+    setSearchQuery(suggestion.text);
+    setShowSuggestions(false);
+    // 保留专辑搜索意图
+    if (searchIntent?.type !== 'album') {
+      setSearchIntent(null);
+    }
+    fetchPage(1, true, suggestion.text);
+  };
 
   /* ---------------- 请求核心 ---------------- */
 
@@ -74,8 +118,9 @@ export function MusicSearchView({ onPlay, currentTrackId, isPlaying }: MusicSear
   }, [searchIntent, searchResults.length]);
 
 
-  const fetchPage = async (nextPage: number, reset = false) => {
-    if (!searchQuery.trim()) return;
+  const fetchPage = async (nextPage: number, reset = false, queryOverride?: string) => {
+    const query = queryOverride ?? searchQuery;
+    if (!query.trim()) return;
     if (searchLoading) return;
 
     const version = ++versionRef.current;
@@ -94,48 +139,16 @@ export function MusicSearchView({ onPlay, currentTrackId, isPlaying }: MusicSear
       const signal = abortRef.current?.signal;
       const res =
         source === "all"
-          ? await musicApi.searchAll(searchQuery, nextPage, 20, signal, aggregatedSources)
-          : await musicApi.search(searchQuery, source, nextPage, 20, signal);
+          ? await musicApi.searchAll(query, nextPage, 20, signal, aggregatedSources, searchIntent)
+          : await musicApi.search(query, source, nextPage, 20, signal, searchIntent);
 
       if (version !== versionRef.current) return; // 过期响应
 
       // 排序逻辑：如果是专辑搜索，优先把同名专辑放到前面
-      let items = res.items;
-      if (searchIntent?.type === 'album') {
-        const q = toSimplified(searchQuery);
-        const targetArtist = searchIntent.artist ? toSimplified(searchIntent.artist) : null;
+      let items = source === "all" ? res.items : mergeAndSortTracks(res.items);
+      items = applySearchIntentSort(items, searchIntent, query);
 
-        items = [...items].sort((a, b) => {
-          const aAlbumMatch = toSimplified(a.album) === q;
-          const bAlbumMatch = toSimplified(b.album) === q;
-
-          if (targetArtist) {
-            const aArtistMatch = a.artist.some(art => toSimplified(art) === targetArtist);
-            const bArtistMatch = b.artist.some(art => toSimplified(art) === targetArtist);
-
-            // 优先匹配：专辑名完全一致且歌手一致
-            const aFull = aAlbumMatch && aArtistMatch;
-            const bFull = bAlbumMatch && bArtistMatch;
-            if (aFull && !bFull) return -1;
-            if (!aFull && bFull) return 1;
-          }
-
-          // 其次匹配：专辑名完全一致
-          if (aAlbumMatch && !bAlbumMatch) return -1;
-          if (!aAlbumMatch && bAlbumMatch) return 1;
-          return 0;
-        });
-      } else if (searchIntent?.type === 'artist') {
-        const q = toSimplified(searchQuery);
-        items = [...items].sort((a, b) => {
-          const aMatch = a.artist.some(artist => toSimplified(artist) === q);
-          const bMatch = b.artist.some(artist => toSimplified(artist) === q);
-          if (aMatch && !bMatch) return -1;
-          if (!aMatch && bMatch) return 1;
-          return 0;
-        });
-      }
-
+      const currentLength = reset ? 0 : searchResults.length;
       const filtered = items.filter(t => {
         const key = getExactKey(t);
         if (seenRef.current.has(key)) return false;
@@ -144,7 +157,8 @@ export function MusicSearchView({ onPlay, currentTrackId, isPlaying }: MusicSear
       });
 
       setSearchResults(reset ? filtered : [...searchResults, ...filtered]);
-      setSearchHasMore(res.hasMore);
+      const newLength = currentLength + filtered.length;
+      setSearchHasMore(res.hasMore && newLength > currentLength);
       setSearchPage(nextPage);
 
       if (reset && filtered.length === 0) {
@@ -162,20 +176,22 @@ export function MusicSearchView({ onPlay, currentTrackId, isPlaying }: MusicSear
 
   return (
     <div className="flex flex-col h-full min-h-0">
-      <div className="p-2 border-b">
+      <div className="p-2 border-b relative">
         <div className="flex gap-2 items-center">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               ref={searchInputRef}
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  setSearchIntent(null);
-                  fetchPage(1, true);
-                }
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setShowSuggestions(true);
+                setActiveSuggestionIndex(-1);
               }}
+              onFocus={() => {
+                if (suggestions.length > 0) setShowSuggestions(true);
+              }}
+              onBlur={() => setShowSuggestions(false)}
               placeholder="搜索歌曲 / 歌手 / 专辑"
               className={cn("pl-9 h-8 text-sm", searchQuery && "pr-8")}
             />
@@ -215,6 +231,14 @@ export function MusicSearchView({ onPlay, currentTrackId, isPlaying }: MusicSear
             {searchLoading ? <Loader2 className="animate-spin h-4 w-4" /> : <Search className="h-4 w-4" />}
           </Button>
         </div>
+        {showSuggestions && (
+          <SearchSuggestions
+            suggestions={suggestions}
+            onSelect={handleSelectSuggestion}
+            activeIndex={activeSuggestionIndex}
+            onClose={() => setShowSuggestions(false)}
+          />
+        )}
       </div>
 
       <div className="flex-1 min-h-0">
