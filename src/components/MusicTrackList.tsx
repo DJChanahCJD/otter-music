@@ -344,7 +344,7 @@ export function MusicTrackList({
                         <MoreVertical className="w-4 h-4" />
                       </Button>
                     </PopoverTrigger>
-                    <PopoverContent side="top" align="end" className="w-48 p-1">
+                    <PopoverContent side="bottom" align="end" className="w-48 p-1">
                       <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">
                         批量操作
                       </div>
