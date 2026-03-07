@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useMusicStore } from "@/store/music-store";
 import { MediaSession } from "@jofr/capacitor-media-session";
 
@@ -8,6 +8,7 @@ export function useMediaSessionIntegration(
 ) {
   const currentTrack = useMusicStore(s => s.queue[s.currentIndex]);
   const isPlaying = useMusicStore(s => s.isPlaying);
+  const playbackStateTaskRef = useRef(Promise.resolve());
 
   useEffect(() => {
     const updateMetadata = async () => {
@@ -35,16 +36,16 @@ export function useMediaSessionIntegration(
   }, [currentTrack, coverUrl]);
 
   useEffect(() => {
-    const updatePlaybackState = async () => {
-      try {
-        await MediaSession.setPlaybackState({
-          playbackState: isPlaying ? "playing" : "paused",
-        });
-      } catch (e) {
+    const nextPlaybackState = isPlaying ? "playing" : "paused";
+    playbackStateTaskRef.current = playbackStateTaskRef.current
+      .then(() =>
+        MediaSession.setPlaybackState({
+          playbackState: nextPlaybackState,
+        })
+      )
+      .catch((e) => {
         console.error("MediaSession state error:", e);
-      }
-    };
-    updatePlaybackState();
+      });
   }, [isPlaying]);
 
   useEffect(() => {
@@ -53,7 +54,6 @@ export function useMediaSessionIntegration(
         useMusicStore.getState().setUserGesture();
         const audio = audioRef.current;
         if (!audio) {
-          useMusicStore.getState().setIsPlaying(true);
           return;
         }
 
