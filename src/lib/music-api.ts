@@ -11,7 +11,7 @@ const TTL_SHORT = 60 * 60 * 1000; // 60 minutes
 const TTL_LONG = 7 * 24 * 60 * 60 * 1000; // 7 days
 const REQUEST_TIMEOUT_MS = 10000;
 
-const cookieOf = (source: MusicSource) => localStorage.getItem(`cookie:${source}`);
+const cookieOf = (source: string) => localStorage.getItem(`cookie:${source.replace('_album', '')}`);
 
 const isAbort = (e: unknown) => e instanceof Error && e.name === 'AbortError';
 
@@ -130,10 +130,10 @@ export const musicApi = {
     page = 1,
     count = 20,
     signal?: AbortSignal,
-    searchIntent?: SearchIntent
+    searchIntent?: SearchIntent | null
   ): Promise<SearchPageResult<MusicTrack>> {
 
-    if (source === 'all') return this.searchAll(query, page, count, signal);
+    if (source === 'all') return this.searchAll(query, page, count, signal, undefined, searchIntent);
 
     if (source === '_netease') {
       const res = await neteaseSearch(query, 1, page, count);
@@ -145,12 +145,13 @@ export const musicApi = {
       };
     }
 
+    let requestSource: string = source;
     if (searchIntent?.type === 'album') {
-      source += "_album";
+      requestSource += "_album";
     }
 
     const json = await retry(
-      () => requestMusicApiJSON<RawApiTrack[]>({ types: 'search', name: query, count, pages: page }, source, signal),
+      () => requestMusicApiJSON<RawApiTrack[]>({ types: 'search', name: query, count, pages: page }, requestSource as MusicSource, signal),
       2,
       500
     );
@@ -167,7 +168,7 @@ export const musicApi = {
     count = 20,
     signal?: AbortSignal,
     sources: MusicSource[] = ['joox', 'netease'],
-    searchIntent?: SearchIntent
+    searchIntent?: SearchIntent | null
   ): Promise<SearchPageResult<MergedMusicTrack>> {
 
     const results = await Promise.all(
