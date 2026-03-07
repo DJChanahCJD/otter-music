@@ -99,7 +99,10 @@ export function MusicSearchView({ onPlay, currentTrackId, isPlaying }: MusicSear
 
     setSearchQuery(suggestion.text);
     setShowSuggestions(false);
-    setSearchIntent(null);
+    // 保留专辑搜索意图
+    if (searchIntent?.type !== 'album') {
+      setSearchIntent(null);
+    }
     fetchPage(1, true, suggestion.text);
   };
 
