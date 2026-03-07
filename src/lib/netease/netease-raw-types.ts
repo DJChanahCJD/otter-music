@@ -1,0 +1,189 @@
+interface BaseEntity {
+  id: number | string;
+  name: string;
+}
+
+export interface RawNeteaseResponse<T = unknown> {
+  code: number;
+  data?: T;
+  result?: T;
+  message?: string;
+}
+
+export interface RawQrKeyData {
+  code: number;
+  unikey: string;
+}
+
+export type RawQrCheckResponse =
+  | {
+      code: number;
+      message: string;
+      cookie?: string;
+    }
+  | {
+      message?: string;
+      cookie?: string;
+      data?: {
+        code: number;
+        message: string;
+      };
+    };
+
+export interface SongArtist extends BaseEntity {
+  tns?: string[];
+  alias?: string[];
+}
+
+export interface SongAlbum extends BaseEntity {
+  picUrl: string;
+  tns?: string[];
+}
+
+export interface SongDetail extends BaseEntity {
+  ar: SongArtist[];
+  al: SongAlbum;
+  dt: number;
+  fee: number;
+  privilege?: NeteasePrivilege;
+  publishTime?: number;
+  st: number;
+}
+
+export interface NeteasePrivilege {
+  id: number;
+  fee: number;
+  payed: number;
+  st: number;
+  pl: number;
+  maxbr: number;
+  plLevel: string;
+  freeTrialPrivilege: {
+    remainTime?: number;
+  };
+}
+
+export interface NeteasePlayerUrlItem {
+  id: number;
+  url: string | null;
+  br: number;
+  size: number;
+  type: string;
+  level: string;
+  freeTrialInfo: unknown | null;
+}
+
+export interface PlaylistDetail extends BaseEntity {
+  coverImgUrl: string;
+  description: string;
+  trackCount: number;
+  playCount: number;
+  tracks: SongDetail[];
+  trackIds: Array<{ id: number }>;
+  creator?: UserProfile;
+}
+
+export interface UserPlaylist extends BaseEntity {
+  coverImgUrl: string;
+  coverUrl?: string;
+  picUrl?: string;
+  trackCount: number;
+  playCount: number;
+  subscribed: boolean;
+  creator: { nickname: string; userId: number };
+}
+
+export interface UserProfile {
+  userId: number;
+  nickname: string;
+  avatarUrl: string;
+  backgroundUrl?: string;
+  signature?: string;
+  vipType?: number;
+}
+
+export interface LyricDetail {
+  lyric: string;
+}
+
+export interface NeteaseLyric {
+  lrc: LyricDetail;
+  tlyric?: LyricDetail;
+  romalrc?: LyricDetail;
+}
+
+export interface RecommendPlaylist extends BaseEntity {
+  picUrl?: string;
+  coverImgUrl?: string;
+  coverUrl?: string;
+  playCount: number;
+  trackCount: number;
+  copywriter?: string;
+}
+
+export interface Toplist extends BaseEntity {
+  coverImgUrl: string;
+  coverUrl?: string;
+  picUrl?: string;
+  updateFrequency: string;
+  trackCount: number;
+  playCount: number;
+  ToplistType?: string;
+}
+
+export interface AlbumDetail {
+  album: SongAlbum & {
+    description: string;
+    artist: SongArtist;
+    size: number;
+    publishTime: number;
+    company?: string;
+    subType?: string;
+  };
+  songs: SongDetail[];
+}
+
+export interface ArtistDetail {
+  artist: SongArtist & {
+    picUrl: string;
+    briefDesc: string;
+    musicSize: number;
+    albumSize: number;
+    mvSize: number;
+  };
+  hotSongs: SongDetail[];
+}
+
+export interface ArtistItem extends BaseEntity {
+  picUrl: string;
+  albumSize: number;
+  musicSize: number;
+  alias?: string[];
+}
+
+export type NeteaseSearchResult = {
+  songs?: SongDetail[];
+  playlists?: UserPlaylist[];
+  songCount?: number;
+  hasMore?: boolean;
+};
+
+export interface ResolveUrlResult {
+  type: "playlist" | "artist" | "album" | "song";
+  id: string;
+}
+
+export interface CookieItem {
+  url: string;
+  name: string;
+  value: string;
+  expirationDate?: number;
+}
+
+export interface SearchSuggestResult {
+  songs?: Array<{ id: number; name: string; artists: Array<{ id: number; name: string; picUrl?: string }>; album: { id: number; name: string; status: number; copyrightId: number } }>;
+  artists?: Array<{ id: number; name: string; picUrl: string; alias: string[] }>;
+  albums?: Array<{ id: number; name: string; artist: { name: string; picUrl: string }; status: number; copyrightId: number }>;
+  playlists?: Array<{ id: number; name: string; coverImgUrl: string; creator: { nickname: string }; trackCount: number; playCount: number; bookCount: number }>;
+  order?: string[];
+}

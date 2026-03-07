@@ -2,23 +2,24 @@ import { useEffect, useState } from "react";
 import { PageLayout } from "@/components/PageLayout";
 import { MusicTrackList } from "@/components/MusicTrackList";
 import { getPlaylistDetail, getArtist, getAlbum, convertSongToMusicTrack } from "@/lib/netease/netease-api";
-import { SongDetail } from "@/lib/netease/netease-types";
 import { MusicTrack } from "@/types/music";
 import { MoreVertical, Import, SquareArrowOutUpRight } from "lucide-react";
 import toast from "react-hot-toast";
-import { formatDateZN, processBatchCPU } from "@/lib/utils";
+import { formatDateZN } from "@/lib/utils";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerDescription, DrawerTrigger,
+} from "@/components/ui/drawer";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { useMusicStore } from "@/store/music-store";
-
 import { MusicCover } from "@/components/MusicCover";
 import { DetailSkeleton } from "@/components/skeletons/DetailSkeleton";
+import { SongDetail } from "@/lib/netease/netease-raw-types";
 
+// Interfaces 保持不变 (NeteaseDetailProps, UnifiedDetail) ...
 interface NeteaseDetailProps {
   id: string | null;
   type?: 'playlist' | 'artist' | 'album';
@@ -42,21 +43,18 @@ function DetailHeader({ detail }: { detail: UnifiedDetail }) {
 
   return (
     <div className="relative w-full overflow-hidden bg-muted/30 shrink-0">
-      {/* 模糊背景 */}
       <div 
         className="absolute inset-0 bg-cover bg-center blur-3xl opacity-20 scale-125 pointer-events-none"
         style={{ backgroundImage: `url(${detail.coverImgUrl})` }}
       />
       
       <div className="relative z-10 p-5 flex gap-4 items-center">
-        {/* 封面图 (稍微缩小以显得更精致) */}
         <MusicCover 
           src={detail.coverImgUrl} 
           alt={detail.name} 
           className="shrink-0 w-24 h-24 rounded-xl object-cover shadow-md ring-1 ring-white/10" 
         />
 
-        {/* 信息区 */}
         <div className="flex-1 min-w-0 flex flex-col gap-1.5">
           <h2 className="text-base font-bold leading-tight text-foreground/90 line-clamp-2" title={detail.name}>
             {detail.name}
@@ -68,14 +66,30 @@ function DetailHeader({ detail }: { detail: UnifiedDetail }) {
             {publishDate && <span className="shrink-0">发布于 {formatDateZN(publishDate)}</span>}
           </div>
 
-          {/* 描述 - 固定高度，截断显示，悬浮看全貌 */}
           {detail.description && (
-            <p 
-              className="text-[11px] text-muted-foreground/70 leading-relaxed line-clamp-2 mt-1 cursor-help"
-              title={detail.description} 
-            >
-              {detail.description}
-            </p>
+            <Drawer>
+              <DrawerTrigger asChild>
+                <p 
+                  className="text-[11px] text-muted-foreground/70 leading-relaxed line-clamp-2 mt-1 cursor-pointer active:opacity-70 transition-opacity"
+                  title="点击查看简介"
+                >
+                  {detail.description}
+                </p>
+              </DrawerTrigger>
+              <DrawerContent>
+                <div className="mx-auto w-full max-w-sm">
+                  <DrawerHeader>
+                    <DrawerTitle>简介</DrawerTitle>
+                    <DrawerDescription className="sr-only">{detail.name}</DrawerDescription>
+                  </DrawerHeader>
+                  <ScrollArea className="p-4 h-[50vh]">
+                    <p className="text-sm text-foreground/90 leading-relaxed whitespace-pre-wrap pb-8">
+                      {detail.description}
+                    </p>
+                  </ScrollArea>
+                </div>
+              </DrawerContent>
+            </Drawer>
           )}
         </div>
       </div>
@@ -84,38 +98,33 @@ function DetailHeader({ detail }: { detail: UnifiedDetail }) {
 }
 
 export function NeteaseDetail({
-  id,
-  type = 'playlist',
-  onBack,
-  onPlay,
-  currentTrackId,
-  isPlaying,
+  id, type = 'playlist', onBack, onPlay, currentTrackId, isPlaying,
 }: NeteaseDetailProps) {
-  const [state, setState] = useState({ loading: true, error: false });
-  const [data, setData] = useState<{ detail: UnifiedDetail | null; tracks: MusicTrack[] }>({ detail: null, tracks: [] });
+  // 1. 合并 State，减少多次 setState 导致的冗余重渲染
+  const [{ loading, error, detail, tracks }, setState] = useState<{
+    loading: boolean; error: boolean; detail: UnifiedDetail | null; tracks: MusicTrack[]
+  }>({ loading: true, error: false, detail: null, tracks: [] });
   
-  const createPlaylist = useMusicStore((state) => state.createPlaylist);
-  const setPlaylistTracks = useMusicStore((state) => state.setPlaylistTracks);
+  const { createPlaylist, setPlaylistTracks } = useMusicStore();
 
   const handleShare = async () => {
-    if (!data.detail || !id) return;
+    if (!detail || !id) return;
     try {
       const typeLabel = { playlist: '歌单', artist: '歌手', album: '专辑' }[type];
-      await navigator.clipboard.writeText(`【网易云${typeLabel}】${data.detail.name}\nhttps://music.163.com/#/${type}?id=${id}`);
+      await navigator.clipboard.writeText(`【网易云${typeLabel}】${detail.name}\nhttps://music.163.com/#/${type}?id=${id}`);
       toast.success("链接已复制");
     } catch {
       toast.error("复制失败");
     }
   };
 
-  const handleImportPlaylist = async () => {
-    if (!data.detail || !data.tracks.length) return;
-    const toastId = toast.loading(`正在导入 ${data.tracks.length} 首歌曲...`);
+  const handleImportPlaylist = () => {
+    if (!detail || !tracks.length) return;
+    const toastId = toast.loading(`正在导入 ${tracks.length} 首歌曲...`);
     try {
-      const newPlaylistId = createPlaylist(data.detail.name, data.detail.coverImgUrl);
-      // 优化：已经是 MusicTrack 数组了，没必要再跑一次 CPU 批处理
-      setPlaylistTracks(newPlaylistId, data.tracks);
-      toast.success(`成功导入 ${data.tracks.length} 首歌曲`, { id: toastId });
+      const newPlaylistId = createPlaylist(detail.name, detail.coverImgUrl);
+      setPlaylistTracks(newPlaylistId, tracks);
+      toast.success(`成功导入 ${tracks.length} 首歌曲`, { id: toastId });
     } catch {
       toast.error("导入失败", { id: toastId });
     }
@@ -124,61 +133,49 @@ export function NeteaseDetail({
   useEffect(() => {
     if (!id) return;
     let active = true;
-    setState({ loading: true, error: false });
-    setData({ detail: null, tracks: [] });
+    setState({ loading: true, error: false, detail: null, tracks: [] });
     
-    const load = async () => {
+    const loadData = async () => {
       try {
-        let rawDetail: UnifiedDetail | null = null;
+        let rawDetail: UnifiedDetail;
         let rawTracks: SongDetail[] = [];
 
-        switch (type) {
-          case 'playlist': {
-            const pRes = await getPlaylistDetail(id, "");
-            if (!pRes) throw new Error("Not found");
-            rawDetail = { name: pRes.name, coverImgUrl: pRes.coverImgUrl, description: pRes.description, creator: pRes.creator?.nickname ? `by ${pRes.creator.nickname}` : undefined, trackCount: pRes.trackCount };
-            rawTracks = pRes.tracks;
-            break;
-          }
-          case 'artist': {
-            const aRes = await getArtist(id, "");
-            if (!aRes) throw new Error("Not found");
-            rawDetail = { name: aRes.artist.name, coverImgUrl: aRes.artist.picUrl, description: aRes.artist.briefDesc, trackCount: aRes.hotSongs.length };
-            rawTracks = aRes.hotSongs;
-            break;
-          }
-          case 'album': {
-            const alRes = await getAlbum(id, "");
-            if (!alRes?.album) throw new Error("Not found");
-            rawDetail = { name: alRes.album.name, coverImgUrl: alRes.album.picUrl, description: alRes.album.description, creator: alRes.album.artist?.name, trackCount: alRes.songs.length, publishTime: alRes.album.publishTime };
-            rawTracks = alRes.songs;
-            break;
-          }
+        // 2. 结构化抽取逻辑，避免冗长的 switch 嵌套
+        if (type === 'playlist') {
+          const res = await getPlaylistDetail(id, "");
+          if (!res) throw new Error("Not found");
+          rawDetail = { name: res.name, coverImgUrl: res.coverImgUrl, description: res.description, creator: res.creator?.nickname ? `by ${res.creator.nickname}` : undefined, trackCount: res.trackCount };
+          rawTracks = res.tracks;
+        } else if (type === 'artist') {
+          const res = await getArtist(id, "");
+          if (!res) throw new Error("Not found");
+          rawDetail = { name: res.artist.name, coverImgUrl: res.artist.picUrl, description: res.artist.briefDesc, trackCount: res.hotSongs.length };
+          rawTracks = res.hotSongs;
+        } else {
+          const res = await getAlbum(id, "");
+          if (!res?.album) throw new Error("Not found");
+          rawDetail = { name: res.album.name, coverImgUrl: res.album.picUrl, description: res.album.description, creator: res.album.artist?.name, trackCount: res.songs.length, publishTime: res.album.publishTime };
+          rawTracks = res.songs;
         }
 
-        if (active && rawDetail) {
-          const musicTracks: MusicTrack[] = [];
-          await processBatchCPU(rawTracks, (track) => {
-            musicTracks.push(convertSongToMusicTrack(track));
-          });
-          if (active) setData({ detail: rawDetail, tracks: musicTracks });
-        }
+        if (!active) return;
+        
+        // 3. 除非列表级别达到上万条造成线程阻塞，通常原生 map 比分片处理更快且代码更简洁
+        const musicTracks = rawTracks.map(convertSongToMusicTrack); 
+        setState({ loading: false, error: false, detail: rawDetail, tracks: musicTracks });
+
       } catch {
-        if (active) setState({ loading: false, error: true });
-      } finally {
-        if (active) setState(s => ({ ...s, loading: false }));
+        if (active) setState(s => ({ ...s, loading: false, error: true }));
       }
     };
 
-    load();
+    loadData();
     return () => { active = false; };
   }, [id, type]);
 
-  if (state.loading) {
-    return <DetailSkeleton onBack={onBack} />;
-  }
+  if (loading) return <DetailSkeleton onBack={onBack} />;
 
-  if (state.error) {
+  if (error) {
     return (
       <PageLayout title="错误" onBack={onBack}>
         <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground gap-4">
@@ -191,7 +188,7 @@ export function NeteaseDetail({
 
   return (
     <PageLayout
-      title={data.detail?.name || "详情"}
+      title={detail?.name || "详情"}
       onBack={onBack}
       action={
         <DropdownMenu>
@@ -211,13 +208,12 @@ export function NeteaseDetail({
         </DropdownMenu>
       }
     >
-      {/* 确保父容器是 flex-col 和 min-h-0，这是 react-window 正常工作的关键 */}
       <div className="flex flex-col flex-1 min-h-0 h-full">
-        {data.detail && <DetailHeader detail={data.detail} />}
+        {detail && <DetailHeader detail={detail} />}
         <div className="flex-1 min-h-0 relative">
           <MusicTrackList
-            tracks={data.tracks}
-            onPlay={(track) => onPlay(track, data.tracks)}
+            tracks={tracks}
+            onPlay={(track) => onPlay(track, tracks)}
             currentTrackId={currentTrackId}
             isPlaying={isPlaying}
             emptyMessage="列表为空"

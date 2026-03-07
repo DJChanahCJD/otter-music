@@ -86,8 +86,17 @@ export type MusicSource =
   | 'tidal' | 'spotify' | 'ytmusic' | 'qobuz' | 'deezer' | 'apple' | 'all' | 'local';
 
 export interface SearchIntent {
-  type: 'artist' | 'album' | '';
+  type: 'artist' | 'album' | 'playlist' | '';
+  id?: string;
+  name?: string;
   artist?: string;
+}
+
+export interface SearchSuggestionItem {
+  id?: string;
+  text: string;
+  type: 'song' | 'artist' | 'album' | 'playlist';
+  source?: MusicSource;
 }
 
 export interface MusicTrack {
