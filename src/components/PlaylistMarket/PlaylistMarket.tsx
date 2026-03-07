@@ -180,7 +180,7 @@ export function PlaylistMarket() {
         <div
           key={item.id}
           className="group flex flex-col gap-2.5 transition-all hover:translate-y-[-4px]"
-          onClick={() => navigate(`/playlist-market/${item.id}`)}
+          onClick={() => navigate(`/netease-playlist/${item.id}`)}
         >
           <div className="relative aspect-square rounded-md overflow-hidden shadow-md ring-1 ring-black/5 hover:shadow-xl transition-shadow cursor-pointer">
             <MusicCover

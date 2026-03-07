@@ -49,7 +49,7 @@ export const router = createBrowserRouter([
         element: <LocalMusicRoute />,
       },
       {
-        path: "playlist-market/:id",
+        path: "netease-playlist/:id",
         element: <MarketPlaylistDetailRoute />,
       },
       {

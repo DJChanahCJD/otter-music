@@ -1,4 +1,4 @@
-import type { MusicSource, MusicTrack, SearchPageResult, MergedMusicTrack, SongLyric, SearchIntent } from "@/types/music";
+import type { MusicSource, MusicTrack, SearchPageResult, MergedMusicTrack, SongLyric, SearchIntent, SearchSuggestionItem } from "@/types/music";
 import { cachedFetch } from "@/lib/utils/cache";
 import { mergeAndSortTracks, SOURCE_RANK } from "@/lib/utils/search-helper";
 import { getOrderedMusicApiUrls, markMusicApiUrlFailure, markMusicApiUrlSuccess } from "./api";
@@ -28,8 +28,8 @@ interface RawApiTrack {
 }
 
 export const forceHttps = (url: string | undefined | null) => {
-    if (!url) return '';
-    return url.replace(/^http:\/\//i, 'https://');
+  if (!url) return '';
+  return url.replace(/^http:\/\//i, 'https://');
 };
 
 const normalizeTrack = (t: RawApiTrack, source: MusicSource): MusicTrack => ({
@@ -350,24 +350,68 @@ export const musicApi = {
 
   /* ---------------- 搜索建议 ---------------- */
 
-  async getSearchSuggestions(query: string): Promise<string[]> {
-    if (!query.trim()) return [];
+  async getSearchSuggestions(query: string): Promise<SearchSuggestionItem[]> {
+    const q = query.trim();
+    if (!q) return [];
+
     try {
-      const s = await searchSuggest(query.trim());
-      if (!s) {
-        return [];
+      const s = await searchSuggest(q);
+      if (!s) return [];
+
+      const suggestions: SearchSuggestionItem[] = [];
+      const seen = new Set<string>();
+
+      /** 添加建议并去重 + 限制数量 */
+      const pushUnique = (
+        text: string,
+        type: SearchSuggestionItem["type"],
+        id?: string | number
+      ) => {
+        if (suggestions.length >= 10) return; // 提前终止
+
+        const key = `${type}:${text}`;
+        if (seen.has(key)) return;
+
+        seen.add(key);
+        suggestions.push({
+          text,
+          type,
+          id: id ? String(id) : undefined,
+          source: "_netease",
+        });
+      };
+
+      // 歌手
+      for (const a of s.artists || []) {
+        pushUnique(a.name, "artist", a.id);
       }
-      const suggestions: string[] = [];
 
-      // 提取建议，优先顺序：歌手 > 歌曲 > 专辑
-      if (Array.isArray(s.artists)) suggestions.push(...s.artists.map(a => a.name));
-      if (Array.isArray(s.songs)) suggestions.push(...s.songs.map(s => `${s.name} ${s.artists?.[0]?.name || ''}`.trim()));
-      if (Array.isArray(s.albums)) suggestions.push(...s.albums.map(a => `${a.name} ${a.artist?.name || ''}`.trim()));
+      // 歌曲
+      for (const song of s.songs || []) {
+        pushUnique(
+          `${song.name} ${song.artists?.[0]?.name ?? ""}`.trim(),
+          "song",
+          song.id
+        );
+      }
 
-      // 去重并限制数量
-      return Array.from(new Set(suggestions));
+      // 专辑
+      for (const a of s.albums || []) {
+        pushUnique(
+          `${a.name} ${a.artist?.name ?? ""}`.trim(),
+          "album",
+          a.id
+        );
+      }
+
+      // 歌单
+      for (const p of s.playlists || []) {
+        pushUnique(p.name, "playlist", p.id);
+      }
+
+      return suggestions;
     } catch (e) {
-      console.warn('Search suggest failed:', e);
+      console.warn("Search suggest failed:", e);
       return [];
     }
   }
