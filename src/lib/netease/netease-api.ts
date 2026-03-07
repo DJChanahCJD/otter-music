@@ -1,5 +1,29 @@
 import { weapi, eapi } from './netease-crypto';
-import { UserProfile, UserPlaylist, PlaylistDetail, SongDetail, SearchResult, RecommendPlaylist, Toplist, AlbumDetail, ArtistDetail, ResolveUrlResult, NeteasePrivilege, NeteaseResponse, QrCheckResponse, QrKeyResponse } from './netease-types';
+import type {
+    AlbumDetail,
+    ArtistDetail,
+    NeteasePrivilege,
+    PlaylistDetail,
+    RawNeteaseResponse,
+    RawQrCheckResponse,
+    RawQrKeyData,
+    RecommendPlaylist,
+    ResolveUrlResult,
+    SongDetail,
+    Toplist,
+    UserPlaylist,
+    UserProfile,
+} from './netease-raw-types';
+import type { MarketPlaylist, NeteaseSongLike, QrStatusResult } from "./netease-models";
+import {
+    normalizeQrStatus,
+    toMarketPlaylistFromRecommend,
+    toMarketPlaylistFromToplist,
+    toMarketPlaylistFromUserPlaylist,
+    unwrapMyInfoProfile,
+    unwrapQrKey,
+    unwrapRecommendResult,
+} from "./netease-normalize";
 import { MusicTrack } from '@/types/music';
 import { cachedFetch } from "@/lib/utils/cache";
 import { API_URL } from "@/lib/api/config";
@@ -199,29 +223,49 @@ export async function getSongUrl(id: string, br: number = 999000, cookie: string
     );
 }
 
-export const getQrKey = () => fetchLocalApi<NeteaseResponse<QrKeyResponse>>(`/music-api/netease/login/qr/key?timestamp=${Date.now()}`);
-export const checkQrStatus = (key: string) => fetchLocalApi<QrCheckResponse>(`/music-api/netease/login/qr/check?key=${key}&timestamp=${Date.now()}`);
+export const getQrKey = async (): Promise<string> => {
+    const res = await fetchLocalApi<RawNeteaseResponse<RawQrKeyData>>(`/music-api/netease/login/qr/key?timestamp=${Date.now()}`);
+    return unwrapQrKey(res);
+};
 
-export const getMyInfo = (cookie: string = '') => 
-    cachedFetch<{ data?: { profile: UserProfile }; profile?: UserProfile }>(
-        `netease:my-info:${cookie.slice(-16)}`, 
-        () => fetchLocalApi('/music-api/netease/my-info', { cookie }), 
+export const checkQrStatus = async (key: string): Promise<QrStatusResult> => {
+    const res = await fetchLocalApi<RawQrCheckResponse>(`/music-api/netease/login/qr/check?key=${key}&timestamp=${Date.now()}`);
+    return normalizeQrStatus(res);
+};
+
+export const getMyInfo = async (cookie: string = ''): Promise<UserProfile | null> => {
+    const res = await cachedFetch<UserProfile | null>(
+        `netease:v2:my-info:${cookie.slice(-16)}`,
+        async () => unwrapMyInfoProfile(await fetchLocalApi('/music-api/netease/my-info', { cookie })),
         TTL_SHORT
     );
+    return res ?? null;
+};
 
-export const getUserPlaylists = (userId: string, cookie: string = '') => 
-    cachedFetch<{ playlist: UserPlaylist[], code: number }>(
-        `netease:user-playlists:${userId}`, 
-        () => fetchLocalApi('/music-api/netease/user-playlists', { userId, cookie }), 
+export const getUserPlaylists = async (userId: string, cookie: string = ''): Promise<MarketPlaylist[]> => {
+    const res = await cachedFetch<MarketPlaylist[]>(
+        `netease:v2:user-playlists:${userId}`,
+        async () => {
+            const r = await fetchLocalApi<{ playlist: UserPlaylist[]; code: number }>('/music-api/netease/user-playlists', { userId, cookie });
+            if (r.code !== 200) throw new Error(`NetEase user playlists error: ${r.code}`);
+            return r.playlist.map(toMarketPlaylistFromUserPlaylist);
+        },
         TTL_MEDIUM
     );
+    return res ?? [];
+};
 
-export const getRecommendPlaylists = (cookie: string = '') => 
-    cachedFetch<{ result?: RecommendPlaylist[]; data?: { result: RecommendPlaylist[] } }>(
-        `netease:recommend:${cookie.slice(-16)}`, 
-        () => fetchLocalApi('/music-api/netease/recommend', { cookie }), 
+export const getRecommendPlaylists = async (cookie: string = ''): Promise<MarketPlaylist[]> => {
+    const res = await cachedFetch<MarketPlaylist[]>(
+        `netease:v2:recommend:${cookie.slice(-16)}`,
+        async () => {
+            const r = await fetchLocalApi<{ result?: RecommendPlaylist[]; data?: { result?: RecommendPlaylist[] } }>('/music-api/netease/recommend', { cookie });
+            return unwrapRecommendResult(r).map(toMarketPlaylistFromRecommend);
+        },
         TTL_SHORT
     );
+    return res ?? [];
+};
 
 export const getPlaylistDetail = (playlistId: string, cookie: string = '') => 
     cachedFetch<PlaylistDetail>( 
@@ -262,7 +306,7 @@ export async function search(keyword: string, type: number = 1, page: number = 1
     const params = new URLSearchParams({ s: keyword, type: String(type), offset: String((page - 1) * limit), limit: String(limit) });
     
     const { data } = await crossFetch(`${BASE_URL}/api/search/pc`, { method: 'POST', headers, body: params.toString() });
-    return { data: data as { result: SearchResult, code: number } };
+    return { data: data as { result: { songs?: NeteaseSongLike[]; songCount?: number; hasMore?: boolean }, code: number } };
 }
 
 export const getLyric = (id: string, cookie: string = '') => 
@@ -283,12 +327,17 @@ export const getSongDetail = (id: string, cookie: string = '') =>
         TTL_LONG // 歌曲基础信息固定，但携带 VIP 鉴权，因此 key 加上 cookie 尾缀 
     ); 
 
-export const getToplist = (cookie: string = '') => 
-    cachedFetch( 
-        `netease:toplist`, 
-        () => requestWeapi<{ list: Toplist[] }>(`${BASE_URL}/weapi/toplist/detail`, {}, cookie), 
-        TTL_SHORT // 榜单每日更新 
-    ); 
+export const getToplist = async (cookie: string = ''): Promise<MarketPlaylist[]> => {
+    const res = await cachedFetch<MarketPlaylist[]>(
+        `netease:v2:toplist`,
+        async () => {
+            const r = await requestWeapi<{ list: Toplist[] }>(`${BASE_URL}/weapi/toplist/detail`, {}, cookie);
+            return r.data.list.map(toMarketPlaylistFromToplist);
+        },
+        TTL_SHORT
+    );
+    return res ?? [];
+};
 
 export const getAlbum = (id: string, cookie: string = '') => 
     cachedFetch( 
@@ -310,16 +359,27 @@ export const getArtist = (id: string, cookie: string = '') =>
         TTL_LONG // 歌手基础信息低频变动 
     ); 
 
-export const getPlaylists = (cat: string = '全部', order: string = 'hot', limit: number = 30, offset: number = 0, cookie: string = '') => 
-    cachedFetch( 
-        `netease:playlists:${cat}:${order}:${limit}:${offset}`, 
-        () => requestWeapi<{ playlists: UserPlaylist[] }>( 
-            `${BASE_URL}/weapi/playlist/list`, 
-            { cat, order, limit, offset, total: true }, 
-            cookie 
-        ), 
-        TTL_SHORT // 广场分类歌单变动较快 
+export const getPlaylists = async (
+    cat: string = '全部',
+    order: string = 'hot',
+    limit: number = 30,
+    offset: number = 0,
+    cookie: string = ''
+): Promise<MarketPlaylist[]> => {
+    const res = await cachedFetch<MarketPlaylist[]>(
+        `netease:v2:playlists:${cat}:${order}:${limit}:${offset}`,
+        async () => {
+            const r = await requestWeapi<{ playlists: UserPlaylist[] }>(
+                `${BASE_URL}/weapi/playlist/list`,
+                { cat, order, limit, offset, total: true },
+                cookie
+            );
+            return r.data.playlists.map(toMarketPlaylistFromUserPlaylist);
+        },
+        TTL_SHORT
     );
+    return res ?? [];
+};
 
 export function resolveUrl(urlStr: string): ResolveUrlResult | null {
     try {
@@ -336,19 +396,7 @@ export function resolveUrl(urlStr: string): ResolveUrlResult | null {
     return null;
 }
 
-// 定义联合入参类型，包含标准 SongDetail 和非标准搜索返回结构
-type RawSongItem = Partial<SongDetail> & {
-    ar?: { name: string; id?: string | number }[];
-    artists?: { name: string; id?: string | number }[];
-    al?: { name?: string; picUrl?: string; id?: string | number };
-    album?: { name?: string; picUrl?: string; id?: string | number };
-    fee?: number;
-    st?: number;
-    status?: number;
-    privilege?: NeteasePrivilege;
-};
-
-export const convertSongToMusicTrack = (song: RawSongItem): MusicTrack => {
+export const convertSongToMusicTrack = (song: NeteaseSongLike): MusicTrack => {
     // 兼容搜索接口返回的 artists 和 album
     const artists = song.ar || song.artists || [];
     const album = song.al || song.album || {};

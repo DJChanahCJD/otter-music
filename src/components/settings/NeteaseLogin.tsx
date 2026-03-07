@@ -74,8 +74,7 @@ export function NeteaseLogin() {
     if (!cookie) return;
     try {
       const res = await getMyInfo(cookie);
-      const profile = res?.profile || res?.data?.profile;
-      if (profile) setUser(profile);
+      if (res) setUser(res);
     } catch (e) {
       console.error("User info fetch failed:", e);
     }
@@ -88,9 +87,7 @@ export function NeteaseLogin() {
     setQrStatus("loading");
 
     try {
-      const res = await getQrKey();
-      const key = res?.data?.unikey;
-      if (!key) throw new Error("Key is empty");
+      const key = await getQrKey();
 
       setQrUrl(`https://music.163.com/login?codekey=${key}`);
       setQrStatus("waiting");
@@ -111,7 +108,7 @@ export function NeteaseLogin() {
       const res = await checkQrStatus(key);
       if (!isPollingRef.current) return;
 
-      const code = res.data?.code;
+      const code = res.code;
       const cookie = res.cookie;
 
       switch (code) {
@@ -120,7 +117,7 @@ export function NeteaseLogin() {
           setQrStatus("expired");
           clearTimer();
           if (code === 8821)
-            toast.error(res.data?.message || res.message || "登录环境异常");
+            toast.error(res.message || "登录环境异常");
           break;
         case 801:
           setQrStatus("waiting");
@@ -135,9 +132,8 @@ export function NeteaseLogin() {
           clearTimer();
           if (cookie) {
             const infoRes = await getMyInfo(cookie);
-            const profile = infoRes?.data?.profile || infoRes?.profile;
-            if (profile) {
-              onLoginSuccess(cookie, profile);
+            if (infoRes) {
+              onLoginSuccess(cookie, infoRes);
             } else {
               toast.error("获取用户信息失败");
             }
@@ -169,10 +165,9 @@ export function NeteaseLogin() {
         ? cookieInput.trim()
         : `MUSIC_U=${cookieInput.trim()}`;
       const res = await getMyInfo(finalCookie);
-      const profile = res?.data?.profile || res?.profile;
 
-      if (profile) {
-        onLoginSuccess(finalCookie, profile);
+      if (res) {
+        onLoginSuccess(finalCookie, res);
         setCookieInput("");
       } else {
         toast.error("Cookie 无效或已过期");

@@ -9,7 +9,7 @@ import {
   NETEASE_COOKIE_KEY,
   getRecommendPlaylists,
 } from "@/lib/netease/netease-api";
-import { Toplist, UserPlaylist } from "@/lib/netease/netease-types";
+import type { MarketPlaylist } from "@/lib/netease/netease-types";
 import { cachedFetch } from "@/lib/utils/cache";
 import { MusicCover } from "@/components/MusicCover";
 import { Loader2, Headphones, LayoutGrid } from "lucide-react";
@@ -17,18 +17,9 @@ import { PlaylistCategorySelector } from "./PlaylistCategorySelector";
 import { cn } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
 import { useMusicStore } from "@/store/music-store";
-import { forceHttps } from "@/lib/music-api";
 import { toast } from "react-hot-toast";
 
 const PAGE_SIZE = 30;
-
-interface MarketPlaylist {
-  id: number | string;
-  name: string;
-  coverImgUrl: string;
-  playCount: number;
-  userId?: number | string;
-}
 
 export function PlaylistMarket() {
   const navigate = useNavigate();
@@ -86,53 +77,25 @@ export function PlaylistMarket() {
           }
 
           const userInfo = await getMyInfo(cookie);
-          const userId =
-            userInfo?.data?.profile?.userId || userInfo?.profile?.userId;
+          const userId = userInfo?.userId;
           if (!userId) {
             toast.error("获取用户信息失败");
             return;
           }
 
           // 并发请求：同时获取用户歌单和每日推荐
-          const [userRes, recRes] = await Promise.all([
+          const [userPlaylists, recommend] = await Promise.all([
             getUserPlaylists(String(userId), cookie),
-            getRecommendPlaylists(cookie).catch(() => null),
+            getRecommendPlaylists(cookie).catch(() => []),
           ]);
 
-          let recommend: MarketPlaylist[] = [];
-          if (recRes) {
-            const rawRecommend = recRes.result || recRes.data?.result;
-            if (rawRecommend && Array.isArray(rawRecommend)) {
-              recommend = rawRecommend.map((i) => ({
-                id: i.id,
-                name: i.name,
-                coverImgUrl: forceHttps(i.picUrl || (i as any).coverImgUrl || (i as any).coverUrl || ""),
-                playCount: i.playCount,
-              }));
-            }
-          }
-
-          if (userRes?.code === 200) {
-            const all: MarketPlaylist[] = userRes.playlist.map((i) => ({
-              id: i.id,
-              name: i.name,
-              coverImgUrl: forceHttps(i.coverImgUrl || (i as any).coverUrl || (i as any).picUrl),
-              playCount: i.playCount || 0,
-              userId: i.creator.userId,
-            }));
-            const created = all.filter(
-              (p) => String(p.userId) === String(userId),
-            );
-            const subscribed = all.filter(
-              (p) => String(p.userId) !== String(userId),
-            );
-
-            setMineData({ recommend, created, subscribed });
-            setHasMore(false);
-          }
+          const created = userPlaylists.filter((p) => p.userId === String(userId));
+          const subscribed = userPlaylists.filter((p) => p.userId !== String(userId));
+          setMineData({ recommend, created, subscribed });
+          setHasMore(false);
         } else {
           const isToplist = category === "toplist";
-          const cacheKey = `market-playlist:${category || "all"}:${
+          const cacheKey = `market-playlist:v2:${category || "all"}:${
             isToplist ? 0 : currentOffset
           }`;
 
@@ -148,23 +111,14 @@ export function PlaylistMarket() {
                 );
           };
 
-          const res = await cachedFetch(
+          const res = await cachedFetch<MarketPlaylist[]>(
             cacheKey,
             fetcher,
             1 * 24 * 60 * 60 * 1000,
           );
 
           if (res) {
-            const rawList = isToplist
-              ? (res.data as { list: Toplist[] }).list
-              : (res.data as { playlists: UserPlaylist[] }).playlists;
-            const newItems: MarketPlaylist[] = rawList.map((i: Toplist | UserPlaylist) => ({
-              id: i.id,
-              name: i.name,
-              coverImgUrl: forceHttps(i.coverImgUrl || (i as any).coverUrl || (i as any).picUrl),
-              playCount: i.playCount || 0,
-              userId: (i as any).creator?.userId,
-            }));
+            const newItems = res;
 
             if (isToplist) {
               setItems(newItems);
@@ -230,7 +184,7 @@ export function PlaylistMarket() {
         >
           <div className="relative aspect-square rounded-md overflow-hidden shadow-md ring-1 ring-black/5 hover:shadow-xl transition-shadow cursor-pointer">
             <MusicCover
-              src={item.coverImgUrl}
+              src={item.coverUrl}
               alt={item.name}
               className="transition-transform duration-500 group-hover:scale-110"
             />
