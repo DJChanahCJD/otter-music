@@ -42,7 +42,7 @@ android/captures/
 android/app/src/main/assets/public/
 
 # Capacitor 自动生成的资源
-icons/
+# icons/
 android/app/src/main/res/drawable-*/splash.png
 android/app/src/main/res/drawable-night/splash.png
 android/app/src/main/res/mipmap-*/ic_launcher*.png
