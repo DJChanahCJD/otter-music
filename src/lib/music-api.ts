@@ -364,16 +364,16 @@ export const musicApi = {
       const s = await searchSuggest(q);
       if (!s) return [];
 
-      const suggestions: SearchSuggestionItem[] = [];
       const seen = new Set<string>();
+      const suggestions: SearchSuggestionItem[] = [];
 
-      /** 添加建议并去重 + 限制数量 */
       const pushUnique = (
         text: string,
         type: SearchSuggestionItem["type"],
         id?: string | number
       ) => {
-        if (suggestions.length >= 10) return; // 提前终止
+        text = text.trim();
+        if (!text) return;
 
         const key = `${type}:${text}`;
         if (seen.has(key)) return;
@@ -382,38 +382,25 @@ export const musicApi = {
         suggestions.push({
           text,
           type,
-          id: id ? String(id) : undefined,
+          id: id === null ? undefined : String(id),
           source: "_netease",
         });
       };
 
-      // 歌手
-      for (const a of s.artists || []) {
-        pushUnique(a.name, "artist", a.id);
-      }
+      const addTop = <T>(
+        list: T[] | undefined,
+        type: SearchSuggestionItem["type"],
+        format: (item: T) => string
+      ) => {
+        for (const item of list?.slice(0, 3) ?? []) {
+          pushUnique(format(item), type, (item as { id?: string | number }).id);
+        }
+      };
 
-      // 歌曲
-      for (const song of s.songs || []) {
-        pushUnique(
-          `${song.name} ${song.artists?.[0]?.name ?? ""}`.trim(),
-          "song",
-          song.id
-        );
-      }
-
-      // 专辑
-      for (const a of s.albums || []) {
-        pushUnique(
-          `${a.name} ${a.artist?.name ?? ""}`.trim(),
-          "album",
-          a.id
-        );
-      }
-
-      // 歌单
-      for (const p of s.playlists || []) {
-        pushUnique(p.name, "playlist", p.id);
-      }
+      addTop(s.artists, "artist", a => a.name);
+      addTop(s.songs, "song", song => `${song.name} ${song.artists?.map(a => a.name).join('/') ?? ""}`);
+      addTop(s.albums, "album", a => `${a.name} ${a.artist?.name ?? ""}`);
+      addTop(s.playlists, "playlist", p => p.name);
 
       return suggestions;
     } catch (e) {
