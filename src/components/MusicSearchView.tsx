@@ -188,6 +188,13 @@ export function MusicSearchView({ onPlay, currentTrackId, isPlaying }: MusicSear
                 setShowSuggestions(true);
                 setActiveSuggestionIndex(-1);
               }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  setSearchIntent(null);
+                  fetchPage(1, true);
+                  setShowSuggestions(false);
+                }
+              }}
               onFocus={() => {
                 if (suggestions.length > 0) setShowSuggestions(true);
               }}
