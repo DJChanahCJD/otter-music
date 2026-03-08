@@ -135,10 +135,19 @@ export const ALL_FILTERS: FilterCategory[] = [
 ];
 
 export const RECOMMEND_FILTERS: FilterItem[] = [
-  { id: '', name: '全部' },
-  { id: 'toplist', name: '排行榜' },
+  { id: "", name: "全部" },
+  { id: "toplist", name: "排行榜" },
 
-  // 自动取风格前 6（高频）
-  ...ALL_FILTERS.find(c => c.category === '语种')!.filters.slice(0, 6),
-  ...ALL_FILTERS.find(c => c.category === '风格')!.filters.slice(0, 6),
-]
+  F("华语"),
+  F("欧美"),
+
+  F("流行"),
+  F("说唱"),
+  F("电子"),
+  F("民谣"),
+
+  F("学习"),
+  F("驾车"),
+  F("放松"),
+  F("治愈"),
+];
