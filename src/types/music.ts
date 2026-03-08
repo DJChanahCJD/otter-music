@@ -48,6 +48,7 @@ export const sourceLabels: Record<string, string> = {
 export const aggregatedSourceOptions: { value: MusicSource; label: string; description: string }[] = [
   { value: 'joox', label: 'Joox', description: '腾讯海外版，专注东南亚及港台流行资源' },
   { value: 'netease', label: '网易云音乐', description: '音源稳定，小众资源多' },
+  { value: '_netease', label: 'Netease', description: '网易云官方，稳定高速' },
   { value: 'kuwo', label: '酷我音乐', description: '版权丰富，但稳定性一般' },
 ];
 
