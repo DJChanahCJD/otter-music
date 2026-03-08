@@ -16,13 +16,12 @@ import {
   CornerDownRight,
   User,
   Disc,
-  Link2,
   Zap,
 } from "lucide-react";
 import { ReactNode, useState } from "react";
 import { MusicCover } from "./MusicCover";
 import { useMusicCover } from "@/hooks/useMusicCover";
-import { MusicTrack, SearchIntent, sourceLabels } from "@/types/music";
+import { MusicTrack, SearchIntent } from "@/types/music";
 import { useNavigate } from "react-router-dom";
 import { useMusicStore } from "@/store/music-store";
 import { toSimplified, normalizeText } from "@/lib/utils/music-key";
@@ -290,11 +289,6 @@ export function MusicTrackMobileMenu({
                 解锁完整音源
               </ActionButton>
             )}
-
-            <Button variant="ghost" className="justify-start w-full cursor-default hover:bg-primary/40">
-              <Link2 className="mr-2 h-4 w-4" /> 来源：
-              {track.source === "local" ? "本地音乐" : sourceLabels[track.source] || track.source}
-            </Button>
 
             {onRemove && (
               <ActionButton
