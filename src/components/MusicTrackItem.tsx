@@ -89,22 +89,21 @@ export function MusicTrackItem({
     <div
       style={style}
       className={cn(
-        "group grid gap-4 items-center px-4 py-2.5 rounded-md transition-all text-sm",
+        "group grid gap-4 items-center px-4 py-2.5 transition-all text-sm cursor-pointer",
         "grid-cols-[2rem_1fr_auto]",
         isSelected && showCheckbox ? "bg-primary/10" : "hover:bg-muted/50",
         className
       )}
+      onClick={showCheckbox ? onSelect : onPlay}
     >
       {/* Column 1: Index / Checkbox / Play State */}
       <div 
-        className="flex justify-center shrink-0 cursor-pointer"
-        onClick={showCheckbox ? onSelect : onPlay}
+        className="flex justify-center shrink-0 "
       >
         {showCheckbox ? (
           <Checkbox
             checked={isSelected}
             onCheckedChange={() => onSelect?.()}
-            onClick={(e) => e.stopPropagation()}
           />
         ) : (
           <div className="relative w-4 h-4 flex items-center justify-center">
@@ -129,8 +128,7 @@ export function MusicTrackItem({
 
       {/* Column 2: Title & Artist & Album */}
       <div 
-        className="min-w-0 flex flex-col gap-0.5 cursor-pointer"
-        onClick={showCheckbox ? onSelect : onPlay}
+        className="min-w-0 flex flex-col gap-0.5"
       >
         <div className={cn("font-medium flex items-center gap-1.5", isCurrent && "text-primary")}>
           <span className="truncate" title={track.name}>
@@ -170,7 +168,7 @@ export function MusicTrackItem({
       </div>
 
       {/* Column 3: Actions */}
-      <div className="flex items-center justify-end gap-1">
+      <div className="flex items-center justify-end gap-1" onClick={(e) => e.stopPropagation()}>
         <MusicTrackMobileMenu
           track={track}
           playlistId={playlistId}
