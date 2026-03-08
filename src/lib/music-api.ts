@@ -10,6 +10,7 @@ import { getSongUrl, getLyric, getSongDetail, search as neteaseSearch, convertSo
 const TTL_SHORT = 60 * 60 * 1000; // 60 minutes
 const TTL_LONG = 7 * 24 * 60 * 60 * 1000; // 7 days
 const REQUEST_TIMEOUT_MS = 10000;
+const DEFAULT_AGGREGATED_SEARCH_SOURCES: MusicSource[] = ['joox', 'netease'];
 
 const cookieOf = (source: string) => localStorage.getItem(`cookie:${source.replace('_album', '')}`);
 
@@ -167,12 +168,17 @@ export const musicApi = {
     page = 1,
     count = 20,
     signal?: AbortSignal,
-    sources: MusicSource[] = ['joox', 'netease'],
+    sources: MusicSource[] = DEFAULT_AGGREGATED_SEARCH_SOURCES,
     searchIntent?: SearchIntent | null
   ): Promise<SearchPageResult<MergedMusicTrack>> {
+    const normalizedSources = Array.from(new Set(sources))
+      .filter((s): s is MusicSource => s !== 'all' && s !== 'local');
+    const effectiveSources = normalizedSources.length
+      ? normalizedSources
+      : DEFAULT_AGGREGATED_SEARCH_SOURCES;
 
     const results = await Promise.all(
-      sources.map(s => this.search(query, s, page, count, signal, searchIntent))
+      effectiveSources.map(s => this.search(query, s, page, count, signal, searchIntent))
     );
 
     if (signal?.aborted) return { items: [], hasMore: false };
