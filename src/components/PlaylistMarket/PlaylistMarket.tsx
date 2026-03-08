@@ -12,7 +12,7 @@ import {
 import type { MarketPlaylist } from "@/lib/netease/netease-types";
 import { cachedFetch } from "@/lib/utils/cache";
 import { MusicCover } from "@/components/MusicCover";
-import { Loader2, Headphones, LayoutGrid } from "lucide-react";
+import { Loader2, LayoutGrid } from "lucide-react";
 import { PlaylistCategorySelector } from "./PlaylistCategorySelector";
 import { cn } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
