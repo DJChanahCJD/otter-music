@@ -53,7 +53,11 @@ interface MusicTrackMobileMenuProps {
 }
 
 // 辅助函数：替换列表中的指定歌曲
-const replaceInList = (list: MusicTrack[], oldId: string, newTrack: MusicTrack) => {
+const replaceInList = (
+  list: MusicTrack[],
+  oldId: string,
+  newTrack: MusicTrack,
+) => {
   let replaced = false;
   const newList = list.map((item) => {
     if (item.id !== oldId) return item;
@@ -63,8 +67,22 @@ const replaceInList = (list: MusicTrack[], oldId: string, newTrack: MusicTrack) 
   return { replaced, newList };
 };
 
-const ActionButton = ({ onClick, icon: Icon, children, className }: { onClick?: () => void; icon: React.ElementType; children: ReactNode; className?: string }) => (
-  <Button variant="ghost" className={cn("justify-start w-full", className)} onClick={onClick}>
+const ActionButton = ({
+  onClick,
+  icon: Icon,
+  children,
+  className,
+}: {
+  onClick?: () => void;
+  icon: React.ElementType;
+  children: ReactNode;
+  className?: string;
+}) => (
+  <Button
+    variant="ghost"
+    className={cn("justify-start w-full", className)}
+    onClick={onClick}
+  >
     <Icon className="mr-2 h-4 w-4" /> {children}
   </Button>
 );
@@ -117,7 +135,7 @@ export function MusicTrackMobileMenu({
         (item) =>
           normalizeText(item.name) === targetName &&
           item.artist.some((a) => normalizeText(a).includes(targetArtist)),
-        5
+        5,
       );
 
       if (!match) {
@@ -143,62 +161,78 @@ export function MusicTrackMobileMenu({
       if (playlistId && playlistId !== "favorites") {
         const playlist = playlists.find((p) => p.id === playlistId);
         if (playlist) {
-          const { replaced, newList } = replaceInList(playlist.tracks, track.id, match);
+          const { replaced, newList } = replaceInList(
+            playlist.tracks,
+            track.id,
+            match,
+          );
           if (replaced) setPlaylistTracks(playlistId, newList);
         }
       }
 
-      toastUtils.success(`已切换至完整版: ${match.name}（${match.source}）`, { id: toastId });
+      toastUtils.success(`已切换至完整版: ${match.name}（${match.source}）`, {
+        id: toastId,
+      });
     } catch (e) {
       console.error(e);
       toastUtils.error("匹配失败", { id: toastId });
     }
   };
 
-  const handleSearch = async (keyword: string, type: SearchIntent["type"] = "", artist?: string, id?: string) => {
+  const handleSearch = async (
+    keyword: string,
+    type: SearchIntent["type"] = "",
+    artist?: string,
+    id?: string,
+  ) => {
     // 优先跳转到详情页 (支持 _netease 和 netease 源，且必须有有效 ID)
     const isNetease = track.source === "_netease" || track.source === "netease";
-    
+
     // 如果是网易云源，但没有 ID，尝试获取详情
     if (isNetease && (!id || id === "0")) {
-        const toastId = toastUtils.loading("正在获取信息...");
-        try {
-            const detail = await getSongDetail(track.id);
-            if (detail) {
-                if (type === "artist" && detail.ar?.[0]?.id) {
-                    id = String(detail.ar[0].id);
-                } else if (type === "album" && detail.al?.id) {
-                    id = String(detail.al.id);
-                }
-            }
-        } catch (e) {
-            console.error("Failed to get song detail", e);
-        } finally {
-            toastUtils.dismiss(toastId);
+      const toastId = toastUtils.loading("正在获取信息...");
+      try {
+        const detail = await getSongDetail(track.id);
+        if (detail) {
+          if (type === "artist" && detail.ar?.[0]?.id) {
+            id = String(detail.ar[0].id);
+          } else if (type === "album" && detail.al?.id) {
+            id = String(detail.al.id);
+          }
         }
+      } catch (e) {
+        console.error("Failed to get song detail", e);
+      } finally {
+        toastUtils.dismiss(toastId);
+      }
     }
 
     if (isNetease && id && id !== "0") {
-        if (type === "artist") {
-            navigate(`/artist/${id}`);
-            onOpenChange(false);
-            setShowArtistSelection(false);
-            onNavigate?.();
-            return;
-        }
-        if (type === "album") {
-            navigate(`/album/${id}`);
-            onOpenChange(false);
-            onNavigate?.();
-            return;
-        }
+      if (type === "artist") {
+        navigate(`/artist/${id}`);
+        onOpenChange(false);
+        setShowArtistSelection(false);
+        onNavigate?.();
+        return;
+      }
+      if (type === "album") {
+        navigate(`/album/${id}`);
+        onOpenChange(false);
+        onNavigate?.();
+        return;
+      }
     }
 
     setSearchQuery(toSimplified(keyword));
     if (type) {
-        setSearchIntent({ type: type as SearchIntent["type"], artist, id, name: keyword });
+      setSearchIntent({
+        type: type as SearchIntent["type"],
+        artist,
+        id,
+        name: keyword,
+      });
     } else {
-        setSearchIntent(null);
+      setSearchIntent(null);
     }
     if (track.source && track.source !== "local") {
       setSearchSource(track.source);
@@ -245,49 +279,98 @@ export function MusicTrackMobileMenu({
             {onToggleLike && (
               <ActionButton
                 icon={Heart}
-                onClick={() => { onToggleLike(); onOpenChange(false); }}
-                className={isFavorite ? "text-primary [&>svg]:fill-primary" : ""}
+                onClick={() => {
+                  onToggleLike();
+                  onOpenChange(false);
+                }}
+                className={
+                  isFavorite ? "text-primary [&>svg]:fill-primary" : ""
+                }
               >
                 {isFavorite ? "取消喜欢" : "喜欢"}
               </ActionButton>
             )}
             {onDownload && (
-              <ActionButton icon={Download} onClick={() => { onDownload(); onOpenChange(false); }}>
+              <ActionButton
+                icon={Download}
+                onClick={() => {
+                  onDownload();
+                  onOpenChange(false);
+                }}
+              >
                 下载
               </ActionButton>
             )}
             {onAddToPlaylist && (
-              <ActionButton icon={ListPlus} onClick={() => { onAddToPlaylist(); onOpenChange(false); }}>
+              <ActionButton
+                icon={ListPlus}
+                onClick={() => {
+                  onAddToPlaylist();
+                  onOpenChange(false);
+                }}
+              >
                 添加到歌单
               </ActionButton>
             )}
             {onAddToNextPlay && (
-              <ActionButton icon={CornerDownRight} onClick={() => { onAddToNextPlay(); onOpenChange(false); }}>
+              <ActionButton
+                icon={CornerDownRight}
+                onClick={() => {
+                  onAddToNextPlay();
+                  onOpenChange(false);
+                }}
+              >
                 下一首播放
               </ActionButton>
             )}
 
-            <ActionButton
-              icon={User}
-              onClick={() => track.artist.length > 1 ? setShowArtistSelection(true) : handleSearch(track.artist[0], "artist", undefined, track.artist_ids?.[0])}
-            >
-              歌手：{track.artist.join(" / ")}
-            </ActionButton>
+            {/* 如果不是播客类型，显示歌手、专辑和解锁音源选项 */}
+            {track.source !== "podcast" && (
+              <>
+                <ActionButton
+                  icon={User}
+                  onClick={() =>
+                    track.artist.length > 1
+                      ? setShowArtistSelection(true)
+                      : handleSearch(
+                          track.artist[0],
+                          "artist",
+                          undefined,
+                          track.artist_ids?.[0],
+                        )
+                  }
+                >
+                  歌手：{track.artist.join(" / ")}
+                </ActionButton>
 
-            {track.album && (
-              <ActionButton icon={Disc} onClick={() => handleSearch(track.album!, "album", track.artist[0], track.album_id)}>
-                专辑：{track.album}
-              </ActionButton>
-            )}
+                {track.album && (
+                  <ActionButton
+                    icon={Disc}
+                    onClick={() =>
+                      handleSearch(
+                        track.album!,
+                        "album",
+                        track.artist[0],
+                        track.album_id,
+                      )
+                    }
+                  >
+                    专辑：{track.album}
+                  </ActionButton>
+                )}
 
-            {track.privilege && [1, 4].includes(track.privilege.fee) && track.privilege.pl <= 0 && (
-              <ActionButton
-                icon={Zap}
-                onClick={handleMatch}
-                className="text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"
-              >
-                解锁完整音源
-              </ActionButton>
+                {track.privilege &&
+                  [1, 4].includes(track.privilege.fee) &&
+                  track.privilege.pl <= 0 && (
+                    <ActionButton
+                      icon={Zap}
+                      onClick={handleMatch}
+                      className="text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"
+                    >
+                      解锁完整音源
+                    </ActionButton>
+                  )}
+              </>
             )}
 
             {onRemove && (
@@ -296,17 +379,26 @@ export function MusicTrackMobileMenu({
                 className="text-destructive hover:text-destructive"
                 onClick={() => {
                   onOpenChange(false);
-                  if (window.confirm(`确定${removeLabel}歌曲「${track.name}」吗？`)) onRemove();
+                  if (
+                    window.confirm(
+                      `确定${removeLabel}歌曲「${track.name}」吗？`,
+                    )
+                  )
+                    onRemove();
                 }}
               >
                 {removeLabel}
               </ActionButton>
             )}
 
-            {customActions && <div className="flex flex-col gap-2">{customActions}</div>}
+            {customActions && (
+              <div className="flex flex-col gap-2">{customActions}</div>
+            )}
           </div>
           <DrawerClose asChild>
-            <Button variant="outline" className="mx-4 mb-4">取消</Button>
+            <Button variant="outline" className="mx-4 mb-4">
+              取消
+            </Button>
           </DrawerClose>
         </DrawerContent>
       </Drawer>
@@ -318,7 +410,19 @@ export function MusicTrackMobileMenu({
           </DialogHeader>
           <div className="flex flex-col gap-2">
             {track.artist.map((artist, index) => (
-              <Button key={artist} variant="ghost" className="justify-start w-full" onClick={() => handleSearch(artist, "artist", undefined, track.artist_ids?.[index])}>
+              <Button
+                key={artist}
+                variant="ghost"
+                className="justify-start w-full"
+                onClick={() =>
+                  handleSearch(
+                    artist,
+                    "artist",
+                    undefined,
+                    track.artist_ids?.[index],
+                  )
+                }
+              >
                 <User className="mr-2 h-4 w-4" />
                 {artist}
               </Button>

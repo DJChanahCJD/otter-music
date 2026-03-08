@@ -1,6 +1,7 @@
 export * from './store-keys';
 export * from './download-store';
 export * from './music-store';
+export * from './podcast-store';
 export * from './history-store';
 export * from './local-music-store';
 export * from './source-quality-store';

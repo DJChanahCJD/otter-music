@@ -17,6 +17,8 @@ const MinePage = lazy(() => import("@/components/MinePage").then(m => ({ default
 const QueuePage = lazy(() => import("@/components/QueuePage").then(m => ({ default: m.QueuePage })));
 const HistoryPage = lazy(() => import("@/components/HistoryPage").then(m => ({ default: m.HistoryPage })));
 const SettingsPage = lazy(() => import("@/components/SettingsPage").then(m => ({ default: m.SettingsPage })));
+const PodcastPage = lazy(() => import("@/components/PodcastPage").then(m => ({ default: m.PodcastPage })));
+const PodcastDetail = lazy(() => import("@/components/PodcastDetail").then(m => ({ default: m.PodcastDetail })));
 const LocalMusicPage = lazy(() => import("@/components/LocalMusicPage").then(m => ({ default: m.LocalMusicPage })));
 const NeteaseDetail = lazy(() => import("@/components/NeteaseDetail").then(m => ({ default: m.NeteaseDetail })));
 const TrashPage = lazy(() => import("@/components/TrashPage").then(m => ({ default: m.TrashPage })));
@@ -130,6 +132,9 @@ export const MineRoute = withSuspense(() => {
   const navigate = useNavigate();
   return <MinePage onSelectPlaylist={(id) => navigate(`/playlist/${id}`)} />;
 });
+
+export const PodcastRoute = withSuspense(() => <PodcastPage />);
+export const PodcastDetailRoute = withSuspense(() => <PodcastDetail />);
 
 export const LocalMusicRoute = withSuspense(() => {
   const { handlePlay } = usePlayHelper();

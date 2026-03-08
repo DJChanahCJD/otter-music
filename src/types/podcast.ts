@@ -1,0 +1,35 @@
+export interface PodcastRssSource {
+  id: string;
+  name: string;
+  rssUrl: string;
+  update_time?: number;
+  is_deleted?: boolean;
+}
+
+export interface PodcastEpisode {
+  id: string;
+  title: string;
+  audioUrl: string | null;
+  desc: string;
+  pubDate: string | null;
+  coverUrl: string | null;
+}
+
+export interface PodcastFeed {
+  name: string;            //  播客标题
+  description: string;
+  coverUrl: string | null;
+  link: string | null;      //  播客原始链接
+  episodes: PodcastEpisode[];
+}
+
+export interface SearchPodcastItem {
+  source: "apple" | "xyz" | "xmly";
+  id: string;
+  title: string;
+  author: string;
+  description?: string | null;
+  cover: string | null;
+  rssUrl: string | null;
+  url: string | null;
+}

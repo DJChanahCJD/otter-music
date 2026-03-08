@@ -1,11 +1,12 @@
 import toast from "react-hot-toast";
 import { useSyncStore } from "@/store/sync-store";
-import { useMusicStore } from "@/store";
+import { useMusicStore, usePodcastStore } from "@/store";
 import { syncCheck, syncPull, syncPush } from "@/lib/api/sync";
 import { MusicTrack, Playlist } from "@/types/music";
+import { PodcastRssSource } from "@/types/podcast";
 
 /** --- 类型定义 --- */
-type SyncSnapshot = { favorites: MusicTrack[]; playlists: Playlist[] };
+type SyncSnapshot = { favorites: MusicTrack[]; playlists: Playlist[]; podcasts: PodcastRssSource[] };
 export type SyncResult = { success: boolean; error?: string; skipped?: boolean };
 
 const SYNC_INTERVAL = 60 * 60 * 1000; // 1小时节流
@@ -13,10 +14,19 @@ const SYNC_INTERVAL = 60 * 60 * 1000; // 1小时节流
 /** --- 原子快照操作 --- */
 const getSnapshot = (): SyncSnapshot => {
   const { favorites, playlists } = useMusicStore.getState();
-  return { favorites, playlists };
+  const { rssSources } = usePodcastStore.getState();
+  return { favorites, playlists, podcasts: rssSources };
 };
 
-const applySnapshot = (data: SyncSnapshot) => useMusicStore.setState(data);
+const applySnapshot = (data: SyncSnapshot) => {
+  useMusicStore.setState({
+    favorites: data.favorites ?? [],
+    playlists: data.playlists ?? [],
+  });
+  if (Array.isArray(data.podcasts)) {
+    usePodcastStore.setState({ rssSources: data.podcasts });
+  }
+};
 
 /**
  * 数据同步 (Thin Client 模式)

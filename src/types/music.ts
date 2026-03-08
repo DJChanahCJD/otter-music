@@ -83,6 +83,8 @@ export type MusicSource =
   | 'lizhi'
   | 'qingting'
   | 'ximalaya'
+  | 'xiaoyuzhou'  //  小宇宙
+  | 'podcast'     //  RSS 播客
   // Common sources mentioned in doc: netease, tencent, tidal, spotify, ytmusic, qobuz, joox, deezer, migu, kugou, kuwo, ximalaya, apple
   | 'tidal' | 'spotify' | 'ytmusic' | 'qobuz' | 'deezer' | 'apple' | 'all' | 'local';
 

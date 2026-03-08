@@ -38,7 +38,7 @@ export function RootLayout() {
         } else {
             const path = locationRef.current.pathname;
             // 如果是主 Tab 页，最小化应用
-            if (path === "/" || path === "/search" || path === "/favorites" || path === "/mine") {
+            if (path === "/" || path === "/search" || path === "/favorites" || path === "/podcast" || path === "/mine") {
                 CapacitorApp.minimizeApp();
             } else {
                 // 否则后退
@@ -74,7 +74,7 @@ export function RootLayout() {
   const currentTrack = queue[currentIndex] || null;
   const coverUrl = useMusicCover(currentTrack);
 
-  const isTab = ["/search", "/favorites", "/mine"].includes(location.pathname) || location.pathname === "/";
+  const isTab = ["/search", "/favorites", "/podcast", "/mine"].includes(location.pathname) || location.pathname === "/";
   
   // Handlers
   const handlePrev = () => {

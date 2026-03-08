@@ -68,6 +68,14 @@ async function resolveAudioUrl({
     }, 2, 800)
   }
 
+  if (source === 'podcast') {
+    return retry(async () => {
+      const url = await musicApi.getUrl(trackId, source, quality)
+      if (!url) throw new Error('EMPTY_URL')
+      return url
+    }, 2, 800)
+  }
+
   if (isNative) {
     const key = buildDownloadKey(source, trackId)
     const uri = useDownloadStore.getState().getUri(key)
@@ -156,7 +164,9 @@ export function useAudioTrackLoader(
           }
         }
 
-        const urlId = (currentTrackSource as string) === 'local' ? currentTrackUrlId : currentTrackId;
+        const urlId = ((currentTrackSource as string) === 'local' || currentTrackSource === 'podcast')
+          ? currentTrackUrlId
+          : currentTrackId;
         const br = parseInt(quality, 10);
 
         const toastId = toast.loading("加载中...", { id: `download-${requestId}` });

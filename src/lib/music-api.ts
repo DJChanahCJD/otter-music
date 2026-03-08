@@ -223,6 +223,10 @@ export const musicApi = {
   /* ---------------- URL ---------------- */
 
   async getUrl(id: string, source: MusicSource, br = 192): Promise<string | null> {
+    if (source === 'podcast') {
+      return forceHttps(id);
+    }
+
     if (source === '_netease') {
       const key = `url:${source}:${id}:${br}`;
       return cachedFetch<string | null>(
@@ -321,6 +325,10 @@ export const musicApi = {
   /* ---------------- 歌词 ---------------- */
 
   async getLyric(id: string, source: MusicSource): Promise<SongLyric | null> {
+    if (source === 'podcast') {
+      return null
+    }
+    
     const key = `lyric:${source}:${id}`;
 
     if (source === '_netease') {
