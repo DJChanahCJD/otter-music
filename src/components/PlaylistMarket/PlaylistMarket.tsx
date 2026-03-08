@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { Button } from "@/components/ui/button";
-import { RECOMMEND_FILTERS } from "@/lib/netease/playlist-category";
+import { FEATURED_SUB_FILTERS, RECOMMEND_FILTERS } from "@/lib/netease/playlist-category";
 import {
   getPlaylists,
   getToplist,
@@ -37,6 +37,8 @@ export function PlaylistMarket() {
 
   const mineTab = useMusicStore((s) => s.lastMineTab);
   const setMineTab = useMusicStore((s) => s.setLastMineTab);
+
+  const [featuredTab, setFeaturedTab] = useState(FEATURED_SUB_FILTERS[0].id);
 
   const [offset, setOffset] = useState(0);
   const [hasMore, setHasMore] = useState(true);
@@ -152,8 +154,10 @@ export function PlaylistMarket() {
   useEffect(() => {
     setOffset(0);
     setHasMore(true);
-    fetchItems(activeCategory, 0);
-  }, [activeCategory, fetchItems]);
+    const categoryToFetch =
+      activeCategory === "featured" ? featuredTab : activeCategory;
+    fetchItems(categoryToFetch, 0);
+  }, [activeCategory, featuredTab, fetchItems]);
 
   useEffect(() => {
     const element = observerTarget.current;
@@ -164,7 +168,9 @@ export function PlaylistMarket() {
         if (entries[0].isIntersecting) {
           const nextOffset = offset + PAGE_SIZE;
           setOffset(nextOffset);
-          fetchItems(activeCategory, nextOffset);
+          const categoryToFetch =
+            activeCategory === "featured" ? featuredTab : activeCategory;
+          fetchItems(categoryToFetch, nextOffset);
         }
       },
       { threshold: 0.1 },
@@ -172,7 +178,15 @@ export function PlaylistMarket() {
 
     observer.observe(element);
     return () => observer.disconnect();
-  }, [offset, hasMore, isFetching, loading, activeCategory, fetchItems]);
+  }, [
+    offset,
+    hasMore,
+    isFetching,
+    loading,
+    activeCategory,
+    featuredTab,
+    fetchItems,
+  ]);
 
   const renderGrid = (list: MarketPlaylist[]) => (
     <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 gap-x-3 gap-y-4">
@@ -317,6 +331,24 @@ export function PlaylistMarket() {
           </div>
         ) : (
           <div className="p-4 pb-24">
+            {activeCategory === "featured" && (
+              <div className="flex items-center gap-6 mb-4 px-1">
+                {FEATURED_SUB_FILTERS.map((tab) => (
+                  <button
+                    key={tab.id}
+                    onClick={() => setFeaturedTab(tab.id)}
+                    className={cn(
+                      "text-[15px] transition-all",
+                      featuredTab === tab.id
+                        ? "font-bold text-foreground tracking-wide"
+                        : "font-medium text-muted-foreground hover:text-foreground",
+                    )}
+                  >
+                    {tab.name}
+                  </button>
+                ))}
+              </div>
+            )}
             {renderGrid(items)}
             <div
               ref={observerTarget}

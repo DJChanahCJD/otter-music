@@ -44,6 +44,7 @@ export const ALL_FILTERS: FilterCategory[] = [
 
       // 中频
       F('R&B/Soul'),
+      F('摇滚'),
       F('爵士'),
       F('乡村'),
       F('古典'),
@@ -110,6 +111,8 @@ export const ALL_FILTERS: FilterCategory[] = [
     category: '主题',
     filters: [
       // 高频
+      F('官方'),
+      F('榜单'),
       F('影视原声'),
       F('ACG'),
       F('游戏'),
@@ -134,20 +137,23 @@ export const ALL_FILTERS: FilterCategory[] = [
   },
 ];
 
+export const FEATURED_SUB_FILTERS: FilterItem[] = [
+  F("官方"),
+  F("榜单"),
+  { id: "toplist", name: "排行榜" },
+];
+
 export const RECOMMEND_FILTERS: FilterItem[] = [
   { id: "", name: "全部" },
-  { id: "toplist", name: "排行榜" },
+  { id: "featured", name: "精选" },
 
   F("华语"),
   F("欧美"),
 
   F("流行"),
   F("说唱"),
+  F("摇滚"),
   F("电子"),
   F("民谣"),
-
-  F("学习"),
-  F("驾车"),
-  F("放松"),
-  F("治愈"),
+  F("轻音乐"),
 ];
