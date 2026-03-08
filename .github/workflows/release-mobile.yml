@@ -1,9 +1,6 @@
 name: Release Mobile (Android Only)
 
 on:
-  push:
-    tags:
-      - 'v*'
   release:
     types: [published]
   workflow_dispatch:
@@ -11,41 +8,39 @@ on:
 permissions:
   contents: write
 
+# 防止同一个 Tag 多次触发导致任务冲突
+concurrency:
+  group: release-android-${{ github.ref_name || github.run_id }}
+  cancel-in-progress: true
+
 env:
   NODE_VERSION: 22
+  JAVA_VERSION: 21
 
 jobs:
   build-android:
     name: Build Android APK
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
 
-      - name: Setup Java
-        uses: actions/setup-java@v4
+      - uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '21'
-          cache: 'gradle'
+          java-version: ${{ env.JAVA_VERSION }}
+          cache: gradle
 
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Build web assets
-        run: npm run build
-
-      - name: Generate Assets (Icons & Splash)
-        run: npm run resources
-
-      - name: Sync Capacitor Android
-        run: npx cap sync android
+      - name: Build app
+        run: |
+          npm ci
+          npm run build
+          npm run resources
+          npx cap sync android
 
       - name: Build release APK
         working-directory: android
@@ -53,11 +48,11 @@ jobs:
           chmod +x gradlew
           ./gradlew assembleRelease --parallel --build-cache --no-daemon
 
-      - name: Sign release APK
+      - name: Sign APK
         id: sign_app
         uses: r0adkll/sign-android-release@v1
         env:
-          BUILD_TOOLS_VERSION: "34.0.0"
+          BUILD_TOOLS_VERSION: 34.0.0
         with:
           releaseDirectory: android/app/build/outputs/apk/release
           signingKeyBase64: ${{ secrets.SIGNING_KEY }}
@@ -65,8 +60,7 @@ jobs:
           keyStorePassword: ${{ secrets.KEY_STORE_PASSWORD }}
           keyPassword: ${{ secrets.KEY_PASSWORD }}
 
-      - name: Upload APK artifact
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
           name: android-apk
           path: ${{ steps.sign_app.outputs.signedReleaseFile }}
@@ -77,38 +71,35 @@ jobs:
     runs-on: ubuntu-latest
     needs: build-android
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      # 必须 Checkout 才能读取源码里的 release notes 文件
+      - uses: actions/checkout@v4
 
-      - name: Download Android artifact
-        uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v4
         with:
           name: android-apk
           path: dist/android
 
       - name: Prepare release notes
+        shell: bash
         run: |
-          TAG="${GITHUB_REF_NAME}"
-          NOTES_FILE="public/release/${TAG}.md"
-          if [ -f "$NOTES_FILE" ]; then
-            cp "$NOTES_FILE" release_body.md
+          TAG="${{ github.ref_name }}"
+          NOTES="public/release/${TAG}.md"
+          if [[ -f "$NOTES" ]]; then
+            cp "$NOTES" release_body.md
           else
-            {
-              echo "# Otter Music ${TAG}"
-              echo ""
-              echo "Android 自动化构建发布。"
-              echo ""
-              echo "### 更新内容"
-              echo "- 构建版本: ${TAG}"
-              echo "- 发布日期: $(date +'%Y-%m-%d')"
-            } > release_body.md
+            cat > release_body.md <<EOF
+          # Otter Music ${TAG}
+          Android 自动化构建发布。
+          ### 更新内容
+          - 构建版本: ${TAG}
+          - 发布日期: $(date +'%Y-%m-%d')
+          EOF
           fi
 
-      - name: Create or update release
-        uses: softprops/action-gh-release@v2
+      - uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_name }}
           body_path: release_body.md
-          files: |
-            dist/android/*.apk
+          prerelease: ${{ contains(github.ref_name, '-beta') || contains(github.ref_name, '-alpha') || contains(github.ref_name, '-rc') || contains(github.ref_name, '-preview') }}
+          files: dist/android/*.apk
           fail_on_unmatched_files: true
