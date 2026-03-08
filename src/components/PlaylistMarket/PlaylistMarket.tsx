@@ -188,13 +188,6 @@ export function PlaylistMarket() {
               alt={item.name}
               className="transition-transform duration-500 group-hover:scale-110"
             />
-            <div className="absolute bottom-0 left-0 right-0 h-1/3 bg-linear-to-t from-black/20 to-transparent pointer-events-none" />
-            <div className="absolute bottom-1.5 right-2 flex items-center gap-1 text-white/90 text-[10px] font-medium z-10">
-              <Headphones className="w-3 h-3 filter drop-shadow-sm" />
-              <span className="tracking-wide drop-shadow-sm">
-                {formatPlayCount(item.playCount)}
-              </span>
-            </div>
           </div>
           <div className="px-0.5">
             <h3 className="text-[13px] font-medium leading-snug line-clamp-2 text-foreground/80 group-hover:text-primary transition-colors cursor-pointer">
@@ -346,10 +339,4 @@ export function PlaylistMarket() {
       </main>
     </div>
   );
-}
-
-function formatPlayCount(count: number) {
-  if (count >= 100000000) return `${(count / 100000000).toFixed(1)}亿`;
-  if (count >= 10000) return `${(count / 10000).toFixed(0)}万`;
-  return count;
 }

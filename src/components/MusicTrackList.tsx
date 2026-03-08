@@ -200,7 +200,7 @@ export function MusicTrackList({
       {renderHeader()}
       <div ref={parentRef} className="flex-1 min-h-0 overflow-y-auto" style={{ scrollbarWidth: "thin" }}>
         <div className="relative w-full" style={{ height: virtualizer.getTotalSize() }}>
-          {virtualizer.getVirtualItems().map((item) => {
+          {virtualizer.getVirtualItems().map((item: { key: string, index: number, start: number }) => {
             const track = tracks[item.index];
             return (
               <div
