@@ -82,7 +82,7 @@ export function SettingsPage({ onBack }: SettingsPageProps) {
           <SettingItem
             icon={Trash2}
             title="回收站"
-            subtitle="找回误删的歌曲与歌单"
+            subtitle="恢复误删的歌曲和歌单"
             onClick={() => navigate("/settings/trash")}
             showChevron
           />

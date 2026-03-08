@@ -90,7 +90,7 @@ export function MusicTrackItem({
       style={style}
       className={cn(
         "group grid gap-4 items-center px-4 py-2.5 transition-all text-sm cursor-pointer",
-        "grid-cols-[2rem_1fr_auto]",
+        "grid-cols-[1.75rem_1fr_auto]",
         isSelected && showCheckbox ? "bg-primary/10" : "hover:bg-muted/50",
         className
       )}

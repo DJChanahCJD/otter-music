@@ -141,7 +141,7 @@ export function MusicTrackList({
   const renderHeader = () => (
     <div className="border-b bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/60 z-10">
       {/* 调整为 h-10, px-3, gap-3, text-xs */}
-      <div className="grid items-center gap-4 px-4 h-10 text-xs text-muted-foreground grid-cols-[2rem_1fr_auto]">
+      <div className="grid items-center gap-4 px-4 h-10 text-xs text-muted-foreground grid-cols-[1.75rem_1fr_auto]">
         {!isSelectionMode ? (
           <>
             <div className="text-center">#</div>
@@ -158,7 +158,7 @@ export function MusicTrackList({
               <Checkbox checked={selectedIds.size > 0 && selectedIds.size === tracks.length} onCheckedChange={toggleSelectAll} />
             </div>
             <div className="flex items-center min-w-0 justify-between">
-              <span className="text-foreground">已选 {selectedIds.size}</span>
+              <span className="text-foreground">已选 {selectedIds.size} 首</span>
               <div className="flex items-center gap-1.5">
                 <Button size="sm" variant="secondary" className="h-7 px-2 text-[11px]" onClick={() => handleBatch(addToNextPlay, "已添加")} disabled={selectedIds.size === 0}>
                   <Plus className="w-3 h-3 mr-1" /> 下一首
