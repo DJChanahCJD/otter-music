@@ -16,6 +16,7 @@
     "cap:open:android": "npx cap open android",
     "cap:update:android": "npx cap update android",
     "cap:clean:android": "npx cap clean android && rm -rf android/app/build",
+    "version": "node scripts/update-mobile-version.js && git add android/app/build.gradle",
     "build:android:debug": "npm run cap:sync:android && cd android && gradlew.bat assembleDebug",
     "build:android:release": "npm run cap:sync:android && cd android && gradlew.bat assembleRelease"
   },

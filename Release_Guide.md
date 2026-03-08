@@ -4,17 +4,27 @@
 
 ---
 
-## 1️⃣ 修改版本号（每次发布必须）
+## 1️⃣ 修改版本号（自动化流程）
 
-确保三处版本保持一致：
+使用 npm 命令一键完成版本号更新、Android 版本同步和 Git 提交：
 
-| 文件                         | 字段            | 要求                 |
-| -------------------------- | ------------- | ------------------ |
-| `android/app/build.gradle` | `versionCode` | 必须递增（整数）           |
-| `android/app/build.gradle` | `versionName` | 用户可见版本，如 `"1.1.0"` |
-| `package.json`             | `version`     | 项目版本号              |
+```bash
+# 补丁更新 (1.0.0 -> 1.0.1)
+npm version patch
 
-> 修改完 package.json 后，运行 `npm install --legacy-peer-deps` 同步到 package-lock.json。
+# 小版本更新 (1.0.0 -> 1.1.0)
+npm version minor
+
+# 大版本更新 (1.0.0 -> 2.0.0)
+npm version major
+```
+
+此命令会自动：
+1. 更新 `package.json` 和 `package-lock.json`
+2. 更新 `android/app/build.gradle` 的 `versionName` 和 `versionCode` (自增)
+3. 创建 Git Commit 和 Tag
+
+> **注意**：执行前请确保 git 工作区是干净的（无未提交更改）。
 ---
 
 ## 2️⃣ 生成签名证书（仅首次执行）
@@ -66,9 +76,10 @@ npm run build:android:release
 
 ### 发布命令
 
+执行完 `npm version` 后，推送代码和标签即可触发构建：
+
 ```bash
-git tag v2.0.2
-git push origin v2.0.2
+git push && git push --tags
 ```
 
 ### Release 文案来源
