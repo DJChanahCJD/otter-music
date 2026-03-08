@@ -39,13 +39,8 @@ function DetailHeader({ detail }: { detail: UnifiedDetail }) {
     : null;
 
   return (
-    <div className="relative w-full overflow-hidden bg-muted/30 shrink-0">
-      <div
-        className="absolute inset-0 bg-cover bg-center blur-3xl opacity-20 scale-125 pointer-events-none"
-        style={{ backgroundImage: `url(${detail.coverImgUrl})` }}
-      />
-
-      <div className="relative z-10 p-5 flex gap-4 items-center">
+    <div className="w-full shrink-0">
+      <div className="p-5 flex gap-4 items-center">
         <MusicCover
           src={detail.coverImgUrl}
           alt={detail.name}
@@ -71,7 +66,7 @@ function DetailHeader({ detail }: { detail: UnifiedDetail }) {
           </div>
 
           {detail.description && (
-            <p className="text-[11px] text-muted-foreground/70 leading-relaxed line-clamp-2 mt-1">
+            <p className="text-[11px] text-muted-foreground/70 leading-relaxed line-clamp-2 mt-1" title={detail.description}>
               {detail.description}
             </p>
           )}
