@@ -1,29 +1,24 @@
-// src/lib/utils/color.ts
-
 export type HSL = [h: number, s: number, l: number];
 
-/** 核心颜色配置 */
 const CONFIG = {
-  MIN_S: 30, // 最低饱和度
-  MIN_L: 20, // 最低亮度
-  MAX_L: 90, // 最高亮度
-  IDEAL_L: 26, // 理想背景亮度
-  SAFE_S: [25, 65], // 最终安全饱和度范围
-  SAFE_L: [18, 35], // 最终安全亮度范围
+  MIN_S: 18,
+  MIN_L: 12,
+  MAX_L: 88,
+
+  SAFE_S: [22, 58],
+  SAFE_L: [16, 32],
 } as const;
 
-/** Hex 转 RGB */
 export function hexToRgb(hex: string): [number, number, number] | null {
   const s = hex.replace(/^#/, '');
   if (s.length !== 6) return null;
   return [
     parseInt(s.slice(0, 2), 16),
     parseInt(s.slice(2, 4), 16),
-    parseInt(s.slice(4, 6), 16)
+    parseInt(s.slice(4, 6), 16),
   ];
 }
 
-/** RGB 转 HSL */
 export function rgbToHsl(r: number, g: number, b: number): HSL {
   r /= 255; g /= 255; b /= 255;
   const max = Math.max(r, g, b), min = Math.min(r, g, b);
@@ -33,15 +28,55 @@ export function rgbToHsl(r: number, g: number, b: number): HSL {
   if (max !== min) {
     const d = max - min;
     s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+
     if (max === r) h = (g - b) / d + (g < b ? 6 : 0);
     else if (max === g) h = (b - r) / d + 2;
     else h = (r - g) / d + 4;
+
     h /= 6;
   }
-  return [Math.round(h * 360), Math.round(s * 100), Math.round(l * 100)];
+
+  return [
+    Math.round(h * 360),
+    Math.round(s * 100),
+    Math.round(l * 100),
+  ];
 }
 
-/** 提取最佳背景色 */
+function scoreByDistance(value: number, ideal: number, tolerance: number, weight: number): number {
+  return Math.max(0, weight - Math.abs(value - ideal) * (weight / tolerance));
+}
+
+function getIdealLightness(h: number): number {
+  if (h >= 0 && h < 60) return 21;      // 红橙黄更深一点
+  if (h >= 60 && h < 160) return 24;    // 绿中间
+  if (h >= 160 && h <= 300) return 27;  // 青蓝紫可稍亮
+  return 23;                            // 品红
+}
+
+function hueComfortBonus(h: number, s: number, l: number): number {
+  if (h >= 170 && h <= 285) return 12; // 青蓝紫最稳
+  if (h > 100 && h < 170) return 5;    // 绿也比较舒服
+
+  // 暖色高饱和/偏亮时容易躁
+  if (h < 60 || h >= 330) {
+    if (s > 60 || l > 30) return -10;
+    return -2;
+  }
+
+  return 0;
+}
+
+function isLikelySkinTone(h: number, s: number, l: number): boolean {
+  return h >= 15 && h <= 38 && s >= 20 && s <= 55 && l >= 35 && l <= 75;
+}
+
+function softenToRange(value: number, min: number, max: number, strength = 0.35): number {
+  if (value < min) return Math.round(value + (min - value) * strength);
+  if (value > max) return Math.round(value - (value - max) * strength);
+  return Math.round(value);
+}
+
 export function pickBestColor(hexColors: string[]): HSL | null {
   if (!hexColors?.length) return null;
 
@@ -54,27 +89,31 @@ export function pickBestColor(hexColors: string[]): HSL | null {
 
     const [h, s, l] = rgbToHsl(rgb[0], rgb[1], rgb[2]);
 
-    // 1. 硬性过滤：去灰、去极暗、去极亮
+    // 基础过滤：允许更多“柔和深色”进来
     if (s < CONFIG.MIN_S || l < CONFIG.MIN_L || l > CONFIG.MAX_L) continue;
 
-    // 2. 核心评分机制
     let score = 0;
-    
-    // 面积权重（靠前的颜色面积更大）
-    score += Math.max(0, 30 - i * 5); 
-    
-    // 饱和度加成
-    score += s * 0.8;
-    
-    // 亮度贴近度
-    score -= Math.abs(l - CONFIG.IDEAL_L) * 1.2;
 
-    // 冷色偏好加成 (青、蓝、紫)
-    if (h >= 160 && h <= 300) score += 10;
+    // 面积权重：保留主色氛围，但别过分偏置第一项
+    score += Math.max(8, 26 - i * 4);
 
-    // 肤色惩罚 (规避专辑封面上的人脸)
-    const isSkinTone = h >= 10 && h <= 50 && s >= 15 && s <= 70 && l >= 20 && l <= 85;
-    if (isSkinTone) score -= 40;
+    // 饱和度：中等最舒服，不是越高越好
+    score += scoreByDistance(s, 40, 24, 24);
+
+    // 亮度：按色相选择最舒服区间
+    score += scoreByDistance(l, getIdealLightness(h), 12, 30);
+
+    // 色相舒适度
+    score += hueComfortBonus(h, s, l);
+
+    // 太灰也不好，但不用一刀切
+    if (s < 24) score -= 8;
+
+    // 太亮的彩色背景容易浮躁
+    if (l > 32 && s > 45) score -= 10;
+
+    // 疑似肤色：弱惩罚
+    if (isLikelySkinTone(h, s, l)) score -= 12;
 
     if (score > bestScore) {
       bestScore = score;
@@ -84,10 +123,10 @@ export function pickBestColor(hexColors: string[]): HSL | null {
 
   if (!best) return null;
 
-  // 3. 最终 UI 安全钳制 (Safe Clamp)
+  // 轻柔修正，不要硬夹死原色气质
   return [
     best[0],
-    Math.max(CONFIG.SAFE_S[0], Math.min(best[1], CONFIG.SAFE_S[1])),
-    Math.max(CONFIG.SAFE_L[0], Math.min(best[2], CONFIG.SAFE_L[1]))
+    softenToRange(best[1], CONFIG.SAFE_S[0], CONFIG.SAFE_S[1]),
+    softenToRange(best[2], CONFIG.SAFE_L[0], CONFIG.SAFE_L[1]),
   ];
 }
