@@ -1,5 +1,5 @@
-import { Suspense, lazy } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { Suspense, lazy, useEffect, useState } from "react";
+import { useParams, useNavigate, Navigate } from "react-router-dom";
 import { useMusicStore } from "@/store/music-store";
 import { useHistoryStore } from "@/store/history-store";
 import { usePlayHelper } from "@/hooks/usePlayHelper";
@@ -17,8 +17,6 @@ const MinePage = lazy(() => import("@/components/MinePage").then(m => ({ default
 const QueuePage = lazy(() => import("@/components/QueuePage").then(m => ({ default: m.QueuePage })));
 const HistoryPage = lazy(() => import("@/components/HistoryPage").then(m => ({ default: m.HistoryPage })));
 const SettingsPage = lazy(() => import("@/components/SettingsPage").then(m => ({ default: m.SettingsPage })));
-const PodcastPage = lazy(() => import("@/components/PodcastPage").then(m => ({ default: m.PodcastPage })));
-const PodcastDetail = lazy(() => import("@/components/PodcastDetail").then(m => ({ default: m.PodcastDetail })));
 const LocalMusicPage = lazy(() => import("@/components/LocalMusicPage").then(m => ({ default: m.LocalMusicPage })));
 const NeteaseDetail = lazy(() => import("@/components/NeteaseDetail").then(m => ({ default: m.NeteaseDetail })));
 const TrashPage = lazy(() => import("@/components/TrashPage").then(m => ({ default: m.TrashPage })));
@@ -133,8 +131,16 @@ export const MineRoute = withSuspense(() => {
   return <MinePage onSelectPlaylist={(id) => navigate(`/playlist/${id}`)} />;
 });
 
-export const PodcastRoute = withSuspense(() => <PodcastPage />);
-export const PodcastDetailRoute = withSuspense(() => <PodcastDetail />);
+export const PodcastRoute = withSuspense(() => {
+  const [shouldRedirect, setShouldRedirect] = useState(false);
+  const setLastPlaylistCategory = useMusicStore((s) => s.setLastPlaylistCategory);
+  useEffect(() => {
+    setLastPlaylistCategory("podcast");
+    setShouldRedirect(true);
+  }, [setLastPlaylistCategory]);
+  if (!shouldRedirect) return null;
+  return <Navigate to="/search" replace />;
+});
 
 export const LocalMusicRoute = withSuspense(() => {
   const { handlePlay } = usePlayHelper();
@@ -150,7 +156,7 @@ export const LocalMusicRoute = withSuspense(() => {
 });
 
 // -- 网易云API详情路由复用逻辑 --
-const createNeteaseRoute = (type: "playlist" | "artist" | "album", contextType: string) => {
+const createNeteaseRoute = (type: "playlist" | "artist" | "album" | "podcast", contextType: string) => {
   return withSuspense(() => {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
@@ -173,6 +179,7 @@ const createNeteaseRoute = (type: "playlist" | "artist" | "album", contextType: 
 export const MarketPlaylistDetailRoute = createNeteaseRoute("playlist", "playlist_market");
 export const ArtistDetailRoute = createNeteaseRoute("artist", "artist");
 export const AlbumDetailRoute = createNeteaseRoute("album", "album");
+export const PodcastDetailRoute = createNeteaseRoute("podcast", "podcast");
 
 export const QueueRoute = withSuspense(() => {
   const queue = useMusicStore(s => s.queue);

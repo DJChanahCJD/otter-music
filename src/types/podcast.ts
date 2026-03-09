@@ -2,6 +2,8 @@ export interface PodcastRssSource {
   id: string;
   name: string;
   rssUrl: string;
+  coverUrl?: string;
+  description?: string;
   update_time?: number;
   is_deleted?: boolean;
 }

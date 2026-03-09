@@ -1,10 +1,10 @@
 "use client";
 
-import { Search, Heart, User, Radio } from "lucide-react";
+import { Search, Heart, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Link, useLocation } from "react-router-dom";
 
-export type TabId = "search" | "favorites" | "podcast" | "mine";
+export type TabId = "search" | "favorites" | "mine";
 
 interface TabItem {
   id: TabId;
@@ -16,7 +16,6 @@ interface TabItem {
 const tabs: TabItem[] = [
   { id: "search", label: "发现", icon: Search, path: "/search" },
   { id: "favorites", label: "喜欢", icon: Heart, path: "/favorites" },
-  { id: "podcast", label: "播客", icon: Radio, path: "/podcast" },
   { id: "mine", label: "我的", icon: User, path: "/mine" },
 ];
 
@@ -35,10 +34,6 @@ export function MusicTabBar() {
       return "favorites";
     }
 
-    if (pathname.startsWith("/podcast")) {
-      return "podcast";
-    }
-    
     // 我的 (Mine)
     if (pathname.startsWith("/mine")) {
       return "mine";

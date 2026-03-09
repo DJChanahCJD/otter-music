@@ -12,12 +12,14 @@ import {
 import type { MarketPlaylist } from "@/lib/netease/netease-types";
 import { cachedFetch } from "@/lib/utils/cache";
 import { MusicCover } from "@/components/MusicCover";
-import { Loader2, LayoutGrid } from "lucide-react";
+import { Loader2, LayoutGrid, Plus } from "lucide-react";
 import { PlaylistCategorySelector } from "./PlaylistCategorySelector";
 import { cn } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
 import { useMusicStore } from "@/store/music-store";
 import { toast } from "react-hot-toast";
+import { PodcastAddDialog } from "@/components/PodcastAddDialog";
+import { usePodcastStore } from "@/store/podcast-store";
 
 const PAGE_SIZE = 30;
 
@@ -25,6 +27,10 @@ export function PlaylistMarket() {
   const navigate = useNavigate();
   const activeCategory = useMusicStore((s) => s.lastPlaylistCategory);
   const setActiveCategory = useMusicStore((s) => s.setLastPlaylistCategory);
+  
+  const rssSources = usePodcastStore((s) => s.rssSources);
+  const [showPodcastDialog, setShowPodcastDialog] = useState(false);
+
   const [items, setItems] = useState<MarketPlaylist[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -69,6 +75,10 @@ export function PlaylistMarket() {
       setIsFetching(true);
 
       try {
+        if (category === "podcast") {
+          setHasMore(false);
+          return;
+        }
         if (category === "mine") {
           const cookie = localStorage.getItem(NETEASE_COOKIE_KEY);
           if (!cookie) {
@@ -194,7 +204,13 @@ export function PlaylistMarket() {
         <div
           key={item.id}
           className="group flex flex-col gap-2.5 transition-all hover:translate-y-[-4px]"
-          onClick={() => navigate(`/netease-playlist/${item.id}`)}
+          onClick={() => {
+            if (activeCategory === "podcast") {
+              navigate(`/podcast/${item.id}`);
+            } else {
+              navigate(`/netease-playlist/${item.id}`);
+            }
+          }}
         >
           <div className="relative aspect-square rounded-md overflow-hidden shadow-md ring-1 ring-black/5 hover:shadow-xl transition-shadow cursor-pointer">
             <MusicCover
@@ -238,6 +254,16 @@ export function PlaylistMarket() {
               <div className="w-4 shrink-0" />
             </div>
           </div>
+          {activeCategory === "podcast" && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 w-8 p-0 rounded-full shrink-0 bg-secondary/50 hover:bg-secondary"
+              onClick={() => setShowPodcastDialog(true)}
+            >
+              <Plus className="h-4 w-4 text-muted-foreground" />
+            </Button>
+          )}
           <PlaylistCategorySelector
             activeCategory={activeCategory}
             onSelect={setActiveCategory}
@@ -296,7 +322,7 @@ export function PlaylistMarket() {
                       id: "subscribed",
                       label: "收藏",
                       count: mineData.subscribed.length,
-                    },
+                    }
                   ].map((tab) => (
                     <button
                       key={tab.id}
@@ -318,8 +344,8 @@ export function PlaylistMarket() {
 
                 {/* 动态渲染对应列表 */}
                 <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
-                  {mineData[mineTab].length > 0 ? (
-                    renderGrid(mineData[mineTab])
+                  {(mineData[mineTab] as MarketPlaylist[]).length > 0 ? (
+                    renderGrid(mineData[mineTab] as MarketPlaylist[])
                   ) : (
                     <div className="text-center py-16 text-muted-foreground text-sm tracking-widest">
                       空空如也~
@@ -328,6 +354,28 @@ export function PlaylistMarket() {
                 </div>
               </>
             )}
+          </div>
+        ) : activeCategory === "podcast" ? (
+          <div className="p-4 pb-24">
+            {rssSources.filter((s) => !s.is_deleted).length > 0 ? (
+              renderGrid(
+                rssSources
+                  .filter((s) => !s.is_deleted)
+                  .map((s) => ({
+                    id: s.id,
+                    name: s.name,
+                    coverUrl: s.coverUrl || "",
+                    playCount: 0,
+                    trackCount: 0,
+                  }))
+              )
+            ) : (
+              <div className="flex flex-col items-center justify-center py-20 text-muted-foreground space-y-4">
+                <p>暂无订阅播客</p>
+                <Button onClick={() => setShowPodcastDialog(true)}>立即添加</Button>
+              </div>
+            )}
+            <PodcastAddDialog open={showPodcastDialog} onOpenChange={setShowPodcastDialog} />
           </div>
         ) : (
           <div className="p-4 pb-24">

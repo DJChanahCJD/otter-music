@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { PageLayout } from "@/components/PageLayout";
 import { MusicTrackList } from "@/components/MusicTrackList";
 import { getPlaylistDetail, getArtist, getAlbum, convertSongToMusicTrack } from "@/lib/netease/netease-api";
@@ -14,10 +14,12 @@ import { useMusicStore } from "@/store/music-store";
 import { MusicCover } from "@/components/MusicCover";
 import { DetailSkeleton } from "@/components/skeletons/DetailSkeleton";
 import { SongDetail } from "@/lib/netease/netease-raw-types";
+import { usePodcastStore } from "@/store/podcast-store";
+import { parsePodcastRss } from "@/lib/api/podcast";
 
 interface NeteaseDetailProps {
   id: string | null;
-  type?: "playlist" | "artist" | "album";
+  type?: "playlist" | "artist" | "album" | "podcast";
   onBack: () => void;
   onPlay: (track: MusicTrack, list: MusicTrack[]) => void;
   currentTrackId?: string;
@@ -34,6 +36,7 @@ interface UnifiedDetail {
 }
 
 function DetailHeader({ detail }: { detail: UnifiedDetail }) {
+  const [isExpanded, setIsExpanded] = useState(false);
   const publishDate = detail.publishTime
     ? new Date(detail.publishTime).toLocaleDateString()
     : null;
@@ -66,7 +69,13 @@ function DetailHeader({ detail }: { detail: UnifiedDetail }) {
           </div>
 
           {detail.description && (
-            <p className="text-[11px] text-muted-foreground/70 leading-relaxed line-clamp-2 mt-1" title={detail.description}>
+            <p
+              className={`text-[11px] text-muted-foreground/70 leading-relaxed mt-1 cursor-pointer hover:text-muted-foreground/90 transition-colors ${
+                isExpanded ? "" : "line-clamp-2"
+              }`}
+              onClick={() => setIsExpanded(!isExpanded)}
+              title={isExpanded ? undefined : detail.description}
+            >
               {detail.description}
             </p>
           )}
@@ -84,6 +93,8 @@ export function NeteaseDetail({
   currentTrackId,
   isPlaying,
 }: NeteaseDetailProps) {
+  const scrollRef = useRef<HTMLDivElement>(null);
+
   const [{ loading, error, detail, tracks }, setState] = useState<{
     loading: boolean;
     error: boolean;
@@ -101,6 +112,10 @@ export function NeteaseDetail({
   const handleShare = async () => {
     if (!detail || !id) return;
     try {
+      if (type === "podcast") {
+        toast.error("播客不支持分享");
+        return;
+      }
       const typeLabel = { playlist: "歌单", artist: "歌手", album: "专辑" }[type];
       await navigator.clipboard.writeText(
         `【网易云${typeLabel}】${detail.name}\nhttps://music.163.com/#/${type}?id=${id}`
@@ -133,6 +148,7 @@ export function NeteaseDetail({
       try {
         let rawDetail: UnifiedDetail;
         let rawTracks: SongDetail[] = [];
+        let podcastTracks: MusicTrack[] = [];
 
         if (type === "playlist") {
           const res = await getPlaylistDetail(id, "");
@@ -155,6 +171,30 @@ export function NeteaseDetail({
             trackCount: res.hotSongs.length,
           };
           rawTracks = res.hotSongs;
+        } else if (type === "podcast") {
+          const sources = usePodcastStore.getState().rssSources;
+          const source = sources.find((s) => s.id === id);
+          if (!source) throw new Error("Podcast not found");
+
+          const feed = await parsePodcastRss(source.rssUrl);
+          rawDetail = {
+            name: feed.name,
+            coverImgUrl: feed.coverUrl || source.coverUrl || "",
+            description: feed.description || source.description,
+            trackCount: feed.episodes.length,
+            creator: "Podcast",
+          };
+
+          podcastTracks = feed.episodes.map((ep) => ({
+            id: ep.id,
+            name: ep.title,
+            artist: [feed.name], // Use Podcast Name as Artist
+            album: ep.pubDate ? formatDateZN(ep.pubDate) : "", // Use PubDate as Album Name
+            pic_id: feed.coverUrl || source.coverUrl || "",
+            url_id: ep.audioUrl || "",
+            lyric_id: "",
+            source: "podcast",
+          }));
         } else {
           const res = await getAlbum(id, "");
           if (!res?.album) throw new Error("Not found");
@@ -175,7 +215,7 @@ export function NeteaseDetail({
           loading: false,
           error: false,
           detail: rawDetail,
-          tracks: rawTracks.map(convertSongToMusicTrack),
+          tracks: type === "podcast" ? podcastTracks : rawTracks.map(convertSongToMusicTrack),
         });
       } catch {
         if (active) {
@@ -229,9 +269,13 @@ export function NeteaseDetail({
         </DropdownMenu>
       }
     >
-      <div className="flex flex-col flex-1 min-h-0 h-full">
+      <div
+        ref={scrollRef}
+        className="flex flex-col flex-1 min-h-0 h-full overflow-y-auto"
+        style={{ scrollbarWidth: "thin" }}
+      >
         {detail && <DetailHeader detail={detail} />}
-        <div className="flex-1 min-h-0 relative">
+        <div className="flex-1 min-h-0">
           <MusicTrackList
             tracks={tracks}
             onPlay={(track) => onPlay(track, tracks)}

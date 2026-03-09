@@ -111,8 +111,6 @@ export const ALL_FILTERS: FilterCategory[] = [
     category: '主题',
     filters: [
       // 高频
-      F('官方'),
-      F('榜单'),
       F('影视原声'),
       F('ACG'),
       F('游戏'),
@@ -146,6 +144,7 @@ export const FEATURED_SUB_FILTERS: FilterItem[] = [
 export const RECOMMEND_FILTERS: FilterItem[] = [
   { id: "", name: "全部" },
   { id: "featured", name: "精选" },
+  { id: "podcast", name: "播客" },
 
   F("华语"),
   F("欧美"),
