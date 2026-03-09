@@ -84,7 +84,7 @@ export function PodcastDetailPage({
           album: ep.pubDate ? formatDateZN(ep.pubDate) : "",
           pic_id: feed.coverUrl || source.coverUrl || "",
           url_id: ep.audioUrl || "",
-          lyric_id: "",
+          lyric_id: "_podcast", //  仅占位
           source: "podcast" as const,
         }));
 

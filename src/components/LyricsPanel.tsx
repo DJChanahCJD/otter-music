@@ -130,6 +130,7 @@ const LyricLineView = memo(function LyricLineView({
 
 export function LyricsPanel({ track, active = true }: LyricsPanelProps) { 
   const [lyrics, setLyrics] = useState<LyricLine[]>([]);
+  const [error, setError] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const [isUserScrolling, setIsUserScrolling] = useState(false);
   const [centerLineIndex, setCenterLineIndex] = useState(-1);
@@ -229,14 +230,14 @@ export function LyricsPanel({ track, active = true }: LyricsPanelProps) {
       .then((res) => {
         if (cancelled) return;
         if (!res) {
-          setLyrics([{ time: 0, text: "暂无歌词" }]);
+          setError("暂无歌词");
           return;
         }
         setLyrics(parseLrc(res.lyric, res.tlyric));
       })
       .catch(() => {
         if (cancelled) return;
-        setLyrics([{ time: 0, text: "歌词加载失败" }]);
+        setError("歌词加载失败");
       })
       .finally(() => {
         if (cancelled) return;
@@ -292,6 +293,14 @@ export function LyricsPanel({ track, active = true }: LyricsPanelProps) {
     return (
       <div className="h-full flex items-center justify-center text-sm text-white/40 tracking-widest">
         加载歌词中...
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="h-full flex items-center justify-center text-sm text-white/40 tracking-widest">
+        {error}
       </div>
     );
   }
