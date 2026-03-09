@@ -53,13 +53,17 @@ const RAW_SOURCES = [
  
   // 英文 | 顶流与新闻
   { id: "joe", name: "The Joe Rogan Experience", rssUrl: "https://feeds.megaphone.fm/GLT1412515089", author: "Joe Rogan", coverUrl: "https://is1-ssl.mzstatic.com/image/thumb/Podcasts221/v4/20/ca/57/20ca5718-1fa5-43d2-62aa-80a7b5e10a23/mza_5053467016139819545.jpg/600x600bb.jpg" },
-  { id: "daily", name: "The Daily", rssUrl: "https://feeds.simplecast.com/54nAGcIl", author: "The New York Times", coverUrl: "https://image.simplecastcdn.com/images/7f2f4c05-9c2f-4deb-82b7-b538062bc22d/73549bf1-94b3-40ff-8aeb-b4054848ec1b/3000x3000/the-daily-album-art-original.jpg?aid=rss_feed" },
+  { id: "daily", name: "The Daily", rssUrl: "https://feeds.simplecast.com/54nAGcIl", author: "The New York Times", coverUrl: "https://image.simplecastcdn.com/images/7f2f4c05-9c2f-4deb-82b7-b538062bc22d/73549bf1-94b3-40ff-8aeb-b4054848ec1b/600x600/the-daily-album-art-original.jpg?aid=rss_feed" },
   { id: "ted-daily", name: "TED Talks Daily", rssUrl: "https://feeds.acast.com/public/shows/67587e77c705e441797aff96", author: "TED", coverUrl: "https://is1-ssl.mzstatic.com/image/thumb/Podcasts116/v4/2e/cf/99/2ecf996f-71f7-604f-b0a0-43116b9d6619/mza_10257768296573848480.png/600x600bb.jpg" },
 
   // 英文 | 学习与泛文化
   { id: "6min", name: "6 Minute English", rssUrl: "https://podcasts.files.bbci.co.uk/p02pc9tn.rss", author: "BBC Radio", coverUrl: "https://is1-ssl.mzstatic.com/image/thumb/Podcasts211/v4/ba/98/35/ba9835eb-1ef3-60e4-bf05-3d141b8d1c7a/mza_3844641997714022659.jpg/600x600bb.jpg" },
+  { id: "bbc-stories", name: "Learning English Stories", rssUrl: "https://podcasts.files.bbci.co.uk/p02pc9s1.rss", author: "BBC Radio", coverUrl: "http://ichef.bbci.co.uk/images/ic/600x600/p0hxqksj.jpg" },
+  { id: "bbc-conversations", name: "Learning English Conversations", rssUrl: "https://podcasts.files.bbci.co.uk/p02pc9zn.rss", author: "BBC Radio", coverUrl: "http://ichef.bbci.co.uk/images/ic/600x600/p0hxql2c.jpg" },
+  { id: "bbc-work", name: "Learning English For Work", rssUrl: "https://podcasts.files.bbci.co.uk/p0h6ffwg.rss", author: "BBC News", coverUrl: "http://ichef.bbci.co.uk/images/ic/600x600/p0hxqkxd.jpg" },
+  { id: "bbc-news", name: "Learning English from the News", rssUrl: "https://podcasts.files.bbci.co.uk/p05hw4bq.rss", author: "BBC Radio", coverUrl: "http://ichef.bbci.co.uk/images/ic/600x600/p0hvw5fz.jpg" },
   { id: "tal", name: "This American Life", rssUrl: "https://www.thisamericanlife.org/podcast/rss.xml", author: "This American Life", coverUrl: "https://is1-ssl.mzstatic.com/image/thumb/Podcasts221/v4/64/aa/3a/64aa3a66-a08a-947c-cf21-a5722a1b77ae/mza_11390421932467026234.png/600x600bb.jpg" },
-  { id: "sysk", name: "Stuff You Should Know", rssUrl: "https://www.omnycontent.com/d/playlist/e73c998e-6e60-432f-8610-ae210140c5b1/a91018a4-ea4f-4130-bf55-ae270180c327/44710ecc-10bb-48d1-93c7-ae270180c33e/podcast.rss", author: "iHeartPodcasts", coverUrl: "https://www.omnycontent.com/d/programs/e73c998e-6e60-432f-8610-ae210140c5b1/a91018a4-ea4f-4130-bf55-ae270180c327/image.jpg?t=1749759419&size=Large" },
+  { id: "sysk", name: "Stuff You Should Know", rssUrl: "https://www.omnycontent.com/d/playlist/e73c998e-6e60-432f-8610-ae210140c5b1/a91018a4-ea4f-4130-bf55-ae270180c327/44710ecc-10bb-48d1-93c7-ae270180c33e/podcast.rss", author: "iHeartPodcasts", coverUrl: "https://www.omnycontent.com/d/programs/e73c998e-6e60-432f-8610-ae210140c5b1/a91018a4-ea4f-4130-bf55-ae270180c327/image.jpg?t=1749759419" },
 ];
 
 export const DEFAULT_RSS_SOURCES: PodcastRssSource[] = RAW_SOURCES.map(source => ({
