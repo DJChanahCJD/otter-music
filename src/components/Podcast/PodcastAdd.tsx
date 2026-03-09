@@ -16,12 +16,12 @@ import toast from "react-hot-toast";
 
 type AddMode = "search" | "rss";
 
-interface PodcastAddDialogProps {
+interface PodcastAddProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
 
-export function PodcastAddDialog({ open, onOpenChange }: PodcastAddDialogProps) {
+export function PodcastAdd({ open, onOpenChange }: PodcastAddProps) {
   const { rssSources, addRssSource } = usePodcastStore();
   const [mode, setMode] = useState<AddMode>("search");
 

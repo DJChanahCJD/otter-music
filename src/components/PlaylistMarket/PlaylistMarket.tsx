@@ -18,7 +18,8 @@ import { cn } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
 import { useMusicStore } from "@/store/music-store";
 import { toast } from "react-hot-toast";
-import { PodcastAddDialog } from "@/components/PodcastAddDialog";
+import { PodcastAdd } from "@/components/Podcast/PodcastAdd";
+import { PodcastCard } from "@/components/Podcast/PodcastCard";
 import { usePodcastStore } from "@/store/podcast-store";
 
 const PAGE_SIZE = 30;
@@ -115,7 +116,7 @@ export function PlaylistMarket() {
             return isToplist
               ? await getToplist("")
               : await getPlaylists(
-                  category || "全部",
+                  category,
                   "hot",
                   PAGE_SIZE,
                   currentOffset,
@@ -358,24 +359,20 @@ export function PlaylistMarket() {
         ) : activeCategory === "podcast" ? (
           <div className="p-4 pb-24">
             {rssSources.filter((s) => !s.is_deleted).length > 0 ? (
-              renderGrid(
-                rssSources
+              <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 gap-x-3 gap-y-4">
+                {rssSources
                   .filter((s) => !s.is_deleted)
-                  .map((s) => ({
-                    id: s.id,
-                    name: s.name,
-                    coverUrl: s.coverUrl || "",
-                    playCount: 0,
-                    trackCount: 0,
-                  }))
-              )
+                  .map((source) => (
+                    <PodcastCard key={source.id} source={source} />
+                  ))}
+              </div>
             ) : (
               <div className="flex flex-col items-center justify-center py-20 text-muted-foreground space-y-4">
                 <p>暂无订阅播客</p>
                 <Button onClick={() => setShowPodcastDialog(true)}>立即添加</Button>
               </div>
             )}
-            <PodcastAddDialog open={showPodcastDialog} onOpenChange={setShowPodcastDialog} />
+            <PodcastAdd open={showPodcastDialog} onOpenChange={setShowPodcastDialog} />
           </div>
         ) : (
           <div className="p-4 pb-24">
