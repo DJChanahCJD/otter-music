@@ -16,7 +16,9 @@ export async function handleAutoMatch(track: MusicTrack): Promise<boolean> {
   try {
     const { updateTrackInQueue, isFavorite, favorites, setFavorites, updateTrackInPlaylists } = useMusicStore.getState();
     const aggregatedSources = getAggregatedSourcesForMatch();
-    
+    if (aggregatedSources.length === 0) {
+      return false;
+    }
     const match = await musicApi.searchBestMatch(
       `${track.name} ${track.artist[0]}`,
       aggregatedSources,

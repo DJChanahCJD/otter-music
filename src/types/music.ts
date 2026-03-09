@@ -113,9 +113,10 @@ export interface MusicTrack {
   source: MusicSource;
   update_time?: number;
   is_deleted?: boolean;
+
   privilege?: NeteasePrivilege;
-  artist_ids?: string[];
-  album_id?: string;
+  artist_ids?: string[];  //  网易云歌手跳转用
+  album_id?: string;      // 网易云专辑跳转用
 }
 
 export interface Playlist {

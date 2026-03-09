@@ -186,7 +186,7 @@ export const useMusicStore = create<MusicState>()(
       setVolume: (volume) => set({ volume }), toggleRepeat: () => set(s => ({ isRepeat: !s.isRepeat })),
       setAudioCurrentTime: (currentAudioTime) => set({ currentAudioTime }), setDuration: (duration) => set({ duration }),
       setIsPlaying: (isPlaying) => set({ isPlaying }), togglePlay: () => set(s => ({ hasUserGesture: true, isPlaying: !s.isPlaying })),
-      setIsLoading: (isLoading) => set({ isLoading }), seek: (time) => set({ seekTargetTime: time, seekTimestamp: Date.now() }),
+      setIsLoading: (isLoading) => set({ isLoading }), seek: (time) => set({ seekTargetTime: time, seekTimestamp: Date.now(), isPlaying: true, hasUserGesture: true }),
       clearSeekTargetTime: () => set({ seekTargetTime: -1 }), setCurrentAudioUrl: (currentAudioUrl) => set({ currentAudioUrl }),
       setUserGesture: () => set({ hasUserGesture: true }), resetFailures: () => set({ consecutiveFailures: 0 }),
       incrementFailures: () => { const f = get().consecutiveFailures + 1; set({ consecutiveFailures: f }); return f; },
