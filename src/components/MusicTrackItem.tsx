@@ -48,6 +48,7 @@ interface MusicTrackItemProps {
   removeLabel?: string;
   isDownloaded?: boolean;
   quality?: string;
+  showSourceBadge?: boolean;
   className?: string;
   style?: React.CSSProperties;
 }
@@ -66,6 +67,7 @@ export function MusicTrackItem({
   removeLabel,
   isDownloaded,
   quality = "192",
+  showSourceBadge = true,
   className,
   style,
 }: MusicTrackItemProps) {
@@ -135,15 +137,17 @@ export function MusicTrackItem({
             {track.name}
           </span>
 
-          <Badge
-            variant="outline"
-            className={cn(
-              "shrink-0 text-[9px] px-1 py-0 h-3.5 leading-none font-normal",
-              sourceBadgeStyles[track.source] || sourceBadgeStyles.default
-            )}
-          >
-            {sourceLabels[track.source] || track.source}
-          </Badge>
+          {showSourceBadge && (
+            <Badge
+              variant="outline"
+              className={cn(
+                "shrink-0 text-[9px] px-1 py-0 h-3.5 leading-none font-normal",
+                sourceBadgeStyles[track.source] || sourceBadgeStyles.default
+              )}
+            >
+              {sourceLabels[track.source] || track.source}
+            </Badge>
+          )}
 
           {badge && (
             <Badge

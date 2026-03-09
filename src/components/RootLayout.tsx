@@ -74,7 +74,7 @@ export function RootLayout() {
   const currentTrack = queue[currentIndex] || null;
   const coverUrl = useMusicCover(currentTrack);
 
-  const isTab = ["/search", "/favorites", "/podcast", "/mine"].includes(location.pathname) || location.pathname === "/";
+  const isTab = ["/search", "/favorites", "/mine"].includes(location.pathname) || location.pathname === "/";
   
   // Handlers
   const handlePrev = () => {

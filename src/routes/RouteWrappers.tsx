@@ -19,6 +19,7 @@ const HistoryPage = lazy(() => import("@/components/HistoryPage").then(m => ({ d
 const SettingsPage = lazy(() => import("@/components/SettingsPage").then(m => ({ default: m.SettingsPage })));
 const LocalMusicPage = lazy(() => import("@/components/LocalMusicPage").then(m => ({ default: m.LocalMusicPage })));
 const NeteaseDetail = lazy(() => import("@/components/NeteaseDetail").then(m => ({ default: m.NeteaseDetail })));
+const PodcastDetailPage = lazy(() => import("@/components/Podcast/PodcastDetailPage").then(m => ({ default: m.PodcastDetailPage })));
 const TrashPage = lazy(() => import("@/components/TrashPage").then(m => ({ default: m.TrashPage })));
 
 // ==========================================
@@ -156,7 +157,7 @@ export const LocalMusicRoute = withSuspense(() => {
 });
 
 // -- 网易云API详情路由复用逻辑 --
-const createNeteaseRoute = (type: "playlist" | "artist" | "album" | "podcast", contextType: string) => {
+const createNeteaseRoute = (type: "playlist" | "artist" | "album", contextType: string) => {
   return withSuspense(() => {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
@@ -179,7 +180,22 @@ const createNeteaseRoute = (type: "playlist" | "artist" | "album" | "podcast", c
 export const MarketPlaylistDetailRoute = createNeteaseRoute("playlist", "playlist_market");
 export const ArtistDetailRoute = createNeteaseRoute("artist", "artist");
 export const AlbumDetailRoute = createNeteaseRoute("album", "album");
-export const PodcastDetailRoute = createNeteaseRoute("podcast", "podcast");
+export const PodcastDetailRoute = withSuspense(() => {
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const { handlePlay } = usePlayHelper();
+  const { currentTrackId, isPlaying } = usePlaybackState();
+
+  return (
+    <PodcastDetailPage
+      id={id || null}
+      onBack={() => navigate(-1)}
+      onPlay={(track, list) => handlePlay(track, list, `podcast-${id}`)}
+      currentTrackId={currentTrackId}
+      isPlaying={isPlaying}
+    />
+  );
+});
 
 export const QueueRoute = withSuspense(() => {
   const queue = useMusicStore(s => s.queue);

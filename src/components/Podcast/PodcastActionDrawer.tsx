@@ -16,7 +16,7 @@ import { ReactNode } from "react";
 interface PodcastActionDrawerProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  source: PodcastRssSource;
+  rssSource: PodcastRssSource;
   onEdit: () => void;
 }
 
@@ -43,14 +43,14 @@ const ActionButton = ({
 export function PodcastActionDrawer({
   open,
   onOpenChange,
-  source,
+  rssSource: rss,
   onEdit,
 }: PodcastActionDrawerProps) {
   const { removeRssSource } = usePodcastStore();
 
   const handleCopy = async () => {
     try {
-      await navigator.clipboard.writeText(source.rssUrl);
+      await navigator.clipboard.writeText(rss.rssUrl);
       toast.success("RSS 链接已复制");
       onOpenChange(false);
     } catch {
@@ -59,8 +59,8 @@ export function PodcastActionDrawer({
   };
 
   const handleUnsubscribe = () => {
-    if (confirm(`确定要取消订阅 "${source.name}" 吗？`)) {
-      removeRssSource(source.id);
+    if (confirm(`确定要取消订阅 "${rss.name}" 吗？`)) {
+      removeRssSource(rss.id);
       toast.success("已取消订阅");
       onOpenChange(false);
     }
@@ -69,21 +69,21 @@ export function PodcastActionDrawer({
   return (
     <Drawer open={open} onOpenChange={onOpenChange}>
       <DrawerContent>
-        <DrawerTitle className="sr-only">{source.name}</DrawerTitle>
+        <DrawerTitle className="sr-only">{rss.name}</DrawerTitle>
         
         {/* Header Section */}
         <div className="flex items-center gap-4 px-6 py-4">
           <MusicCover
-            src={source.coverUrl}
-            alt={source.name}
+            src={rss.coverUrl}
+            alt={rss.name}
             className="h-16 w-16 rounded-lg shadow-md"
             iconClassName="h-8 w-8"
             fallbackIcon={<Podcast className="h-8 w-8 text-muted-foreground/50" />}
           />
           <div className="min-w-0 flex-1">
-            <div className="font-bold line-clamp-2 text-lg">{source.name}</div>
+            <div className="font-bold line-clamp-2 text-lg">{rss.name}</div>
             <div className="text-sm text-muted-foreground truncate">
-              {source.description || source.rssUrl}
+              {rss.author || rss.description || rss.rssUrl}
             </div>
           </div>
         </div>

@@ -5,19 +5,19 @@ import { Button } from "@/components/ui/button";
 import { PodcastActionDrawer } from "./PodcastActionDrawer";
 import { PodcastEditDrawer } from "./PodcastEditDrawer";
 import { useNavigate } from "react-router-dom";
-import { MoreHorizontal } from "lucide-react";
+import { MoreHorizontal, Podcast } from "lucide-react";
 
 interface PodcastCardProps {
-  source: PodcastRssSource;
+  rssSource: PodcastRssSource;
 }
 
-export function PodcastCard({ source }: PodcastCardProps) {
+export function PodcastCard({ rssSource }: PodcastCardProps) {
   const navigate = useNavigate();
   const [actionOpen, setActionOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
 
   const handleCardClick = () => {
-    navigate(`/podcast/${source.id}`);
+    navigate(`/podcast/${rssSource.id}`);
   };
 
   return (
@@ -28,9 +28,10 @@ export function PodcastCard({ source }: PodcastCardProps) {
       >
         <div className="relative aspect-square rounded-md overflow-hidden shadow-md ring-1 ring-black/5 hover:shadow-xl transition-shadow cursor-pointer">
           <MusicCover
-            src={source.coverUrl || ""}
-            alt={source.name}
+            src={rssSource.coverUrl || ""}
+            alt={rssSource.name}
             className="transition-transform duration-500 group-hover:scale-110"
+            fallbackIcon={<Podcast className="h-8 w-8 text-muted-foreground/50" />}
           />
           <div 
             className="absolute top-1 right-1 z-10 md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-200"
@@ -48,7 +49,7 @@ export function PodcastCard({ source }: PodcastCardProps) {
         </div>
         <div className="px-0.5">
           <h3 className="text-[13px] font-medium leading-snug line-clamp-2 text-foreground/80 group-hover:text-primary transition-colors cursor-pointer">
-            {source.name}
+            {rssSource.name}
           </h3>
         </div>
       </div>
@@ -56,14 +57,14 @@ export function PodcastCard({ source }: PodcastCardProps) {
       <PodcastActionDrawer
         open={actionOpen}
         onOpenChange={setActionOpen}
-        source={source}
+        rssSource={rssSource}
         onEdit={() => setEditOpen(true)}
       />
 
       <PodcastEditDrawer
         open={editOpen}
         onOpenChange={setEditOpen}
-        source={source}
+        source={rssSource}
       />
     </>
   );

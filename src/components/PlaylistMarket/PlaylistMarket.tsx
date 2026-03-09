@@ -206,11 +206,7 @@ export function PlaylistMarket() {
           key={item.id}
           className="group flex flex-col gap-2.5 transition-all hover:translate-y-[-4px]"
           onClick={() => {
-            if (activeCategory === "podcast") {
-              navigate(`/podcast/${item.id}`);
-            } else {
-              navigate(`/netease-playlist/${item.id}`);
-            }
+            navigate(`/netease-playlist/${item.id}`);
           }}
         >
           <div className="relative aspect-square rounded-md overflow-hidden shadow-md ring-1 ring-black/5 hover:shadow-xl transition-shadow cursor-pointer">
@@ -362,8 +358,8 @@ export function PlaylistMarket() {
               <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 gap-x-3 gap-y-4">
                 {rssSources
                   .filter((s) => !s.is_deleted)
-                  .map((source) => (
-                    <PodcastCard key={source.id} source={source} />
+                  .map((rssSource) => (
+                    <PodcastCard key={rssSource.id} rssSource={rssSource} />
                   ))}
               </div>
             ) : (

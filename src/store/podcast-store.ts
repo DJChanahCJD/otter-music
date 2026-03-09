@@ -11,8 +11,8 @@ const DEFAULT_RSS_SOURCES: PodcastRssSource[] = [
 
 interface PodcastState {
   rssSources: PodcastRssSource[];
-  addRssSource: (name: string, rssUrl: string, coverUrl?: string, description?: string) => string;
-  updateRssSource: (id: string, data: Pick<PodcastRssSource, "name" | "rssUrl" | "coverUrl" | "description">) => void;
+  addRssSource: (name: string, rssUrl: string, author?: string, coverUrl?: string, description?: string) => string;
+  updateRssSource: (id: string, data: Pick<PodcastRssSource, "name" | "rssUrl" | "author" | "coverUrl" | "description">) => void;
   removeRssSource: (id: string) => void;
   resetDefaultRssSources: () => void;
   setRssSources: (sources: PodcastRssSource[]) => void;
@@ -35,11 +35,11 @@ export const usePodcastStore = create<PodcastState>()(
   persist(
     (set) => ({
       rssSources: DEFAULT_RSS_SOURCES,
-      addRssSource: (name, rssUrl, coverUrl, description) => {
+      addRssSource: (name, rssUrl, author, coverUrl, description) => {
         const id = uuidv4();
         set((state) => ({
           rssSources: [
-            markUpdate({ id, name, rssUrl, coverUrl, description, is_deleted: false }),
+            markUpdate({ id, name, rssUrl, author, coverUrl, description, is_deleted: false }),
             ...state.rssSources,
           ],
         }));

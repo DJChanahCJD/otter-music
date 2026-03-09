@@ -29,6 +29,7 @@ interface MusicTrackListProps {
   loading?: boolean;
   emptyMessage?: string;
   removeLabel?: string;
+  showSourceBadge?: boolean;
 }
 
 const ROW_HEIGHT = 48; // 缩小默认估算行高
@@ -37,6 +38,7 @@ export function MusicTrackList({
   tracks, onPlay, playlistId, currentTrackId, isPlaying,
   onRemove, onLoadMore, hasMore, loading,
   emptyMessage = "暂无歌曲", removeLabel = "移除",
+  showSourceBadge = true,
 }: MusicTrackListProps) {
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -218,7 +220,7 @@ export function MusicTrackList({
                   isSelected={selectedIds.has(track.id)} onSelect={() => toggleSelect(track.id)}
                   onRemove={!isSelectionMode && onRemove ? () => onRemove(track) : undefined}
                   removeLabel={removeLabel} isDownloaded={downloadedStatusMap.get(track.id) ?? false}
-                  quality={quality}
+                  quality={quality} showSourceBadge={showSourceBadge}
                 />
               ) : (
                 <div className="px-3 pb-20 pt-2 h-full">

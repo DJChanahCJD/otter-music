@@ -82,6 +82,7 @@ export function PodcastAdd({ open, onOpenChange }: PodcastAddProps) {
     addRssSource(
       item.title, 
       item.rssUrl, 
+      item.author || undefined,
       item.cover || undefined, 
       item.description || undefined
     );
