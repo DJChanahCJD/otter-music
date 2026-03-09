@@ -36,8 +36,6 @@ interface FullScreenPlayerProps {
   isFullScreen: boolean;
   onClose: () => void;
   currentTrack: MusicTrack | null;
-  currentTime: number;
-  duration: number;
   coverUrl: string | null;
   isFavorite?: boolean;
   onToggleLike?: () => void;
@@ -48,7 +46,6 @@ interface FullScreenPlayerProps {
   onTogglePlay: () => void;
   onPrev: () => void;
   onNext: () => void;
-  onSeek: (value: number[]) => void;
   onToggleRepeat: () => void;
   onToggleShuffle: () => void;
 }
@@ -57,8 +54,6 @@ export function FullScreenPlayer({
   isFullScreen,
   onClose,
   currentTrack,
-  currentTime,
-  duration,
   coverUrl,
   isFavorite = false,
   onToggleLike,
@@ -69,7 +64,6 @@ export function FullScreenPlayer({
   onTogglePlay,
   onPrev,
   onNext,
-  onSeek,
   onToggleRepeat,
   onToggleShuffle,
 }: FullScreenPlayerProps) {
@@ -194,7 +188,7 @@ export function FullScreenPlayer({
       <div className="flex-1 flex flex-col items-center justify-center px-2 relative z-10 overflow-hidden cursor-pointer" onClick={() => setShowLyrics(!showLyrics)}>
         {showLyrics ? (
           <div className="w-full h-full">
-            <LyricsPanel track={currentTrack} currentTime={currentTime} active={isFullScreen} />
+            <LyricsPanel track={currentTrack} active={isFullScreen} />
           </div>
         ) : (
           <div className={cn("relative aspect-square w-72 max-w-[320px] overflow-hidden rounded-3xl shadow-xl shadow-black/40 transition-transform duration-500 ring-1 ring-white/5", isPlaying ? "scale-100" : "scale-[0.95]")}>
@@ -224,7 +218,7 @@ export function FullScreenPlayer({
       </div>
 
       <div className="shrink-0 px-8 relative z-10">
-        <PlayerProgressBar currentTime={currentTime} duration={duration} onSeek={onSeek} className="relative" />
+        <PlayerProgressBar className="relative" />
       </div>
 
       <div className="shrink-0 flex items-center justify-between px-8 py-6 pb-[calc(2rem+env(safe-area-inset-bottom))] relative z-10">

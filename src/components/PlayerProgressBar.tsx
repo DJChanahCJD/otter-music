@@ -3,20 +3,24 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
 import { formatMediaTime } from "@/lib/utils/music";
+import { useMusicStore } from "@/store/music-store";
+import { useShallow } from "zustand/react/shallow";
 
 interface PlayerProgressBarProps {
-  currentTime: number;
-  duration: number;
-  onSeek: (value: number[]) => void;
   className?: string;
 }
 
 export function PlayerProgressBar({
-  currentTime,
-  duration,
-  onSeek,
   className,
 }: PlayerProgressBarProps) {
+  const { currentTime, duration, seek } = useMusicStore(
+    useShallow((state) => ({
+      currentTime: state.currentAudioTime,
+      duration: state.duration,
+      seek: state.seek,
+    }))
+  );
+
   const barRef = React.useRef<HTMLDivElement>(null);
   const [isDragging, setIsDragging] = React.useState(false);
   const [dragTime, setDragTime] = React.useState(0);
@@ -48,9 +52,9 @@ export function PlayerProgressBar({
   }, [duration]);
 
   const handleEnd = React.useCallback(() => {
-    onSeek([dragTimeRef.current]);
+    seek(dragTimeRef.current);
     setIsDragging(false);
-  }, [onSeek]);
+  }, [seek]);
 
   React.useEffect(() => {
     if (isDragging) {

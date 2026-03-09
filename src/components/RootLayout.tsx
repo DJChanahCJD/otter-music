@@ -57,13 +57,11 @@ export function RootLayout() {
     queue,
     currentIndex,
     isPlaying,
-    duration,
     isLoading,
     isRepeat,
     isShuffle,
     togglePlay,
     setCurrentIndexAndPlay,
-    seek,
     toggleRepeat,
     toggleShuffle,
     isFavorite,
@@ -85,10 +83,6 @@ export function RootLayout() {
   const handleNext = () => {
     if (queue.length === 0) return;
     setCurrentIndexAndPlay((currentIndex + 1) % queue.length);
-  };
-
-  const handleSeek = (value: number[]) => {
-    seek(value[0]);
   };
 
   const handleToggleLike = () => {
@@ -128,8 +122,6 @@ export function RootLayout() {
         isFullScreen={isFullScreenPlayer}
         onClose={() => setStoreFullScreen(false)}
         currentTrack={currentTrack}
-        currentTime={useMusicStore.getState().currentAudioTime} // Note: this might not update reactively if not selected
-        duration={duration}
         coverUrl={coverUrl}
         isFavorite={currentTrack ? isFavorite(currentTrack.id) : false}
         onToggleLike={handleToggleLike}
@@ -140,7 +132,6 @@ export function RootLayout() {
         onTogglePlay={togglePlay}
         onPrev={handlePrev}
         onNext={handleNext}
-        onSeek={handleSeek}
         onToggleRepeat={toggleRepeat}
         onToggleShuffle={toggleShuffle}
       />

@@ -7,10 +7,10 @@ import { musicApi } from "@/lib/music-api";
 import { MusicTrack } from "@/types/music";
 import { Play } from "lucide-react";
 import { useMusicStore } from "@/store/music-store";
+import { useShallow } from "zustand/react/shallow";
 
 interface LyricsPanelProps {
   track: MusicTrack | null;
-  currentTime: number;
   active?: boolean;
 }
 
@@ -34,13 +34,12 @@ function formatTime(seconds: number): string {
 
 function parseSimpleLrc(lrc: string): { time: number; text: string }[] {
   const lines: { time: number; text: string }[] = [];
-  const timeRegex = TIME_EXP; 
-
+  
   for (const line of lrc.split("\n")) {
-    const timeMatches = [...line.matchAll(timeRegex)];
+    const timeMatches = [...line.matchAll(TIME_EXP)];
     
     if (timeMatches.length > 0) {
-      const text = line.replace(timeRegex, "").trim();
+      const text = line.replace(TIME_EXP, "").trim();
       
       if (text) {
         for (const m of timeMatches) {
@@ -129,11 +128,18 @@ const LyricLineView = memo(function LyricLineView({
   );
 });
 
-export function LyricsPanel({ track, currentTime, active = true }: LyricsPanelProps) {
+export function LyricsPanel({ track, active = true }: LyricsPanelProps) { 
   const [lyrics, setLyrics] = useState<LyricLine[]>([]);
   const [loading, setLoading] = useState(true);
   const [isUserScrolling, setIsUserScrolling] = useState(false);
   const [centerLineIndex, setCenterLineIndex] = useState(-1);
+
+  const { currentTime, seek } = useMusicStore(
+    useShallow((state) => ({
+      currentTime: state.currentAudioTime,
+      seek: state.seek,
+    }))
+  );
 
   const trackId = track?.id ?? null;
   const lyricId = track?.lyric_id ?? null;
@@ -153,7 +159,6 @@ export function LyricsPanel({ track, currentTime, active = true }: LyricsPanelPr
   const viewportRef = useRef<HTMLDivElement>(null);
   const scrollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isAutoScrollingRef = useRef(false);
-  const seek = useMusicStore((s) => s.seek);
 
   const handleSeek = useCallback(
     (time: number) => {
