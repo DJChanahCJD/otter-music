@@ -66,7 +66,7 @@ export function useAudioEventHandlers(
       state.setDuration(duration);
 
       // 网易云试听/自动匹配逻辑
-      if (currentTrack?.source === '_netease' && duration > 0 && duration <= 45) {
+      if (currentTrack?.source === '_netease' && duration >= 30 && duration <= 45) {
         if (toastedTrackIdRef.current !== currentTrack.id) {
           toast("试听中...", { icon: "🎵" });
           toastedTrackIdRef.current = currentTrack.id;
