@@ -78,7 +78,7 @@ export function PodcastDetailPage({
 
         const feed = await parsePodcastRss(source.rssUrl);
         const podcastTracks = feed.episodes.map((ep) => ({
-          id: ep.id,
+          id: ep.audioUrl || ep.id,
           name: ep.title,
           artist: [feed.name],
           album: ep.pubDate ? formatDateZN(ep.pubDate) : "",
