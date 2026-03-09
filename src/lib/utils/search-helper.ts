@@ -166,50 +166,80 @@ function score(t: MergedMusicTrack & PreparedTrack, q: string): number {
   return s;
 }
 
-/* 4. 多源排序（避免重复 + 平台偏好） */
+/* 4. 多源排序（按 source 分桶，避免全量 O(n^2) 扫描） */
 function diversifiedSort(
   tracks: (MergedMusicTrack & PreparedTrack)[],
   query: string
 ): MergedMusicTrack[] {
   const q = normalizeText(query);
 
-  // 1. 计算所有基础分
-  const pool = tracks.map((t, i) => ({
+  // 1. 先计算基础分
+  const scored = tracks.map((t, i) => ({
     track: t,
     base: score(t, q),
     index: i
   }));
 
+  // 2. 按 source 分桶
+  const buckets = new Map<
+    MusicSource,
+    { track: MergedMusicTrack & PreparedTrack; base: number; index: number }[]
+  >();
+
+  for (const item of scored) {
+    const source = item.track.source;
+    if (!buckets.has(source)) buckets.set(source, []);
+    buckets.get(source)!.push(item);
+  }
+
+  // 3. 每个桶内部先按 base 降序；同分时保留原始顺序
+  for (const list of buckets.values()) {
+    list.sort((a, b) => b.base - a.base || a.index - b.index);
+  }
+
   const result: MergedMusicTrack[] = [];
   const sourceCount = new Map<MusicSource, number>();
 
-  // 2. 贪心选择：每一轮动态选最高分
-  while (pool.length > 0) {
-    let bestIndex = -1;
-    let maxScore = -Infinity;
+  // 4. 记录每个桶当前取到哪个位置，避免 shift() 的 O(n)
+  const pointers = new Map<MusicSource, number>();
+  for (const source of buckets.keys()) {
+    pointers.set(source, 0);
+  }
 
-    for (let i = 0; i < pool.length; i++) {
-      const item = pool[i];
-      const used = sourceCount.get(item.track.source) || 0;
-      
-      // 动态惩罚：同源已选越多，扣分越重
-      const currentScore = item.base - (used * 6);
+  const sources = Array.from(buckets.keys());
 
-      if (currentScore > maxScore) {
-        maxScore = currentScore;
-        bestIndex = i;
+  // 5. 每轮只比较每个 source 的桶头
+  while (true) {
+    let bestSource: MusicSource | null = null;
+    let bestScore = -Infinity;
+    let bestItem: { track: MergedMusicTrack & PreparedTrack; base: number; index: number } | null = null;
+
+    for (const source of sources) {
+      const list = buckets.get(source);
+      const ptr = pointers.get(source) || 0;
+
+      if (!list || ptr >= list.length) continue;
+
+      const item = list[ptr];
+      const used = sourceCount.get(source) || 0;
+      const currentScore = item.base - used * 6;
+
+      if (
+        currentScore > bestScore ||
+        (currentScore === bestScore && bestItem && item.index < bestItem.index)
+      ) {
+        bestScore = currentScore;
+        bestSource = source;
+        bestItem = item;
       }
     }
 
-    if (bestIndex === -1) break;
+    if (!bestSource || !bestItem) break;
 
-    const best = pool[bestIndex];
-    result.push(best.track);
-    
-    const s = best.track.source;
-    sourceCount.set(s, (sourceCount.get(s) || 0) + 1);
+    result.push(bestItem.track);
 
-    pool.splice(bestIndex, 1);
+    pointers.set(bestSource, (pointers.get(bestSource) || 0) + 1);
+    sourceCount.set(bestSource, (sourceCount.get(bestSource) || 0) + 1);
   }
 
   return result;
