@@ -11,6 +11,7 @@ import { buildDownloadKey } from "@/lib/utils/download";
 import type { MusicSource } from "@/types/music";
 import toast from "react-hot-toast";
 import { handleAutoMatch } from "@/lib/audio-match";
+import { getProxyUrl, isProxyUrl } from "@/lib/api";
 
 /** 远程重试工具函数 */
 async function retryWithRemote(audio: HTMLAudioElement, trackId: string, source: MusicSource, quality: number) {
@@ -30,6 +31,25 @@ async function retryWithRemote(audio: HTMLAudioElement, trackId: string, source:
       await audio.play();
       setIsPlaying(true);
     }
+  } finally {
+    setIsLoading(false);
+  }
+}
+
+/** 代理重试工具函数 */
+async function retryWithProxy(audio: HTMLAudioElement, originalUrl: string) {
+  const { setIsPlaying, setIsLoading, setCurrentAudioUrl } = useMusicStore.getState();
+  const proxyUrl = getProxyUrl(originalUrl);
+
+  try {
+    setIsLoading(true);
+    toast("尝试代理节点...", { icon: "🌐" });
+    
+    setCurrentAudioUrl(proxyUrl);
+    audio.src = proxyUrl;
+    audio.load();
+    await audio.play();
+    setIsPlaying(true);
   } finally {
     setIsLoading(false);
   }
@@ -95,27 +115,40 @@ export function useAudioEventHandlers(
       
       state.setIsLoading(false);
       if (track?.source) useSourceQualityStore.getState().recordFail(track.source);
+      if (!track) return;
 
-      // Native 下载记录失效回退逻辑
-      if (Capacitor.isNativePlatform() && track && track.source !== 'local') {
-        const downloadKey = buildDownloadKey(track.source, track.id);
-        const downloadUri = useDownloadStore.getState().getUri(downloadKey);
-        const isLocalFileUrl = /_capacitor_file_|capacitor:\/\/|file:\/\//.test(audio.src);
+      const currentSrc = audio.src || "";
+      const isLocalFileUrl = /_capacitor_file_|capacitor:\/\/|file:\/\//.test(currentSrc);
 
-        if (downloadUri && isLocalFileUrl) {
-          useDownloadStore.getState().removeRecord(downloadKey);
-          toast.error(`本地文件失效，尝试网络播放`, { duration: 3000 });
+      try {
+        // 1. Native 下载记录失效回退逻辑
+        if (Capacitor.isNativePlatform() && track.source !== 'local') {
+          const downloadKey = buildDownloadKey(track.source, track.id);
+          const downloadUri = useDownloadStore.getState().getUri(downloadKey);
 
-          try {
+          if (downloadUri && isLocalFileUrl) {
+            useDownloadStore.getState().removeRecord(downloadKey);
+            toast.error(`本地文件失效，尝试网络播放`, { duration: 3000 });
             await retryWithRemote(audio, track.id, track.source, parseInt(state.quality, 10));
-          } catch {
-            toast.error(`播放失败: ${track.name}`);
-            audio.src = "";
-            state.setCurrentAudioUrl(null);
-            state.skipToNext();
+            return; // 重试成功直接返回
           }
         }
+
+        // 2. 普通网络播放失败，尝试代理节点
+        if (!isLocalFileUrl && currentSrc && !isProxyUrl(currentSrc)) {
+          await retryWithProxy(audio, currentSrc);
+          return; // 代理启动成功直接返回（若代理也失败，会再次触发 onError，且 isProxyUrl 为 true，进入最终失败）
+        }
+
+      } catch (err) {
+        console.error("Fallback logic failed:", err);
       }
+
+      // 3. 最终失败：跳过当前歌曲
+      toast.error(`播放失败: ${track.name}`);
+      audio.src = "";
+      state.setCurrentAudioUrl(null);
+      state.skipToNext();
     };
 
     const onPause = () => {

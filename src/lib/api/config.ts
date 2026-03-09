@@ -90,3 +90,14 @@ export function fetchWithTimeout(input: RequestInfo | URL, init: RequestInit = {
   return fetch(input, { ...init, signal: controller.signal })
     .finally(() => window.clearTimeout(timer));
 }
+
+export function getProxyUrl(url: string) {
+  return `${API_URL}/proxy?url=${encodeURIComponent(url)}`;
+}
+
+/**
+ * 判断当前 URL 是否已经是代理 URL，防止死循环
+ */
+export function isProxyUrl(url: string): boolean {
+  return url.includes(`${API_URL}/proxy?url=`);
+}
