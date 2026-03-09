@@ -169,41 +169,32 @@ export function useAudioTrackLoader(
           : currentTrackId;
         const br = parseInt(quality, 10);
 
-        const toastId = toast.loading("加载中...", { id: `download-${requestId}` });
+        const audioUrl = await resolveAudioUrl({
+          trackId: urlId || '',
+          source: currentTrackSource,
+          quality: br,
+        });
 
-        try {
-          const audioUrl = await resolveAudioUrl({
-            trackId: urlId || '',
-            source: currentTrackSource,
-            quality: br,
+        if (requestId !== requestIdRef.current) {
+          return;
+        }
+
+        setCurrentAudioUrl(audioUrl);
+
+        if (audio.src !== audioUrl) {
+          audio.src = audioUrl;
+          audio.load();
+        }
+
+        audio.currentTime = currentAudioTime;
+
+        const playPromise = audio.play();
+        if (playPromise !== undefined) {
+          playPromise.catch((error) => {
+            console.error("Auto-play failed:", error);
+            setIsPlaying(false);
+            toast.error("重试中...")
           });
-
-          if (requestId !== requestIdRef.current) {
-            toast.dismiss(toastId);
-            return;
-          }
-
-          setCurrentAudioUrl(audioUrl);
-
-          if (audio.src !== audioUrl) {
-            audio.src = audioUrl;
-            audio.load();
-          }
-
-          audio.currentTime = currentAudioTime;
-
-          const playPromise = audio.play();
-          if (playPromise !== undefined) {
-            playPromise.catch((error) => {
-              console.error("Auto-play failed:", error);
-              setIsPlaying(false);
-            });
-          }
-
-          toast.success("加载成功", { id: toastId });
-        } catch (err: unknown) {
-          toast.dismiss(toastId);
-          throw err;
         }
       } catch (err: unknown) {
         if (requestId !== requestIdRef.current) return;
