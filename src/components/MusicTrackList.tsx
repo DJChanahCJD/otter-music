@@ -10,6 +10,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { MusicTrackItem } from "./MusicTrackItem";
 import { downloadMusicTrack, buildDownloadKey } from "@/lib/utils/download";
 import { useMusicStore } from "@/store/music-store";
+import { useActivePlaylists } from "@/hooks/use-active-playlists";
 import { useDownloadStore } from "@/store/download-store";
 import { MusicTrack } from "@/types/music";
 import toast from "react-hot-toast";
@@ -39,18 +40,18 @@ export function MusicTrackList({
 }: MusicTrackListProps) {
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const parentRef = useRef<HTMLDivElement | null>(null);
+  const internalRef = useRef<HTMLDivElement | null>(null);
 
-  const { addToFavorites, playlists, addToPlaylist, createPlaylist, addToNextPlay, quality } = useMusicStore(
+  const { addToFavorites, addToPlaylist, createPlaylist, addToNextPlay, quality } = useMusicStore(
     useShallow((state) => ({
       addToFavorites: state.addToFavorites,
-      playlists: state.playlists,
       addToPlaylist: state.addToPlaylist,
       createPlaylist: state.createPlaylist,
       addToNextPlay: state.addToNextPlay,
       quality: state.quality,
     }))
   );
+  const playlists = useActivePlaylists();
 
   const records = useDownloadStore((state) => state.records);
 
@@ -124,7 +125,7 @@ export function MusicTrackList({
 
   const virtualizer = useVirtualizer({
     count: tracks.length + 1,
-    getScrollElement: () => parentRef.current,
+    getScrollElement: () => internalRef.current,
     estimateSize: () => ROW_HEIGHT,
     overscan: 8,
   });
@@ -139,7 +140,7 @@ export function MusicTrackList({
   }
 
   const renderHeader = () => (
-    <div className="border-b bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/60 z-10">
+    <div className="sticky top-0 z-20 border-b bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/60">
       {/* 调整为 h-10, px-3, gap-3, text-xs */}
       <div className="grid items-center gap-4 px-4 h-10 text-xs text-muted-foreground grid-cols-[1.75rem_1fr_auto]">
         {!isSelectionMode ? (
@@ -196,43 +197,41 @@ export function MusicTrackList({
   );
 
   return (
-    <div className="flex flex-col h-full min-h-0">
+    <div className="flex flex-col w-full" ref={internalRef}>
       {renderHeader()}
-      <div ref={parentRef} className="flex-1 min-h-0 overflow-y-auto" style={{ scrollbarWidth: "thin" }}>
-        <div className="relative w-full" style={{ height: virtualizer.getTotalSize() }}>
-          {virtualizer.getVirtualItems().map((item) => {
-            const track = tracks[item.index];
-            return (
-              <div
-                key={item.key}
-                data-index={item.index}
-                ref={virtualizer.measureElement}
-                className="absolute left-0 top-0 w-full"
-                style={{ transform: `translateY(${item.start}px)` }}
-              >
-                {track ? (
-                  <MusicTrackItem
-                    track={track} playlistId={playlistId} index={item.index}
-                    isCurrent={track.id === currentTrackId} isPlaying={isPlaying}
-                    onPlay={() => onPlay(track)} showCheckbox={isSelectionMode}
-                    isSelected={selectedIds.has(track.id)} onSelect={() => toggleSelect(track.id)}
-                    onRemove={!isSelectionMode && onRemove ? () => onRemove(track) : undefined}
-                    removeLabel={removeLabel} isDownloaded={downloadedStatusMap.get(track.id) ?? false}
-                    quality={quality}
-                  />
-                ) : (
-                  <div className="px-3 pb-20 pt-2 h-full">
-                    {onLoadMore ? (
-                      <Button variant="ghost" size="sm" className="w-full text-xs text-muted-foreground h-8" onClick={onLoadMore} disabled={!hasMore || loading}>
-                        {loading ? <Loader2 className="animate-spin w-3.5 h-3.5 mr-2" /> : hasMore ? "加载更多" : "没有更多了"}
-                      </Button>
-                    ) : <div className="h-full" />}
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
+      <div className="relative w-full" style={{ height: virtualizer.getTotalSize() }}>
+        {virtualizer.getVirtualItems().map((item) => {
+          const track = tracks[item.index];
+          return (
+            <div
+              key={item.key}
+              data-index={item.index}
+              ref={virtualizer.measureElement}
+              className="absolute left-0 top-0 w-full"
+              style={{ transform: `translateY(${item.start}px)` }}
+            >
+              {track ? (
+                <MusicTrackItem
+                  track={track} playlistId={playlistId} index={item.index}
+                  isCurrent={track.id === currentTrackId} isPlaying={isPlaying}
+                  onPlay={() => onPlay(track)} showCheckbox={isSelectionMode}
+                  isSelected={selectedIds.has(track.id)} onSelect={() => toggleSelect(track.id)}
+                  onRemove={!isSelectionMode && onRemove ? () => onRemove(track) : undefined}
+                  removeLabel={removeLabel} isDownloaded={downloadedStatusMap.get(track.id) ?? false}
+                  quality={quality}
+                />
+              ) : (
+                <div className="px-3 pb-20 pt-2 h-full">
+                  {onLoadMore ? (
+                    <Button variant="ghost" size="sm" className="w-full text-xs text-muted-foreground h-8" onClick={onLoadMore} disabled={!hasMore || loading}>
+                      {loading ? <Loader2 className="animate-spin w-3.5 h-3.5 mr-2" /> : hasMore ? "加载更多" : "没有更多了"}
+                    </Button>
+                  ) : <div className="h-full" />}
+                </div>
+              )}
+            </div>
+          );
+        })}
       </div>
     </div>
   );

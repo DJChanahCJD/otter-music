@@ -1,4 +1,5 @@
 import { useMusicStore } from "@/store/music-store";
+import { useActivePlaylists } from "@/hooks/use-active-playlists";
 import type { MusicTrack } from "@/types/music";
 import { ListMusic, Plus } from "lucide-react";
 import toast from "react-hot-toast";
@@ -13,7 +14,8 @@ interface AddToPlaylistDialogProps {
 }
 
 export function AddToPlaylistDialog({ open, onOpenChange, track }: AddToPlaylistDialogProps) {
-  const { playlists, addToPlaylist, createPlaylist } = useMusicStore();
+  const { addToPlaylist, createPlaylist } = useMusicStore();
+  const playlists = useActivePlaylists();
 
   if (!track) return null;
 

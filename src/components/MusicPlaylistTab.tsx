@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { ListMusic, SquarePlus, MoreHorizontal, Trash2, Pencil } from "lucide-react";
 import { useMusicStore } from "@/store/music-store";
+import { useActivePlaylists } from "@/hooks/use-active-playlists";
 import { useShallow } from "zustand/react/shallow";
 import { Button } from "./ui/button";
 import {
@@ -28,14 +29,14 @@ interface MusicPlaylistTabProps {
 }
 
 export function MusicPlaylistTab({ onSelectPlaylist }: MusicPlaylistTabProps) {
-  const { playlists, createPlaylist, renamePlaylist, deletePlaylist } = useMusicStore(
+  const { createPlaylist, renamePlaylist, deletePlaylist } = useMusicStore(
     useShallow((state) => ({
-      playlists: state.playlists,
       createPlaylist: state.createPlaylist,
       renamePlaylist: state.renamePlaylist,
       deletePlaylist: state.deletePlaylist,
     }))
   );
+  const playlists = useActivePlaylists();
 
   const [newPlaylistName, setNewPlaylistName] = useState("");
   const [isCreateOpen, setIsCreateOpen] = useState(false);
