@@ -24,7 +24,7 @@ import { useMusicCover } from "@/hooks/useMusicCover";
 import { MusicTrack, SearchIntent } from "@/types/music";
 import { useNavigate } from "react-router-dom";
 import { useMusicStore } from "@/store/music-store";
-import { toSimplified, normalizeText } from "@/lib/utils/music-key";
+import { normalizeText } from "@/lib/utils/music-key";
 import { musicApi } from "@/lib/music-api";
 import { toastUtils } from "@/lib/utils/toast";
 import { getSongDetail } from "@/lib/netease/netease-api";
@@ -222,8 +222,12 @@ export function MusicTrackMobileMenu({
         return;
       }
     }
+    let searchKeyword = keyword;
+    if (type === "album" && artist) {
+      searchKeyword = `${keyword} ${artist}`;
+    }
 
-    setSearchQuery(toSimplified(keyword));
+    setSearchQuery(searchKeyword);
     if (type) {
       setSearchIntent({
         type: type as SearchIntent["type"],

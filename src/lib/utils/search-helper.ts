@@ -1,5 +1,13 @@
 import type { MusicSource, MusicTrack, MergedMusicTrack, SearchIntent } from '@/types/music';
-import { normalizeText, normalizeArtists, getExactKey, toSimplified } from './music-key';
+import {
+  normalizeText,
+  normalizeArtists,
+  getExactKey,
+  isNameMatch,
+  isArtistMatch,
+  isNameContainsMatch,
+  isArtistContainsMatch
+} from './music-key';
 import { useSourceQualityStore } from '@/store/source-quality-store';
 
 /* 常量 */
@@ -163,29 +171,45 @@ function diversifiedSort(
   tracks: (MergedMusicTrack & PreparedTrack)[],
   query: string
 ): MergedMusicTrack[] {
-
   const q = normalizeText(query);
 
-  const scored = tracks.map((t, i) => ({
+  // 1. 计算所有基础分
+  const pool = tracks.map((t, i) => ({
     track: t,
     base: score(t, q),
     index: i
   }));
 
-  // 初始排序（保留 API 顺序）
-  scored.sort((a, b) => b.base - a.base);
-
   const result: MergedMusicTrack[] = [];
   const sourceCount = new Map<MusicSource, number>();
 
-  for (const item of scored) {
-    const used = sourceCount.get(item.track.source) || 0;
+  // 2. 贪心选择：每一轮动态选最高分
+  while (pool.length > 0) {
+    let bestIndex = -1;
+    let maxScore = -Infinity;
 
-    // 平台惩罚：越多出现越难再上
-    item.base -= used * 6;
+    for (let i = 0; i < pool.length; i++) {
+      const item = pool[i];
+      const used = sourceCount.get(item.track.source) || 0;
+      
+      // 动态惩罚：同源已选越多，扣分越重
+      const currentScore = item.base - (used * 6);
 
-    result.push(item.track);
-    sourceCount.set(item.track.source, used + 1);
+      if (currentScore > maxScore) {
+        maxScore = currentScore;
+        bestIndex = i;
+      }
+    }
+
+    if (bestIndex === -1) break;
+
+    const best = pool[bestIndex];
+    result.push(best.track);
+    
+    const s = best.track.source;
+    sourceCount.set(s, (sourceCount.get(s) || 0) + 1);
+
+    pool.splice(bestIndex, 1);
   }
 
   return result;
@@ -202,24 +226,46 @@ export function mergeAndSortTracks(tracks: MusicTrack[], query = ''): MergedMusi
 export function applySearchIntentSort(items: MergedMusicTrack[], intent: SearchIntent | null, query: string = "") {
   if (!intent) return items;
 
-  const q = toSimplified(query);
-  const targetArtist = intent.artist ? toSimplified(intent.artist) : null;
+  if (!query && !intent.artist) return items;
 
-  return [...items].sort((a, b) => {
-    const getWeight = (track: MergedMusicTrack) => {
-      let weight = 0;
-      const albumMatched = toSimplified(track.album) === q;
-      const artistMatched = track.artist.some(art => toSimplified(art) === (targetArtist || q));
+  const artistTarget = intent.artist || query;
 
-      if (intent.type === 'album') {
-        if (albumMatched && artistMatched) weight = 3; // 专辑+歌手全匹配
-        else if (albumMatched) weight = 2;              // 仅专辑匹配
-      } else if (intent.type === 'artist') {
-        if (artistMatched) weight = 2;                 // 歌手匹配
-      }
-      return weight;
-    };
+  const getWeight = (track: MergedMusicTrack): number => {
+    const albumExact = query ? isNameMatch(track.album, query) : false;
+    const albumContains = query ? isNameContainsMatch(track.album, query) : false;
+    const artistExact = artistTarget ? isArtistMatch(track.artist, [artistTarget]) : false;
+    const artistContains = artistTarget ? isArtistContainsMatch(track.artist, [artistTarget]) : false;
+    const nameExact = query ? isNameMatch(track.name, query) : false;
+    const nameContains = query ? isNameContainsMatch(track.name, query) : false;
 
-    return getWeight(b) - getWeight(a); // 权重降序排列
-  });
+    if (intent.type === 'album') {
+      let score = 0;
+      if (albumExact) score += 60;
+      else if (albumContains) score += 18;
+
+      if (artistExact) score += 24;
+      else if (artistContains) score += 8;
+
+      if (albumExact && artistExact) score += 16;
+      return score;
+    }
+
+    if (intent.type === 'artist') {
+      let score = 0;
+      if (artistExact) score += 60;
+      else if (artistContains) score += 20;
+
+      if (nameExact) score += 12;
+      else if (nameContains) score += 4;
+
+      return score;
+    }
+
+    return 0;
+  };
+
+  return items
+    .map((item, index) => ({ item, index, weight: getWeight(item) }))
+    .sort((a, b) => b.weight - a.weight || a.index - b.index)
+    .map(v => v.item);
 }

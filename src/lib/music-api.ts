@@ -146,13 +146,9 @@ export const musicApi = {
       };
     }
 
-    let requestSource: string = source;
-    if (searchIntent?.type === 'album') {
-      requestSource += "_album";
-    }
 
     const json = await retry(
-      () => requestMusicApiJSON<RawApiTrack[]>({ types: 'search', name: query, count, pages: page }, requestSource as MusicSource, signal),
+      () => requestMusicApiJSON<RawApiTrack[]>({ types: 'search', name: query, count, pages: page }, source, signal),
       2,
       500
     );

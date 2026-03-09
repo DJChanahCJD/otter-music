@@ -64,9 +64,35 @@ export const isArtistMatch = (artists1: string[], artists2: string[]): boolean =
   return false;
 };
 
-export const toSimplified = (v: string): string => {
-  if (!v) return '';
-  return v.replace(/[\u4e00-\u9fa5]/g, c => tMap.get(c) ?? c);
+const includesEither = (left: string, right: string): boolean => {
+  if (!left || !right) return false;
+  return left.includes(right) || right.includes(left);
+};
+
+export const isNameContainsMatch = (name1: string, name2: string): boolean => {
+  const n1 = normalizeText(name1);
+  const n2 = normalizeText(name2);
+  const a1 = getAlias(name1);
+  const a2 = getAlias(name2);
+
+  if (includesEither(n1, n2)) return true;
+  if (a1 && includesEither(a1, n2)) return true;
+  if (a2 && includesEither(a2, n1)) return true;
+
+  return false;
+};
+
+export const isArtistContainsMatch = (artists1: string[], artists2: string[]): boolean => {
+  const normalized1 = artists1.map(normalizeText).filter(Boolean);
+  const normalized2 = artists2.map(normalizeText).filter(Boolean);
+
+  for (const a1 of normalized1) {
+    for (const a2 of normalized2) {
+      if (includesEither(a1, a2)) return true;
+    }
+  }
+
+  return false;
 };
 
 /* -------------------------------------------------- */
