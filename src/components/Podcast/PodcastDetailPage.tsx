@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { PageLayout } from "@/components/PageLayout";
 import { MusicTrackList } from "@/components/MusicTrackList";
-import { MusicCover } from "@/components/MusicCover";
+import { CommonDetailHeader } from "@/components/CommonDetailHeader";
 import { Button } from "@/components/ui/button";
 import { DetailSkeleton } from "@/components/skeletons/DetailSkeleton";
 import { Podcast, SquareArrowOutUpRight } from "lucide-react";
@@ -28,50 +28,6 @@ interface PodcastDetailData {
   rssUrl: string;
 }
 
-function PodcastDetailHeader({ detail }: { detail: PodcastDetailData }) {
-  const [isExpanded, setIsExpanded] = useState(false);
-
-  return (
-    <div className="w-full shrink-0">
-      <div className="p-5 flex gap-4 items-center">
-        <MusicCover
-          src={detail.coverImgUrl}
-          alt={detail.name}
-          className="shrink-0 w-24 h-24 rounded-xl object-cover shadow-md ring-1 ring-white/10"
-          fallbackIcon={<Podcast className="h-8 w-8 text-muted-foreground/50" />}
-        />
-
-        <div className="flex-1 min-w-0 flex flex-col gap-1.5">
-          <h2
-            className="text-base font-bold leading-tight text-foreground/90 line-clamp-2"
-            title={detail.name}
-          >
-            {detail.name}
-          </h2>
-
-          <div className="flex items-center flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground/80">
-            {detail.creator && (
-              <span className="truncate max-w-[120px]">{detail.creator}</span>
-            )}
-            <span className="shrink-0">{detail.trackCount.toLocaleString()} 集</span>
-          </div>
-
-          {detail.description && (
-            <p
-              className={`text-[11px] text-muted-foreground/70 leading-relaxed mt-1 cursor-pointer hover:text-muted-foreground/90 transition-colors ${
-                isExpanded ? "" : "line-clamp-2"
-              }`}
-              onClick={() => setIsExpanded(!isExpanded)}
-              title={isExpanded ? undefined : detail.description}
-            >
-              {detail.description}
-            </p>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
 
 export function PodcastDetailPage({
   id,
@@ -189,7 +145,17 @@ export function PodcastDetailPage({
         ref={scrollRef}
         className="flex flex-col flex-1 min-h-0 h-full overflow-y-auto"
       >
-        {detail && <PodcastDetailHeader detail={detail} />}
+        {detail && (
+          <CommonDetailHeader
+            title={detail.name}
+            coverUrl={detail.coverImgUrl}
+            description={detail.description}
+            creator={detail.creator}
+            trackCount={detail.trackCount}
+            unit="集"
+            fallbackIcon={<Podcast className="h-8 w-8 text-muted-foreground/50" />}
+          />
+        )}
         <div className="flex-1 min-h-0">
           <MusicTrackList
             tracks={tracks}

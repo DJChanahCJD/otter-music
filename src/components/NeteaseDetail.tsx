@@ -5,14 +5,13 @@ import { getPlaylistDetail, getArtist, getAlbum, convertSongToMusicTrack } from 
 import { MusicTrack } from "@/types/music";
 import { MoreVertical, Import, SquareArrowOutUpRight } from "lucide-react";
 import toast from "react-hot-toast";
-import { formatDateZN } from "@/lib/utils";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { useMusicStore } from "@/store/music-store";
-import { MusicCover } from "@/components/MusicCover";
 import { DetailSkeleton } from "@/components/skeletons/DetailSkeleton";
+import { CommonDetailHeader } from "@/components/CommonDetailHeader";
 import { SongDetail } from "@/lib/netease/netease-raw-types";
 
 interface NeteaseDetailProps {
@@ -33,55 +32,6 @@ interface UnifiedDetail {
   publishTime?: number;
 }
 
-function DetailHeader({ detail }: { detail: UnifiedDetail }) {
-  const [isExpanded, setIsExpanded] = useState(false);
-  const publishDate = detail.publishTime
-    ? new Date(detail.publishTime).toLocaleDateString()
-    : null;
-
-  return (
-    <div className="w-full shrink-0">
-      <div className="p-5 flex gap-4 items-center">
-        <MusicCover
-          src={detail.coverImgUrl}
-          alt={detail.name}
-          className="shrink-0 w-24 h-24 rounded-xl object-cover shadow-md ring-1 ring-white/10"
-        />
-
-        <div className="flex-1 min-w-0 flex flex-col gap-1.5">
-          <h2
-            className="text-base font-bold leading-tight text-foreground/90 line-clamp-2"
-            title={detail.name}
-          >
-            {detail.name}
-          </h2>
-
-          <div className="flex items-center flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground/80">
-            {detail.creator && (
-              <span className="truncate max-w-[120px]">{detail.creator}</span>
-            )}
-            <span className="shrink-0">{detail.trackCount.toLocaleString()} 首</span>
-            {publishDate && (
-              <span className="shrink-0">发布于 {formatDateZN(publishDate)}</span>
-            )}
-          </div>
-
-          {detail.description && (
-            <p
-              className={`text-[11px] text-muted-foreground/70 leading-relaxed mt-1 cursor-pointer hover:text-muted-foreground/90 transition-colors ${
-                isExpanded ? "" : "line-clamp-2"
-              }`}
-              onClick={() => setIsExpanded(!isExpanded)}
-              title={isExpanded ? undefined : detail.description}
-            >
-              {detail.description}
-            </p>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
 
 export function NeteaseDetail({
   id,
@@ -150,7 +100,7 @@ export function NeteaseDetail({
             name: res.name,
             coverImgUrl: res.coverImgUrl,
             description: res.description,
-            creator: res.creator?.nickname ? `by ${res.creator.nickname}` : undefined,
+            creator: res.creator?.nickname ? res.creator.nickname : undefined,
             trackCount: res.trackCount,
           };
           rawTracks = res.tracks;
@@ -243,7 +193,17 @@ export function NeteaseDetail({
         className="flex flex-col flex-1 min-h-0 h-full overflow-y-auto"
         style={{ scrollbarWidth: "thin" }}
       >
-        {detail && <DetailHeader detail={detail} />}
+        {detail && (
+          <CommonDetailHeader
+            title={detail.name}
+            coverUrl={detail.coverImgUrl}
+            description={detail.description}
+            creator={detail.creator}
+            trackCount={detail.trackCount}
+            publishTime={detail.publishTime}
+            unit="首"
+          />
+        )}
         <div className="flex-1 min-h-0">
           <MusicTrackList
             tracks={tracks}
