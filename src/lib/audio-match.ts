@@ -1,5 +1,6 @@
 import { toast } from "react-hot-toast";
 import { useMusicStore } from "@/store/music-store";
+import { getAggregatedSourcesForMatch } from "@/hooks/use-aggregated-sources";
 import { musicApi } from "@/lib/music-api";
 import type { MusicTrack } from "@/types/music";
 import { isNameMatch, isArtistMatch } from "./utils/music-key";
@@ -13,7 +14,8 @@ export async function handleAutoMatch(track: MusicTrack): Promise<boolean> {
   const toastId = toast.loading("正在搜索免费音源...", { id: `auto-match-${track.id}` });
   
   try {
-    const { aggregatedSources, updateTrackInQueue, isFavorite, favorites, setFavorites, updateTrackInPlaylists } = useMusicStore.getState();
+    const { updateTrackInQueue, isFavorite, favorites, setFavorites, updateTrackInPlaylists } = useMusicStore.getState();
+    const aggregatedSources = getAggregatedSourcesForMatch();
     
     const match = await musicApi.searchBestMatch(
       `${track.name} ${track.artist[0]}`,

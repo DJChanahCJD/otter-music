@@ -6,6 +6,7 @@ import { Search, X, Loader2 } from "lucide-react";
 
 import { getExactKey } from "@/lib/utils/music-key";
 import { useDebounce } from "@/hooks/use-debounce";
+import { useAggregatedSourcesForSearch } from "@/hooks/use-aggregated-sources";
 import { musicApi } from "@/lib/music-api";
 import { useMusicStore } from "@/store/music-store";
 import {
@@ -56,7 +57,6 @@ export function MusicSearchView({
     setSearchHasMore,
     searchPage,
     setSearchPage,
-    aggregatedSources,
     searchIntent,
     setSearchIntent,
   } = useMusicStore(
@@ -73,11 +73,12 @@ export function MusicSearchView({
       setSearchHasMore: s.setSearchHasMore,
       searchPage: s.searchPage,
       setSearchPage: s.setSearchPage,
-      aggregatedSources: s.aggregatedSources,
       searchIntent: s.searchIntent,
       setSearchIntent: s.setSearchIntent,
     })),
   );
+
+  const aggregatedSources = useAggregatedSourcesForSearch();
 
   const abortRef = useRef<AbortController | null>(null);
   const versionRef = useRef(0);
@@ -245,7 +246,7 @@ export function MusicSearchView({
                 if (suggestions.length > 0) setShowSuggestions(true);
               }}
               placeholder="搜索音乐、歌手或专辑..."
-              className="h-full flex-1 border-0 !bg-transparent px-3 text-sm shadow-none focus-visible:ring-0 placeholder:text-muted-foreground/60"
+              className="h-full flex-1 border-0 bg-transparent! px-3 text-sm shadow-none focus-visible:ring-0 placeholder:text-muted-foreground/60"
             />
 
             {/* 清空按钮 */}
