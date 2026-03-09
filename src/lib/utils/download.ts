@@ -8,6 +8,7 @@ import toast from "react-hot-toast";
 import { LocalMusicFile } from "@/plugins/local-music";
 import { useDownloadStore } from "@/store/download-store";
 import { toastUtils } from "./toast";
+import { getProxyUrl, isProxyUrl } from "@/lib/api/config";
 
 /* ================= 主入口 ================= */
 
@@ -33,12 +34,26 @@ export async function downloadMusicTrack(track: MusicTrack, br = 192) {
       }
     }
 
-    const url = await musicApi.getUrl(track.id, track.source, br);
+    const url = await musicApi.getUrl(track.url_id || track.id, track.source, br);
     if (!url) throw new Error("无法获取下载链接");
 
-    await (isNative
-      ? downloadNative(url, fileName, track, toastId)
-      : downloadWeb(url, fileName, toastId));
+    const performDownload = async (downloadUrl: string) => {
+      await (isNative
+        ? downloadNative(downloadUrl, fileName, track, toastId)
+        : downloadWeb(downloadUrl, fileName, toastId));
+    };
+
+    try {
+      await performDownload(url);
+    } catch (err) {
+      if (isProxyUrl(url)) throw err;
+
+      console.warn("Direct download failed, retrying with proxy...", err);
+      toast.loading("已切换备用下载线路", { id: toastId });
+      
+      const proxyUrl = getProxyUrl(url);
+      await performDownload(proxyUrl);
+    }
 
   } catch (err: unknown) {
     console.error(err);

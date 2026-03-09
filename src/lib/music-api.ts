@@ -218,18 +218,18 @@ export const musicApi = {
 
   /* ---------------- URL ---------------- */
 
-  async getUrl(id: string, source: MusicSource, br = 192): Promise<string | null> {
-    if (source === 'podcast') {
-      return forceHttps(id);
+  async getUrl(idOrUrl: string, source: MusicSource, br = 192): Promise<string | null> {
+    if (idOrUrl.startsWith('http')) {
+      return idOrUrl;
     }
 
     if (source === '_netease') {
-      const key = `url:${source}:${id}:${br}`;
+      const key = `url:${source}:${idOrUrl}:${br}`;
       return cachedFetch<string | null>(
         key,
         async () => {
           try {
-            const res = await getSongUrl(id, br * 1000);
+            const res = await getSongUrl(idOrUrl, br * 1000);
             return forceHttps(res.data?.data?.[0]?.url) || null;
           } catch (e) {
             console.error('getSongUrl failed:', e);
@@ -243,7 +243,7 @@ export const musicApi = {
     if (source === 'local') {
       if (Capacitor.isNativePlatform()) {
         try {
-          const result = await LocalMusicPlugin.getLocalFileUrl({ localPath: id });
+          const result = await LocalMusicPlugin.getLocalFileUrl({ localPath: idOrUrl });
           if (result.success && result.url) {
             return Capacitor.convertFileSrc(result.url);
           }
@@ -254,15 +254,15 @@ export const musicApi = {
           return null;
         }
       }
-      return Capacitor.convertFileSrc(id);
+      return Capacitor.convertFileSrc(idOrUrl);
     }
 
-    const key = `url:${source}:${id}:${br}`;
+    const key = `url:${source}:${idOrUrl}:${br}`;
 
     const res = await cachedFetch<{ url: string }>(
       key,
       async () => {
-        const json = await requestMusicApiJSON<{ url?: string }>({ types: 'url', id, br }, source);
+        const json = await requestMusicApiJSON<{ url?: string }>({ types: 'url', id: idOrUrl, br }, source);
         return json?.url ? { url: json.url } : null;
       },
       TTL_SHORT,
