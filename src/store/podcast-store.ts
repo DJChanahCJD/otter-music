@@ -3,11 +3,7 @@ import { createJSONStorage, persist } from "zustand/middleware";
 import { v4 as uuidv4 } from "uuid";
 import { idbStorage } from "@/lib/storage-adapter";
 import { storeKey } from "./store-keys";
-import type { PodcastRssSource } from "@/types/podcast";
-
-const DEFAULT_RSS_SOURCES: PodcastRssSource[] = [
-  { id: "podcast-1", name: "资讯早七点", rssUrl: "https://feed.xyzfm.space/wb39te6k9gqw", update_time: Date.now(), is_deleted: false },
-];
+import { DEFAULT_RSS_SOURCES, type PodcastRssSource } from "@/types/podcast";
 
 interface PodcastState {
   rssSources: PodcastRssSource[];
