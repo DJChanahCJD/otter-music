@@ -142,7 +142,7 @@ export const FEATURED_SUB_FILTERS: FilterItem[] = [
 ];
 
 export const RECOMMEND_FILTERS: FilterItem[] = [
-  { id: "", name: "全部" },
+  F("全部"),
   { id: "featured", name: "精选" },
   { id: "podcast", name: "播客" },
 
