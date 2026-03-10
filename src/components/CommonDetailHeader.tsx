@@ -7,9 +7,8 @@ export interface CommonDetailHeaderProps {
   coverUrl: string;
   description?: string;
   creator?: string;
-  trackCount: number;
   publishTime?: number;
-  unit?: string;
+  countDesc?: string;
   fallbackIcon?: React.ReactNode;
 }
 
@@ -18,9 +17,8 @@ export function CommonDetailHeader({
   coverUrl,
   description,
   creator,
-  trackCount,
   publishTime,
-  unit = "首",
+  countDesc,
   fallbackIcon,
 }: CommonDetailHeaderProps) {
   const [isExpanded, setIsExpanded] = useState(false);
@@ -53,7 +51,7 @@ export function CommonDetailHeader({
               <span className="truncate max-w-[120px]">{creator}</span>
             )}
             <span className="shrink-0">
-              {trackCount.toLocaleString()} {unit}
+              {countDesc}
             </span>
             {publishDateStr && (
               <span className="shrink-0">发布于 {formatDateZN(publishDateStr)}</span>

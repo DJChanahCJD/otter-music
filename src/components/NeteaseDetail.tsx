@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { useMusicStore } from "@/store/music-store";
+import { PageError } from "@/components/PageError";
 import { DetailSkeleton } from "@/components/skeletons/DetailSkeleton";
 import { CommonDetailHeader } from "@/components/CommonDetailHeader";
 import { SongDetail } from "@/lib/netease/netease-raw-types";
@@ -42,6 +43,7 @@ export function NeteaseDetail({
   isPlaying,
 }: NeteaseDetailProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
+  const [retryCount, setRetryCount] = useState(0);
 
   const [{ loading, error, detail, tracks }, setState] = useState<{
     loading: boolean;
@@ -147,19 +149,17 @@ export function NeteaseDetail({
     return () => {
       active = false;
     };
-  }, [id, type]);
+  }, [id, type, retryCount]);
 
   if (loading) return <DetailSkeleton onBack={onBack} />;
 
   if (error) {
     return (
       <PageLayout title="错误" onBack={onBack}>
-        <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground gap-4">
-          <p>加载失败</p>
-          <Button variant="link" onClick={onBack}>
-            返回
-          </Button>
-        </div>
+        <PageError 
+          onBack={onBack} 
+          onRetry={() => setRetryCount((c) => c + 1)}
+        />
       </PageLayout>
     );
   }
@@ -199,9 +199,8 @@ export function NeteaseDetail({
             coverUrl={detail.coverImgUrl}
             description={detail.description}
             creator={detail.creator}
-            trackCount={detail.trackCount}
+            countDesc={`${detail.trackCount} 首`}
             publishTime={detail.publishTime}
-            unit="首"
           />
         )}
         <div className="flex-1 min-h-0">

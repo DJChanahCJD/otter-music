@@ -3,6 +3,7 @@ import { PageLayout } from "@/components/PageLayout";
 import { MusicTrackList } from "@/components/MusicTrackList";
 import { CommonDetailHeader } from "@/components/CommonDetailHeader";
 import { Button } from "@/components/ui/button";
+import { PageError } from "@/components/PageError";
 import { DetailSkeleton } from "@/components/skeletons/DetailSkeleton";
 import { Podcast, SquareArrowOutUpRight } from "lucide-react";
 import toast from "react-hot-toast";
@@ -37,6 +38,8 @@ export function PodcastDetailPage({
   isPlaying,
 }: PodcastDetailPageProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
+  const [retryCount, setRetryCount] = useState(0);
+
   const [{ loading, error, detail, tracks }, setState] = useState<{
     loading: boolean;
     error: boolean;
@@ -114,19 +117,17 @@ export function PodcastDetailPage({
     return () => {
       active = false;
     };
-  }, [id]);
+  }, [id, retryCount]);
 
   if (loading) return <DetailSkeleton onBack={onBack} />;
 
   if (error) {
     return (
       <PageLayout title="错误" onBack={onBack}>
-        <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground gap-4">
-          <p>加载失败</p>
-          <Button variant="link" onClick={onBack}>
-            返回
-          </Button>
-        </div>
+        <PageError 
+          onBack={onBack} 
+          onRetry={() => setRetryCount((c) => c + 1)}
+        />
       </PageLayout>
     );
   }
@@ -151,8 +152,7 @@ export function PodcastDetailPage({
             coverUrl={detail.coverImgUrl}
             description={detail.description}
             creator={detail.creator}
-            trackCount={detail.trackCount}
-            unit="集"
+            countDesc={`最近 ${detail.trackCount} 集`}
             fallbackIcon={<Podcast className="h-8 w-8 text-muted-foreground/50" />}
           />
         )}
