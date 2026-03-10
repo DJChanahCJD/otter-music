@@ -21,35 +21,24 @@ import { toast } from "react-hot-toast";
 import { PodcastAdd } from "@/components/Podcast/PodcastAdd";
 import { PodcastCard } from "@/components/Podcast/PodcastCard";
 import { usePodcastStore } from "@/store/podcast-store";
+import { useScrollSave } from "@/hooks/use-scroll-save";
 
 const PAGE_SIZE = 30;
 const SUB_TAB_HEIGHT = "h-8";
 
-const PlaylistGrid = ({
-  list,
-  onClick,
-}: {
-  list: MarketPlaylist[];
-  onClick: (id: string) => void;
-}) => (
+// 构造唯一的快照 Key
+const getSnapshotKey = (category: string, tab: string) => 
+  `market-snapshot:${category}:${category === 'featured' ? tab : 'default'}`;
+
+const PlaylistGrid = ({ list, onClick }: { list: MarketPlaylist[]; onClick: (id: string) => void; }) => (
   <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 gap-x-3 gap-y-4">
     {list.map((item) => (
-      <div
-        key={item.id}
-        className="group flex flex-col gap-2.5 transition-all hover:translate-y-[-4px]"
-        onClick={() => onClick(item.id)}
-      >
+      <div key={item.id} className="group flex flex-col gap-2.5 transition-all hover:translate-y-[-4px]" onClick={() => onClick(item.id)}>
         <div className="relative aspect-square rounded-md overflow-hidden shadow-md ring-1 ring-black/5 hover:shadow-xl transition-shadow cursor-pointer">
-          <MusicCover
-            src={item.coverUrl}
-            alt={item.name}
-            className="transition-transform duration-500 group-hover:scale-110"
-          />
+          <MusicCover src={item.coverUrl} alt={item.name} className="transition-transform duration-500 group-hover:scale-110" />
         </div>
         <div className="px-0.5">
-          <h3 className="text-[13px] font-medium leading-snug line-clamp-2 text-foreground/80 group-hover:text-primary transition-colors cursor-pointer">
-            {item.name}
-          </h3>
+          <h3 className="text-[13px] font-medium leading-snug line-clamp-2 text-foreground/80 group-hover:text-primary transition-colors cursor-pointer">{item.name}</h3>
         </div>
       </div>
     ))}
@@ -74,27 +63,21 @@ function MineSection() {
   useEffect(() => {
     const fetchMineData = async () => {
       const cookie = localStorage.getItem(NETEASE_COOKIE_KEY);
-      if (!cookie) {
-        setLoading(false);
-        return;
-      }
+      if (!cookie) return setLoading(false);
 
       try {
         setLoading(true);
-        // 获取用户信息
         let userId = currentUserId;
         if (!userId) {
           const userInfo = await getMyInfo(cookie);
           userId = userInfo?.userId ?? null;
           if (!userId) {
             toast.error("获取用户信息失败");
-            setLoading(false);
-            return;
+            return setLoading(false);
           }
           setCurrentUserId(userId);
         }
 
-        // 按需加载 Tab 数据
         if (mineTab === "recommend" && !mineData.recommend) {
           const recommend = await getRecommendPlaylists(cookie).catch(() => []);
           setMineData((prev) => ({ ...prev, recommend }));
@@ -122,7 +105,7 @@ function MineSection() {
 
   return (
     <div className="p-4 pb-24 space-y-6">
-      <div className={cn("flex items-center justify-between mb-4 px-1", SUB_TAB_HEIGHT)}>
+      <div className={cn("flex items-center justify-between mb-4 px-1 relative", SUB_TAB_HEIGHT)}>
         <div className="flex items-center gap-6">
           {[
             { id: "recommend", label: "推荐", count: mineData.recommend?.length },
@@ -134,21 +117,20 @@ function MineSection() {
               key={tab.id}
               onClick={() => setMineTab(tab.id as MusicState["lastMineTab"])}
               className={cn(
-                "text-[15px] transition-all",
-                mineTab === tab.id
-                  ? "font-bold text-foreground tracking-wide"
-                  : "font-medium text-muted-foreground hover:text-foreground"
+                "text-[15px] transition-all whitespace-nowrap",
+                mineTab === tab.id ? "font-bold text-foreground tracking-wide" : "font-medium text-muted-foreground hover:text-foreground"
               )}
             >
               {tab.label} {tab.count !== undefined && <span className="text-xs opacity-60 ml-0.5">{tab.count}</span>}
             </button>
           ))}
         </div>
-        {mineTab === "podcast" && (
-          <Button variant="ghost" size="sm" className="p-0 text-muted-foreground hover:text-foreground" onClick={() => setShowPodcastDialog(true)}>
+        {/* 核心高度防抖：透明度切换占位 */}
+        <div className={cn("transition-opacity", mineTab === "podcast" ? "opacity-100" : "opacity-0 pointer-events-none")}>
+          <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground" onClick={() => setShowPodcastDialog(true)}>
             <Plus className="h-5 w-5" />
           </Button>
-        )}
+        </div>
       </div>
 
       <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
@@ -198,14 +180,20 @@ export function PlaylistMarket() {
   const [isFetching, setIsFetching] = useState(false);
   const observerTarget = useRef<HTMLDivElement>(null);
 
+  // 动态生成对应的缓存 Key
+  const snapshotKey = useMemo(() => getSnapshotKey(activeCategory, featuredTab), [activeCategory, featuredTab]);
+  
+  // 绑定滚动 Hook：当 items 准备好或处于 mine 标签时触发恢复
+  const { scrollRef } = useScrollSave(`scroll-${snapshotKey}`, items.length > 0 || activeCategory === "mine");
+
   const displayFilters = useMemo(() => {
     const baseFilters = [RECOMMEND_FILTERS[0], { id: "mine", name: "我的" }, ...RECOMMEND_FILTERS.slice(1)];
     if (!activeCategory || baseFilters.some((f) => f.id === activeCategory)) return baseFilters;
     return [...baseFilters, { id: activeCategory, name: activeCategory }];
   }, [activeCategory]);
 
-  const fetchItems = useCallback(async (category: string, currentOffset: number) => {
-    if (category === "mine") return; // "我的"模块已独立，直接跳过
+  const fetchItems = useCallback(async (category: string, subTab: string, currentOffset: number) => {
+    if (category === "mine") return;
     
     if (currentOffset === 0) {
       setLoading(true);
@@ -224,17 +212,24 @@ export function PlaylistMarket() {
       );
 
       if (res) {
-        if (isToplist) {
-          setItems(res);
-          setHasMore(false);
-        } else {
-          setItems((prev) => {
-            if (currentOffset === 0) return res;
+        setItems((prev) => {
+          let nextItems = res;
+          if (!isToplist) {
             const existingIds = new Set(prev.map((p) => p.id));
-            return [...prev, ...res.filter((p) => !existingIds.has(p.id))];
-          });
-          setHasMore(res.length >= PAGE_SIZE);
-        }
+            const uniqueRes = res.filter((p) => !existingIds.has(p.id));
+            nextItems = currentOffset === 0 ? res : [...prev, ...uniqueRes];
+          }
+          
+          // 更新并写入快照
+          const hasMoreData = isToplist ? false : res.length >= PAGE_SIZE;
+          setHasMore(hasMoreData);
+          sessionStorage.setItem(
+            getSnapshotKey(category, subTab),
+            JSON.stringify({ items: nextItems, offset: currentOffset, hasMore: hasMoreData })
+          );
+
+          return nextItems;
+        });
       } else {
         setHasMore(false);
       }
@@ -247,13 +242,32 @@ export function PlaylistMarket() {
     }
   }, []);
 
+  // 初始挂载与分类切换监听
   useEffect(() => {
     if (activeCategory === "mine") return;
+
+    // 1. 尝试从快照极速恢复
+    const snapStr = sessionStorage.getItem(snapshotKey);
+    if (snapStr) {
+      try {
+        const snap = JSON.parse(snapStr);
+        setItems(snap.items);
+        setOffset(snap.offset);
+        setHasMore(snap.hasMore);
+        setLoading(false);
+        return; // 命中快照，跳过 Fetch
+      } catch (e) {
+        console.warn("解析快照失败", e);
+      }
+    }
+
+    // 2. 未命中，正常加载
     setOffset(0);
     setHasMore(true);
-    fetchItems(activeCategory === "featured" ? featuredTab : activeCategory, 0);
-  }, [activeCategory, featuredTab, fetchItems]);
+    fetchItems(activeCategory, featuredTab, 0);
+  }, [activeCategory, featuredTab, snapshotKey, fetchItems]);
 
+  // 无限下拉触发器
   useEffect(() => {
     const element = observerTarget.current;
     if (!element || loading || isFetching || !hasMore || activeCategory === "mine") return;
@@ -263,7 +277,7 @@ export function PlaylistMarket() {
         if (entries[0].isIntersecting) {
           const nextOffset = offset + PAGE_SIZE;
           setOffset(nextOffset);
-          fetchItems(activeCategory === "featured" ? featuredTab : activeCategory, nextOffset);
+          fetchItems(activeCategory, featuredTab, nextOffset);
         }
       },
       { threshold: 0.1 }
@@ -310,7 +324,7 @@ export function PlaylistMarket() {
         </div>
       </header>
 
-      <main className="flex-1 overflow-y-auto custom-scrollbar">
+      <main ref={scrollRef} className="flex-1 overflow-y-auto custom-scrollbar">
         {activeCategory === "mine" ? (
           <MineSection />
         ) : loading ? (
