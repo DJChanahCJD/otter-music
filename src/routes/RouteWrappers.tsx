@@ -135,10 +135,12 @@ export const MineRoute = withSuspense(() => {
 export const PodcastRoute = withSuspense(() => {
   const [shouldRedirect, setShouldRedirect] = useState(false);
   const setLastPlaylistCategory = useMusicStore((s) => s.setLastPlaylistCategory);
+  const setLastMineTab = useMusicStore((s) => s.setLastMineTab);
   useEffect(() => {
-    setLastPlaylistCategory("podcast");
+    setLastPlaylistCategory("mine");
+    setLastMineTab("podcast");
     setShouldRedirect(true);
-  }, [setLastPlaylistCategory]);
+  }, [setLastPlaylistCategory, setLastMineTab]);
   if (!shouldRedirect) return null;
   return <Navigate to="/search" replace />;
 });
