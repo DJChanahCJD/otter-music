@@ -59,34 +59,19 @@ async function resolveAudioUrl({
 }): Promise<string> {
   const isNative = Capacitor.isNativePlatform()
   const isLocal = source === 'local'
-
-  if (isLocal) {
-    return retry(async () => {
-      const url = await musicApi.getUrl(trackId, source, quality)
-      if (!url) throw new Error('LOCAL_FILE_NOT_ACCESSIBLE')
-      return url
-    }, 2, 800)
-  }
-
-  if (source === 'podcast') {
-    return retry(async () => {
-      const url = await musicApi.getUrl(trackId, source, quality)
-      if (!url) throw new Error('EMPTY_URL')
-      return url
-    }, 2, 800)
-  }
-
-  if (isNative) {
+  if (isNative && !isLocal) {
     const key = buildDownloadKey(source, trackId)
     const uri = useDownloadStore.getState().getUri(key)
     if (uri) {
-      return Capacitor.convertFileSrc(uri)
+      return Capacitor.convertFileSrc(uri)  //  如果本地有记录，优先播放本地资源
     }
   }
 
   return retry(async () => {
     const url = await musicApi.getUrl(trackId, source, quality)
-    if (!url) throw new Error('EMPTY_URL')
+    if (!url) {
+      throw new Error(isLocal ? 'LOCAL_FILE_NOT_ACCESSIBLE' : 'EMPTY_URL')
+    }
     return url
   }, 2, 800)
 }
