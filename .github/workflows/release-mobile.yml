@@ -27,13 +27,31 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: npm
 
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: ${{ env.JAVA_VERSION }}
-          cache: gradle
+
+      - name: Restore npm cache
+        id: npm-cache-restore
+        uses: actions/cache/restore@v4
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-npm-${{ hashFiles('package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-npm-
+
+      - name: Restore gradle cache
+        id: gradle-cache-restore
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
 
       - name: Build app
         run: |
@@ -47,6 +65,24 @@ jobs:
         run: |
           chmod +x gradlew
           ./gradlew assembleRelease --parallel --build-cache --no-daemon
+
+      # Only main manual runs write new caches.
+      # Release/tag runs restore-only to avoid creating one cache set per tag.
+      - name: Save npm cache
+        if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && steps.npm-cache-restore.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-npm-${{ hashFiles('package-lock.json') }}
+
+      - name: Save gradle cache
+        if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && steps.gradle-cache-restore.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
 
       - name: Sign APK
         id: sign_app
@@ -68,6 +104,7 @@ jobs:
 
   publish-release:
     name: Publish GitHub Release
+    if: github.event_name == 'release'
     runs-on: ubuntu-latest
     needs: build-android
     steps:

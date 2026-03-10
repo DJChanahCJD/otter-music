@@ -2,6 +2,7 @@ name: CI
 
 on:
   push:
+    branches: [main]
   pull_request:
 
 permissions:
@@ -22,7 +23,15 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: npm
+
+      - name: Restore npm cache
+        id: npm-cache-restore
+        uses: actions/cache/restore@v4
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-npm-${{ hashFiles('package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-npm-
 
       - name: Install dependencies
         run: npm ci
@@ -35,6 +44,14 @@ jobs:
 
       - name: Test
         run: npx vitest run
-      
+
       - name: Build
         run: npm run build
+
+      # Only main branch updates cache; PR and other refs are restore-only.
+      - name: Save npm cache
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.npm-cache-restore.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-npm-${{ hashFiles('package-lock.json') }}
