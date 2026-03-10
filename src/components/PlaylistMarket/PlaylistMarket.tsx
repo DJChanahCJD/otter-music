@@ -194,6 +194,7 @@ export function PlaylistMarket() {
 
   const fetchItems = useCallback(async (category: string, subTab: string, currentOffset: number) => {
     if (category === "mine") return;
+    const requestCategory = category === "featured" ? subTab : category;
     
     if (currentOffset === 0) {
       setLoading(true);
@@ -202,12 +203,12 @@ export function PlaylistMarket() {
     setIsFetching(true);
 
     try {
-      const isToplist = category === "toplist";
-      const cacheKey = `market-playlist:v2:${category || "all"}:${isToplist ? 0 : currentOffset}`;
+      const isToplist = requestCategory === "toplist";
+      const cacheKey = `market-playlist:v2:${requestCategory || "all"}:${isToplist ? 0 : currentOffset}`;
       
       const res = await cachedFetch<MarketPlaylist[]>(
         cacheKey,
-        () => isToplist ? getToplist("") : getPlaylists(category, "hot", PAGE_SIZE, currentOffset, ""),
+        () => isToplist ? getToplist("") : getPlaylists(requestCategory, "hot", PAGE_SIZE, currentOffset, ""),
         1 * 24 * 60 * 60 * 1000
       );
 
