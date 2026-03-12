@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import { PlaylistOperations } from "./PlaylistOperations";
 import { MusicTrack } from "@/types/music";
 import { useMusicStore } from "@/store/music-store";
+import { useShallow } from "zustand/react/shallow";
 import { useDownloadStore } from "@/store/download-store";
 import { buildDownloadKey } from "@/lib/utils/download";
 import toast from "react-hot-toast";
@@ -71,6 +72,17 @@ export function MusicPlaylistView({
   const [searchQuery, setSearchQuery] = useState("");
   const [isCoverDialogOpen, setIsCoverDialogOpen] = useState(false);
   const [coverUrlInput, setCoverUrlInput] = useState("");
+
+  const playlists = useMusicStore(useShallow(state => state.playlists));
+  const isPersonalPlaylist = useMemo(() => {
+    return playlistId && playlists.some(p => p.id === playlistId);
+  }, [playlistId, playlists]);
+
+  const handleReorder = (newOrder: MusicTrack[]) => {
+    if (playlistId && isPersonalPlaylist) {
+      useMusicStore.getState().setPlaylistTracks(playlistId, newOrder);
+    }
+  };
 
   const filteredTracks = useMemo(() => {
     if (!searchQuery.trim()) return tracks;
@@ -238,6 +250,7 @@ export function MusicPlaylistView({
           isPlaying={isPlaying}
           onRemove={onRemove}
           removeLabel={removeLabel}
+          onReorder={isPersonalPlaylist && !searchQuery ? handleReorder : undefined}
         />
       </div>
 

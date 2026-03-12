@@ -1,5 +1,30 @@
-import { useMemo, useRef, useState, useCallback } from "react";
+import React, { useMemo, useRef, useState, useCallback } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
+import {
+  DndContext, 
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+  DragOverlay,
+  defaultDropAnimationSideEffects,
+  DropAnimation,
+  DragStartEvent,
+} from '@dnd-kit/core';
+import {
+  restrictToVerticalAxis,
+  restrictToWindowEdges,
+} from '@dnd-kit/modifiers';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+  useSortable,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import { Button } from "@/components/ui/button";
 import {
   ListChecks, Plus, Heart, Download, Trash2, ListMusic,
@@ -30,19 +55,80 @@ interface MusicTrackListProps {
   emptyMessage?: string;
   removeLabel?: string;
   showSourceBadge?: boolean;
+  onReorder?: (newOrder: MusicTrack[]) => void;
 }
 
 const ROW_HEIGHT = 48; // 缩小默认估算行高
+
+function SortableTrackItem({ track, children }: { track: MusicTrack, children: React.ReactElement }) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: track.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition: isDragging ? transition : undefined,
+    zIndex: isDragging ? 1 : 0,
+    position: 'relative' as const,
+    opacity: isDragging ? 0 : 1,
+  };
+
+  return (
+    <div ref={setNodeRef} style={style} {...attributes}>
+      {React.cloneElement(children as React.ReactElement<any>, { 
+        dragHandleProps: listeners, 
+        isSortable: true 
+      })}
+    </div>
+  );
+}
 
 export function MusicTrackList({
   tracks, onPlay, playlistId, currentTrackId, isPlaying,
   onRemove, onLoadMore, hasMore, loading,
   emptyMessage = "暂无歌曲", removeLabel = "移除",
   showSourceBadge = true,
+  onReorder,
 }: MusicTrackListProps) {
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [activeId, setActiveId] = useState<string | null>(null);
   const internalRef = useRef<HTMLDivElement | null>(null);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  const enableDnd = isSelectionMode && !!onReorder;
+  const trackIds = useMemo(() => tracks.map(t => t.id), [tracks]);
+
+  const handleDragStart = (event: DragStartEvent) => {
+    setActiveId(event.active.id as string);
+  };
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    setActiveId(null);
+    if (active.id !== over?.id && onReorder) {
+       const oldIndex = tracks.findIndex((t) => t.id === active.id);
+       const newIndex = tracks.findIndex((t) => t.id === over?.id);
+       if (oldIndex !== -1 && newIndex !== -1) {
+         onReorder(arrayMove(tracks, oldIndex, newIndex));
+       }
+    }
+  };
 
   const { addToFavorites, addToPlaylist, createPlaylist, addToNextPlay, quality } = useMusicStore(
     useShallow((state) => ({
@@ -114,6 +200,16 @@ export function MusicTrackList({
       1
     );
     resetSelection();
+  };
+
+  const dropAnimation: DropAnimation = {
+    sideEffects: defaultDropAnimationSideEffects({
+      styles: {
+        active: {
+          opacity: '0.3',
+        },
+      },
+    }),
   };
 
   const handleCreatePlaylist = () => {
@@ -201,18 +297,22 @@ export function MusicTrackList({
   return (
     <div className="flex flex-col w-full" ref={internalRef}>
       {renderHeader()}
-      <div className="relative w-full" style={{ height: virtualizer.getTotalSize() }}>
-        {virtualizer.getVirtualItems().map((item) => {
-          const track = tracks[item.index];
-          return (
-            <div
-              key={item.key}
-              data-index={item.index}
-              ref={virtualizer.measureElement}
-              className="absolute left-0 top-0 w-full"
-              style={{ transform: `translateY(${item.start}px)` }}
-            >
-              {track ? (
+      <DndContext 
+        sensors={sensors} 
+        collisionDetection={closestCenter} 
+        onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd}
+        id="dnd-context"
+      >
+        <SortableContext 
+          items={trackIds} 
+          strategy={verticalListSortingStrategy}
+          disabled={!enableDnd}
+        >
+          <div className="relative w-full" style={{ height: virtualizer.getTotalSize() }}>
+            {virtualizer.getVirtualItems().map((item) => {
+              const track = tracks[item.index];
+              const content = track ? (
                 <MusicTrackItem
                   track={track} playlistId={playlistId} index={item.index}
                   isCurrent={track.id === currentTrackId} isPlaying={isPlaying}
@@ -230,11 +330,49 @@ export function MusicTrackList({
                     </Button>
                   ) : <div className="h-full" />}
                 </div>
-              )}
-            </div>
-          );
-        })}
-      </div>
+              );
+
+              return (
+                <div
+                  key={item.key}
+                  data-index={item.index}
+                  ref={virtualizer.measureElement}
+                  className="absolute left-0 top-0 w-full"
+                  style={{ transform: `translateY(${item.start}px)` }}
+                >
+                  {track && enableDnd ? (
+                    <SortableTrackItem track={track}>{content}</SortableTrackItem>
+                  ) : (
+                    content
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </SortableContext>
+        <DragOverlay 
+          modifiers={[restrictToVerticalAxis, restrictToWindowEdges]}
+          dropAnimation={dropAnimation}
+        >
+          {activeId ? (() => {
+            const track = tracks.find(t => t.id === activeId);
+            if (!track) return null;
+            return (
+              <MusicTrackItem
+                track={track} playlistId={playlistId} index={tracks.findIndex(t => t.id === activeId)}
+                isCurrent={track.id === currentTrackId} isPlaying={isPlaying}
+                onPlay={() => {}} showCheckbox={isSelectionMode}
+                isSelected={selectedIds.has(track.id)} 
+                isDownloaded={downloadedStatusMap.get(track.id) ?? false}
+                quality={quality} showSourceBadge={showSourceBadge}
+                dragHandleProps={{ style: { cursor: 'grabbing' } }}
+                isSortable={true}
+                className="bg-background border rounded-md shadow-lg opacity-90"
+              />
+            );
+          })() : null}
+        </DragOverlay>
+      </DndContext>
     </div>
   );
 }

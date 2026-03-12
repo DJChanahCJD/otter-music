@@ -16,7 +16,7 @@ import { MusicTrackMobileMenu } from "./MusicTrackMobileMenu";
 import { MusicTrackVariants } from "./MusicTrackVariants";
 import { Checkbox } from "./ui/checkbox";
 import { Badge } from "./ui/badge";
-import { DatabaseZap, DollarSign, Gem } from "lucide-react";
+import { DatabaseZap, DollarSign, Gem, GripVertical } from "lucide-react";
 import { NeteasePrivilege } from "@/lib/netease/netease-types";
 
 // 预定义 Badge 样式，避免每次渲染都重新计算
@@ -51,6 +51,8 @@ interface MusicTrackItemProps {
   showSourceBadge?: boolean;
   className?: string;
   style?: React.CSSProperties;
+  dragHandleProps?: React.HTMLAttributes<HTMLDivElement>;
+  isSortable?: boolean;
 }
 
 export function MusicTrackItem({
@@ -70,6 +72,8 @@ export function MusicTrackItem({
   showSourceBadge = true,
   className,
   style,
+  dragHandleProps,
+  isSortable,
 }: MusicTrackItemProps) {
   const { addToFavorites, removeFromFavorites, isFavorite, addToNextPlay } =
     useMusicStore(
@@ -179,6 +183,15 @@ export function MusicTrackItem({
 
       {/* Column 3: Actions */}
       <div className="flex items-center justify-end gap-1">
+        {isSortable && (
+          <div 
+            {...dragHandleProps} 
+            className="cursor-grab active:cursor-grabbing p-1 text-muted-foreground/50 hover:text-foreground transition-colors touch-none mr-1"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <GripVertical className="h-4 w-4" />
+          </div>
+        )}
         <MusicTrackMobileMenu
           track={track}
           playlistId={playlistId}
