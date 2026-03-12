@@ -6,7 +6,6 @@ import { Search, X, Loader2 } from "lucide-react";
 
 import { getExactKey } from "@/lib/utils/music-key";
 import { useDebounce } from "@/hooks/use-debounce";
-import { useAggregatedSourcesForSearch } from "@/hooks/use-aggregated-sources";
 import { musicApi } from "@/lib/music-api";
 import { useMusicStore } from "@/store/music-store";
 import {
@@ -77,8 +76,6 @@ export function MusicSearchView({
       setSearchIntent: s.setSearchIntent,
     })),
   );
-
-  const aggregatedSources = useAggregatedSourcesForSearch();
 
   const abortRef = useRef<AbortController | null>(null);
   const versionRef = useRef(0);
@@ -174,7 +171,6 @@ export function MusicSearchView({
               nextPage,
               20,
               signal,
-              aggregatedSources,
               searchIntent,
             )
           : await musicApi.search(

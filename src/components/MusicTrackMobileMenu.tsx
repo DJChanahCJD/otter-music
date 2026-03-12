@@ -27,8 +27,8 @@ import { useNavigate } from "react-router-dom";
 import { useMusicStore } from "@/store/music-store";
 import { normalizeText } from "@/lib/utils/music-key";
 import { musicApi } from "@/lib/music-api";
+import { MusicProviderFactory } from "@/lib/music-provider";
 import { toastUtils } from "@/lib/utils/toast";
-import { getSongDetail } from "@/lib/netease/netease-api";
 import { MusicCommentsDrawer } from "./MusicCommentsDrawer";
 import {
   Dialog,
@@ -182,7 +182,7 @@ export function MusicTrackMobileMenu({
     }
   };
 
-  const isNetease = track.source === "_netease" || track.source === "netease";
+  const provider = MusicProviderFactory.getProvider(track.source);
 
   const handleSearch = async (
     keyword: string,
@@ -190,11 +190,11 @@ export function MusicTrackMobileMenu({
     artist?: string,
     id?: string,
   ) => {
-    // 如果是网易云源，但没有 ID，尝试获取详情
-    if (isNetease && (!id || id === "0")) {
+    // 如果支持详情查询，但没有 ID，尝试获取详情
+    if ((provider.getArtistDetail || provider.getAlbumDetail) && (!id || id === "0") && provider.getSongDetail) {
       const toastId = toastUtils.loading("正在获取信息...");
       try {
-        const detail = await getSongDetail(track.id);
+        const detail = await provider.getSongDetail(track.id);
         if (detail) {
           if (type === "artist" && detail.ar?.[0]?.id) {
             id = String(detail.ar[0].id);
@@ -209,15 +209,15 @@ export function MusicTrackMobileMenu({
       }
     }
 
-    if (isNetease && id && id !== "0") {
-      if (type === "artist") {
+    if ((provider.getArtistDetail || provider.getAlbumDetail) && id && id !== "0") {
+      if (type === "artist" && provider.getArtistDetail) {
         navigate(`/netease-artist/${id}`);
         onOpenChange(false);
         setShowArtistSelection(false);
         onNavigate?.();
         return;
       }
-      if (type === "album") {
+      if (type === "album" && provider.getAlbumDetail) {
         navigate(`/netease-album/${id}`);
         onOpenChange(false);
         onNavigate?.();
@@ -330,8 +330,8 @@ export function MusicTrackMobileMenu({
               </ActionButton>
             )}
 
-            {/* 如果是网易云源，显示评论入口 */}
-            {isNetease && (
+            {/* 如果支持评论，显示评论入口 */}
+            {provider.getComments && (
               <ActionButton
                 icon={MessageSquareQuote}
                 onClick={() => {
@@ -343,54 +343,54 @@ export function MusicTrackMobileMenu({
               </ActionButton>
             )}
 
-            {/* 如果不是播客类型，显示歌手、专辑和解锁音源选项 */}
-            {track.source !== "podcast" && (
-              <>
-                <ActionButton
-                  icon={User}
-                  onClick={() =>
-                    track.artist.length > 1
-                      ? setShowArtistSelection(true)
-                      : handleSearch(
-                          track.artist[0],
-                          "artist",
-                          undefined,
-                          track.artist_ids?.[0],
-                        )
-                  }
-                >
-                  歌手：{track.artist.join(" / ")}
-                </ActionButton>
-
-                {track.album && (
-                  <ActionButton
-                    icon={Disc}
-                    onClick={() =>
-                      handleSearch(
-                        track.album!,
-                        "album",
+            {/* 如果支持歌手搜索或详情，显示歌手入口 */}
+            {(provider.searchArtist || provider.getArtistDetail) && (
+              <ActionButton
+                icon={User}
+                onClick={() =>
+                  track.artist.length > 1
+                    ? setShowArtistSelection(true)
+                    : handleSearch(
                         track.artist[0],
-                        track.album_id,
+                        "artist",
+                        undefined,
+                        track.artist_ids?.[0],
                       )
-                    }
-                  >
-                    专辑：{track.album}
-                  </ActionButton>
-                )}
-
-                {track.privilege &&
-                  [1, 4].includes(track.privilege.fee) &&
-                  track.privilege.pl <= 0 && (
-                    <ActionButton
-                      icon={Zap}
-                      onClick={handleMatch}
-                      className="text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"
-                    >
-                      解锁完整音源
-                    </ActionButton>
-                  )}
-              </>
+                }
+              >
+                歌手：{track.artist.join(" / ")}
+              </ActionButton>
             )}
+
+            {/* 如果支持专辑搜索或详情，显示专辑入口 */}
+            {(provider.searchAlbum || provider.getAlbumDetail) && track.album && (
+              <ActionButton
+                icon={Disc}
+                onClick={() =>
+                  handleSearch(
+                    track.album!,
+                    "album",
+                    track.artist[0],
+                    track.album_id,
+                  )
+                }
+              >
+                专辑：{track.album}
+              </ActionButton>
+            )}
+
+            {/* 解锁音源选项 */}
+            {provider.canUnlock && track.privilege &&
+              [1, 4].includes(track.privilege.fee) &&
+              track.privilege.pl <= 0 && (
+                <ActionButton
+                  icon={Zap}
+                  onClick={handleMatch}
+                  className="text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"
+                >
+                  解锁完整音源
+                </ActionButton>
+              )}
 
             {onRemove && (
               <ActionButton
