@@ -1,7 +1,7 @@
 "use client";
 
 import { createPortal } from "react-dom";
-import { useState, useEffect } from "react";
+import { useState, useEffect, memo, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { LyricsPanel } from "./LyricsPanel";
@@ -31,6 +31,55 @@ function ModeIcon({ isRepeat, isShuffle }: ModeIconProps) {
   if (isShuffle) return <Shuffle className="h-5 w-5" />;
   return <Repeat className="h-5 w-5" />;
 }
+
+const BackgroundLayer = memo(({ hslColor }: { hslColor: [number, number, number] | null }) => {
+  const dynamicStyle = useMemo(() => {
+    if (!hslColor) return undefined;
+    const [h, s, l] = hslColor;
+    return {
+      "--bg-h": h,
+      "--bg-s": `${s}%`,
+      "--bg-l": `${l}%`,
+      background: `linear-gradient(to bottom, 
+        hsl(var(--bg-h), var(--bg-s), var(--bg-l)), 
+        hsl(var(--bg-h), var(--bg-s), calc(var(--bg-l) - 8%)))`,
+    } as React.CSSProperties;
+  }, [hslColor]);
+
+  return (
+    <div className="absolute inset-0 z-[-1] overflow-hidden bg-zinc-950">
+      {/* 动态颜色层 */}
+      <div
+        className={cn(
+          "absolute inset-0 transition-opacity duration-1000 ease-in-out",
+          hslColor ? "opacity-100" : "opacity-0"
+        )}
+        style={dynamicStyle}
+      />
+
+      {/* 兜底背景层 */}
+      <div
+        className={cn(
+          "absolute inset-0 transition-opacity duration-1000",
+          hslColor ? "opacity-0" : "opacity-100"
+        )}
+      >
+        <div className="absolute inset-0 bg-linear-to-b from-zinc-900 via-zinc-950 to-black" />
+        <div
+          className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-2xl h-[60vh] opacity-30 pointer-events-none"
+          style={{
+            background:
+              "radial-gradient(circle at 50% 0%, rgba(255,255,255,0.08) 0%, transparent 70%)",
+          }}
+        />
+      </div>
+
+      {/* 噪点层 */}
+      <div className="absolute inset-0 opacity-[0.02] mix-blend-overlay pointer-events-none select-none bg-[url('data:image/svg+xml,...')]" />
+    </div>
+  );
+});
+BackgroundLayer.displayName = "BackgroundLayer";
 
 interface FullScreenPlayerProps {
   isFullScreen: boolean;
@@ -146,34 +195,7 @@ export function FullScreenPlayer({
       )}
 
       {/* 背景渲染层 */}
-      <div className="absolute inset-0 z-[-1] overflow-hidden bg-zinc-950">
-        {hslColor ? (
-          <div
-            className="absolute inset-0 transition-colors duration-1000 ease-in-out"
-            style={{
-              background: `linear-gradient(to bottom, hsl(${hslColor[0]}, ${hslColor[1]}%, ${hslColor[2]}%), hsl(${hslColor[0]}, ${hslColor[1]}%, ${Math.max(5, hslColor[2] - 8)}%))`
-            }}
-          />
-        ) : (
-          /* 极简深色兜底背景 - 优化版 */
-          <div className="absolute inset-0 transition-all duration-1000 ease-in-out bg-zinc-950">
-            {/* 深邃的对角线渐变底色 */}
-            <div className="absolute inset-0 bg-linear-to-br from-zinc-800/40 via-zinc-950 to-black" />
-            
-            {/* 顶部柔和的聚光灯光晕 */}
-            <div 
-              className="absolute top-0 left-1/2 -translate-x-1/2 w-screen max-w-2xl h-[60vh] opacity-40 pointer-events-none"
-              style={{ background: 'radial-gradient(circle at 50% 0%, rgba(255,255,255,0.06) 0%, transparent 70%)' }}
-            />
-          </div>
-        )}
-
-        {/* 统一的质感噪点层 (覆盖在提取色和默认色之上，增加整体高级感) */}
-        <div 
-          className="absolute inset-0 opacity-[0.02] mix-blend-overlay pointer-events-none" 
-          style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")` }} 
-        />
-      </div>
+      <BackgroundLayer hslColor={hslColor} />
 
       <header className="shrink-0 flex items-center justify-between px-6 pt-[calc(1rem+env(safe-area-inset-top))] pb-6 relative z-10">
         <Button variant="ghost" size="icon" className="h-12 w-12 text-white/60 hover:bg-white/10 hover:text-white" onClick={onClose}>
@@ -191,7 +213,14 @@ export function FullScreenPlayer({
             <LyricsPanel track={currentTrack} active={isFullScreen} />
           </div>
         ) : (
-          <div className={cn("relative aspect-square w-72 max-w-[320px] overflow-hidden rounded-3xl shadow-xl shadow-black/40 transition-transform duration-500 ring-1 ring-white/5", isPlaying ? "scale-100" : "scale-[0.95]")}>
+          <div 
+            className={cn("relative aspect-square w-72 max-w-[320px] overflow-hidden rounded-3xl transition-transform duration-500 ring-1 ring-white/5", isPlaying ? "scale-100" : "scale-[0.95]")}
+            style={{
+              boxShadow: hslColor 
+                ? `0 30px 60px -12px hsla(${hslColor[0]}, ${hslColor[1]}%, ${Math.max(0, hslColor[2] - 20)}%, 0.4)`
+                : "0 25px 50px -12px rgba(0, 0, 0, 0.5)"
+            }}
+          >
             <MusicCover src={coverUrl} alt={currentTrack?.name} className="h-full w-full object-cover" iconClassName="h-16 w-16 text-white/30" />
           </div>
         )}
