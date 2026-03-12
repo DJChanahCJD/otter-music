@@ -2,6 +2,7 @@ import { weapi, eapi } from './netease-crypto';
 import type {
     AlbumDetail,
     ArtistDetail,
+    ArtistAlbum,
     NeteasePrivilege,
     PlaylistDetail,
     RawNeteaseResponse,
@@ -358,6 +359,20 @@ export const getArtist = (id: string, cookie: string = '') =>
             return res.data; 
         }, 
         TTL_LONG // 歌手基础信息低频变动 
+    ); 
+
+export const getArtistAlbums = (id: string, limit: number = 30, offset: number = 0, cookie: string = '') =>
+    cachedFetch(
+        `netease:artist-albums:${id.replace(/^(neartist_|ne_artist_)/, '')}:${limit}:${offset}`,
+        async () => {
+            const res = await requestWeapi<{ hotAlbums: ArtistAlbum[], more: boolean }>(
+                `${BASE_URL}/weapi/artist/albums/${id.replace(/^(neartist_|ne_artist_)/, '')}`,
+                { limit, offset, total: true },
+                cookie
+            );
+            return res.data;
+        },
+        TTL_LONG
     ); 
 
 export const getPlaylists = (cat: string = '全部', order: string = 'hot', limit: number = 30, offset: number = 0, cookie: string = '') => 

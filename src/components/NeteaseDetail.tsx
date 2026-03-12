@@ -3,7 +3,7 @@ import { PageLayout } from "@/components/PageLayout";
 import { MusicTrackList } from "@/components/MusicTrackList";
 import { getPlaylistDetail, getArtist, getAlbum, convertSongToMusicTrack } from "@/lib/netease/netease-api";
 import { MusicTrack } from "@/types/music";
-import { MoreVertical, Import, SquareArrowOutUpRight } from "lucide-react";
+import { MoreVertical, Import, SquareArrowOutUpRight, Album } from "lucide-react";
 import toast from "react-hot-toast";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
@@ -14,6 +14,7 @@ import { PageError } from "@/components/PageError";
 import { DetailSkeleton } from "@/components/skeletons/DetailSkeleton";
 import { CommonDetailHeader } from "@/components/CommonDetailHeader";
 import { SongDetail } from "@/lib/netease/netease-raw-types";
+import { ArtistAlbumSheet } from "@/components/ArtistAlbumSheet";
 
 interface NeteaseDetailProps {
   id: string | null;
@@ -44,6 +45,7 @@ export function NeteaseDetail({
 }: NeteaseDetailProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [retryCount, setRetryCount] = useState(0);
+  const [isAlbumSheetOpen, setIsAlbumSheetOpen] = useState(false);
 
   const [{ loading, error, detail, tracks }, setState] = useState<{
     loading: boolean;
@@ -138,7 +140,8 @@ export function NeteaseDetail({
           detail: rawDetail,
           tracks: rawTracks.map(convertSongToMusicTrack),
         });
-      } catch {
+      } catch (err) {
+        console.error(err);
         if (active) {
           setState((s) => ({ ...s, loading: false, error: true }));
         }
@@ -184,6 +187,12 @@ export function NeteaseDetail({
               <Import className="w-4 h-4 mr-2" />
               导入歌单
             </DropdownMenuItem>
+            {type === 'artist' && (
+              <DropdownMenuItem onClick={() => setIsAlbumSheetOpen(true)}>
+                <Album className="w-4 h-4 mr-2" />
+                查看专辑
+              </DropdownMenuItem>
+            )}
           </DropdownMenuContent>
         </DropdownMenu>
       }
@@ -204,15 +213,22 @@ export function NeteaseDetail({
           />
         )}
         <div className="flex-1 min-h-0">
-          <MusicTrackList
-            tracks={tracks}
-            onPlay={(track) => onPlay(track, tracks)}
-            currentTrackId={currentTrackId}
-            isPlaying={isPlaying}
-            emptyMessage="列表为空"
-          />
+            <MusicTrackList
+              tracks={tracks}
+              onPlay={(track) => onPlay(track, tracks)}
+              currentTrackId={currentTrackId}
+              isPlaying={isPlaying}
+              emptyMessage="列表为空"
+            />
         </div>
       </div>
+      
+      <ArtistAlbumSheet 
+        artistId={id} 
+        isOpen={isAlbumSheetOpen} 
+        onOpenChange={setIsAlbumSheetOpen}
+        artistName={detail?.name}
+      />
     </PageLayout>
   );
 }

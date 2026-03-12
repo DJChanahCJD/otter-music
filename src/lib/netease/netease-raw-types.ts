@@ -161,6 +161,14 @@ export interface ArtistItem extends BaseEntity {
   alias?: string[];
 }
 
+export interface ArtistAlbum extends BaseEntity {
+  picUrl: string;
+  publishTime: number;
+  size: number;
+  type?: string;
+  artist?: ArtistItem;
+}
+
 export type NeteaseSearchResult = {
   songs?: SongDetail[];
   playlists?: UserPlaylist[];
