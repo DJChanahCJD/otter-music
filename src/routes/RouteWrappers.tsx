@@ -6,6 +6,7 @@ import { usePlayHelper } from "@/hooks/usePlayHelper";
 import { PageLoader } from "@/components/PageLoader";
 import { PageLayout } from "@/components/PageLayout";
 import { ListMusic } from "lucide-react";
+import { useActivePlaylists } from "@/hooks/use-active-playlists";
 
 // ==========================================
 // 1. 懒加载路由组件 (保持极速首屏)
@@ -88,7 +89,8 @@ export const PlaylistDetailRoute = withSuspense(() => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   // 精确查找特定歌单
-  const playlist = useMusicStore(s => s.playlists.find(p => p.id === id && !p.is_deleted));
+  const activePlaylists = useActivePlaylists();
+  const playlist = activePlaylists.find(p => p.id === id);
   const { currentTrackId, isPlaying } = usePlaybackState();
 
   if (!playlist) {

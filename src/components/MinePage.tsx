@@ -25,6 +25,7 @@ import {
 } from "./ui/dropdown-menu";
 
 import { useNavigate } from "react-router-dom";
+import { useActivePlaylists } from "@/hooks/use-active-playlists";
 
 interface MinePageProps {
   onSelectPlaylist: (playlistId: string) => void;
@@ -32,15 +33,14 @@ interface MinePageProps {
 
 export function MinePage({ onSelectPlaylist }: MinePageProps) {
   const navigate = useNavigate();
-  const { playlists, createPlaylist, renamePlaylist, deletePlaylist } = useMusicStore(
+  const { createPlaylist, renamePlaylist, deletePlaylist } = useMusicStore(
     useShallow((state) => ({
-      playlists: state.playlists,
       createPlaylist: state.createPlaylist,
       renamePlaylist: state.renamePlaylist,
       deletePlaylist: state.deletePlaylist,
     }))
   );
-  const activePlaylists = playlists.filter((playlist) => playlist.is_deleted !== true);
+  const activePlaylists = useActivePlaylists();
 
   const [newPlaylistName, setNewPlaylistName] = useState("");
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -190,6 +190,7 @@ export function MinePage({ onSelectPlaylist }: MinePageProps) {
                   <>
                     <p className="font-medium text-foreground truncate">{playlist.name}</p>
                     <p className="text-xs text-muted-foreground">
+                      {/* TODO: 是否去掉filter? */}
                       {playlist.tracks.filter((track) => track.is_deleted !== true).length} 首 · {format(playlist.createdAt, "yyyy-MM-dd")}
                     </p>
                   </>
