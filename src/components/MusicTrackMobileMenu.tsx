@@ -209,14 +209,14 @@ export function MusicTrackMobileMenu({
 
     if (isNetease && id && id !== "0") {
       if (type === "artist") {
-        navigate(`/artist/${id}`);
+        navigate(`/netease-artist/${id}`);
         onOpenChange(false);
         setShowArtistSelection(false);
         onNavigate?.();
         return;
       }
       if (type === "album") {
-        navigate(`/album/${id}`);
+        navigate(`/netease-album/${id}`);
         onOpenChange(false);
         onNavigate?.();
         return;

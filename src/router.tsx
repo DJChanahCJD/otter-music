@@ -63,11 +63,11 @@ export const router = createBrowserRouter([
         element: <MarketPlaylistDetailRoute />,
       },
       {
-        path: "artist/:id",
+        path: "netease-artist/:id",
         element: <ArtistDetailRoute />,
       },
       {
-        path: "album/:id",
+        path: "netease-album/:id",
         element: <AlbumDetailRoute />,
       },
       {
