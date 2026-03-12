@@ -45,20 +45,32 @@ const PlaylistGrid = ({ list, onClick }: { list: MarketPlaylist[]; onClick: (id:
   </div>
 );
 
-function MineSection() {
+interface MineDataState {
+  recommend: MarketPlaylist[] | null;
+  created: MarketPlaylist[] | null;
+  subscribed: MarketPlaylist[] | null;
+}
+
+interface MineSectionProps {
+  mineData: MineDataState;
+  setMineData: React.Dispatch<React.SetStateAction<MineDataState>>;
+  currentUserId: number | null;
+  setCurrentUserId: React.Dispatch<React.SetStateAction<number | null>>;
+}
+
+function MineSection({
+  mineData,
+  setMineData,
+  currentUserId,
+  setCurrentUserId
+}: MineSectionProps) {
   const navigate = useNavigate();
   const mineTab = useMusicStore((s) => s.lastMineTab);
   const setMineTab = useMusicStore((s) => s.setLastMineTab);
   const rssSources = usePodcastStore((s) => s.rssSources);
   
   const [showPodcastDialog, setShowPodcastDialog] = useState(false);
-  const [currentUserId, setCurrentUserId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
-  const [mineData, setMineData] = useState<{
-    recommend: MarketPlaylist[] | null;
-    created: MarketPlaylist[] | null;
-    subscribed: MarketPlaylist[] | null;
-  }>({ recommend: null, created: null, subscribed: null });
 
   useEffect(() => {
     const fetchMineData = async () => {
@@ -98,7 +110,7 @@ function MineSection() {
 
     if (mineTab !== "podcast") fetchMineData();
     else setLoading(false);
-  }, [mineTab, currentUserId, mineData.recommend, mineData.created]);
+  }, [mineTab, currentUserId, mineData.recommend, mineData.created, setMineData, setCurrentUserId]);
 
   const activeDataList = mineTab !== "podcast" ? mineData[mineTab as keyof typeof mineData] : [];
   const validRssSources = rssSources.filter((s) => !s.is_deleted);
@@ -185,6 +197,13 @@ export function PlaylistMarket() {
   // 动态生成对应的缓存 Key
   const snapshotKey = useMemo(() => getSnapshotKey(activeCategory, featuredTab), [activeCategory, featuredTab]);
   
+  const [mineData, setMineData] = useState<MineDataState>({
+    recommend: null,
+    created: null,
+    subscribed: null
+  });
+  const [currentUserId, setCurrentUserId] = useState<number | null>(null);
+
   // 绑定滚动 Hook：当 items 准备好或处于 mine 标签时触发恢复
   const { scrollRef } = useScrollSave(`scroll-${snapshotKey}`, items.length > 0 || activeCategory === "mine");
 
@@ -329,7 +348,12 @@ export function PlaylistMarket() {
 
       <main ref={scrollRef} className="flex-1 overflow-y-auto custom-scrollbar">
         {activeCategory === "mine" ? (
-          <MineSection />
+          <MineSection 
+            mineData={mineData} 
+            setMineData={setMineData} 
+            currentUserId={currentUserId} 
+            setCurrentUserId={setCurrentUserId} 
+          />
         ) : (
           <div className="p-4 pb-24">
             {activeCategory === "featured" && (
