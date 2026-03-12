@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Music2 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { forceHttps } from "@/lib/music-api";
+import { forceHttps } from "@/lib/music-provider";
 
 interface MusicCoverProps {
   src?: string | null;
@@ -25,6 +25,7 @@ export function MusicCover({
   fallbackIcon,
 }: MusicCoverProps) {
   const [error, setError] = useState(false);
+  const coverUrl = forceHttps(src);
 
   if (!src || error) {
     return (
@@ -43,7 +44,7 @@ export function MusicCover({
 
   return (
     <img
-      src={forceHttps(src)}
+      src={coverUrl}
       alt={alt}
       className={cn("w-full h-full object-cover shrink-0", className)}
       onError={() => setError(true)}

@@ -70,6 +70,7 @@ async function resolveAudioUrl({
   return retry(async () => {
     const url = await musicApi.getUrl(trackId, source, quality)
     if (!url) {
+      toast.error(isLocal ? '本地文件无法访问' : '获取音频 URL 失败')
       throw new Error(isLocal ? 'LOCAL_FILE_NOT_ACCESSIBLE' : 'EMPTY_URL')
     }
     return url
