@@ -1,54 +1,64 @@
-// lib/utils/color.ts
-
 export type HSL = [h: number, s: number, l: number];
 
 export function hexToRgb(hex: string): [number, number, number] | null {
-  let s = hex.trim().replace(/^#/, '');
-  if (s.length === 3) s = s.split('').map(c => c + c).join('');
-  if (s.length !== 6) return null;
-  return [
-    parseInt(s.slice(0, 2), 16),
-    parseInt(s.slice(2, 4), 16),
-    parseInt(s.slice(4, 6), 16),
-  ];
+  const s = hex.replace(/^#/, "");
+  const match = s.match(s.length === 3 ? /./g : /../g);
+  if (!match || match.length !== 3) return null;
+  
+  const [r, g, b] = match.map(c => parseInt(c.length === 1 ? c + c : c, 16));
+  return [r, g, b].some(Number.isNaN) ? null : [r, g, b];
 }
 
 export function rgbToHsl(r: number, g: number, b: number): HSL {
   r /= 255; g /= 255; b /= 255;
-  const max = Math.max(r, g, b), min = Math.min(r, g, b);
-  let h = 0, s = 0, l = (max + min) / 2;
+  const max = Math.max(r, g, b), min = Math.min(r, g, b), d = max - min, l = (max + min) / 2;
+  if (max === min) return [0, 0, Math.round(l * 100)];
+
+  const s = d / (1 - Math.abs(2 * l - 1));
+  const h = max === r ? (g - b) / d + (g < b ? 6 : 0) : max === g ? (b - r) / d + 2 : (r - g) / d + 4;
   
-  if (max !== min) {
-    const d = max - min;
-    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
-    if (max === r) h = (g - b) / d + (g < b ? 6 : 0);
-    else if (max === g) h = (b - r) / d + 2;
-    else h = (r - g) / d + 4;
-    h /= 6;
-  }
-  return [Math.round(h * 360), Math.round(s * 100), Math.round(l * 100)];
+  return [Math.round(h * 60), Math.round(s * 100), Math.round(l * 100)];
 }
 
-export function pickBestColor(candidates: string[] | any[]): HSL | null {
+export function pickBestColor(candidates: any[]): HSL | null {
   if (!candidates?.length) return null;
+  let best = { score: -Infinity, hsl: null as HSL | null };
 
   for (const item of candidates) {
-    const hex = typeof item === 'string' ? item : item.hex;
-    const rgb = hexToRgb(hex);
+    const rgb = hexToRgb(typeof item === "string" ? item : item?.hex || "");
     if (!rgb) continue;
 
-    let [h, s, l] = rgbToHsl(rgb[0], rgb[1], rgb[2]);
+    const [h, s, l] = rgbToHsl(...rgb);
 
-    // 1. 过滤无效背景色
-    if (l > 90 || l < 10) continue;
+    // 基础过滤：前置判断，尽早跳出循环
+    if (l > 88 || l < 8 || s < 12) continue;
 
-    // 2. 背景化处理：强制将颜色压暗、降噪，适应深色模式
-    s = Math.min(s, 85); // 饱和度最高限制在 85% 以内，避免刺眼
-    l = Math.min(Math.max(l, 18), 32); // 亮度强制卡在 18% - 32% 的深色安全区间
+    // 分数计算精简版
+    let score = (s >= 35 && s <= 80 ? 16 : s >= 20 ? 8 : -10) + (l >= 25 && l <= 65 ? 12 : -6);
+    
+    if ((h >= 200 && h <= 280) || (h >= 300 && h <= 345)) score += 20;
+    else if (h >= 160 && h <= 199) score += 12;
+    else if (h <= 20 || h >= 345) score += 8;
+    else if (h >= 35 && h <= 95) score -= 18;
 
-    // 直接返回顺位最靠前、且符合条件的第一个颜色
-    return [h, s, l];
+    // 脏色惩罚内联
+    if (((h >= 35 && h <= 75) || (h >= 80 && h <= 95)) && s >= 18 && l >= 20 && l <= 70) score -= 28;
+
+    // 仅当分数高于历史最高时，才进行归一化计算（减少性能开销）
+    if (score > best.score) {
+      const isMud = h >= 35 && h <= 75;
+      const nextS = isMud ? Math.max(28, Math.min(s, 55)) : s;
+      
+      best = {
+        score,
+        hsl: [
+          Math.round(isMud ? Math.max(18, h - 18) : h),
+          Math.round(Math.max(24, Math.min(nextS, 68))),
+          Math.round(Math.max(18, Math.min(28, l)))
+        ]
+      };
+    }
   }
 
-  return null;
+  return best.hsl;
 }
