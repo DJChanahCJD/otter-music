@@ -17,6 +17,7 @@ import {
   User,
   Disc,
   Zap,
+  MessageSquareQuote,
 } from "lucide-react";
 import { ReactNode, useState } from "react";
 import { MusicCover } from "./MusicCover";
@@ -28,6 +29,7 @@ import { normalizeText } from "@/lib/utils/music-key";
 import { musicApi } from "@/lib/music-api";
 import { toastUtils } from "@/lib/utils/toast";
 import { getSongDetail } from "@/lib/netease/netease-api";
+import { MusicCommentsDrawer } from "./MusicCommentsDrawer";
 import {
   Dialog,
   DialogContent,
@@ -106,6 +108,7 @@ export function MusicTrackMobileMenu({
   const coverUrl = useMusicCover(track, open);
   const navigate = useNavigate();
   const [showArtistSelection, setShowArtistSelection] = useState(false);
+  const [showComments, setShowComments] = useState(false);
 
   // Zustand Store
   const setSearchQuery = useMusicStore((s) => s.setSearchQuery);
@@ -179,15 +182,14 @@ export function MusicTrackMobileMenu({
     }
   };
 
+  const isNetease = track.source === "_netease" || track.source === "netease";
+
   const handleSearch = async (
     keyword: string,
     type: SearchIntent["type"] = "",
     artist?: string,
     id?: string,
   ) => {
-    // 优先跳转到详情页 (支持 _netease 和 netease 源，且必须有有效 ID)
-    const isNetease = track.source === "_netease" || track.source === "netease";
-
     // 如果是网易云源，但没有 ID，尝试获取详情
     if (isNetease && (!id || id === "0")) {
       const toastId = toastUtils.loading("正在获取信息...");
@@ -328,6 +330,19 @@ export function MusicTrackMobileMenu({
               </ActionButton>
             )}
 
+            {/* 如果是网易云源，显示评论入口 */}
+            {isNetease && (
+              <ActionButton
+                icon={MessageSquareQuote}
+                onClick={() => {
+                  onOpenChange(false);
+                  setShowComments(true);
+                }}
+              >
+                查看评论
+              </ActionButton>
+            )}
+
             {/* 如果不是播客类型，显示歌手、专辑和解锁音源选项 */}
             {track.source !== "podcast" && (
               <>
@@ -434,6 +449,11 @@ export function MusicTrackMobileMenu({
           </div>
         </DialogContent>
       </Dialog>
+      <MusicCommentsDrawer
+        track={track}
+        open={showComments}
+        onOpenChange={setShowComments}
+      />
     </div>
   );
 }

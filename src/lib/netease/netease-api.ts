@@ -15,6 +15,8 @@ import type {
     UserPlaylist,
     UserProfile,
     SearchSuggestResult,
+    NeteaseCommentResult,
+    NeteaseNewCommentResult,
 } from './netease-raw-types';
 import type { MarketPlaylist, NeteaseSongLike, QrStatusResult } from "./netease-models";
 import {
@@ -402,6 +404,56 @@ export const searchSuggest = (keyword: string, cookie: string = '') =>
         },
         TTL_SHORT
     );
+
+export const getHotComments = (id: string, limit: number = 20, offset: number = 0, cookie: string = '') =>
+    cachedFetch<NeteaseCommentResult>(
+        `netease:comments:hot:${id.replace(/^(netrack_|ne_track_)/, '')}:${limit}:${offset}`,
+        async () => {
+            const realId = id.replace(/^(netrack_|ne_track_)/, '');
+            const rid = `R_SO_4_${realId}`;
+            const res = await requestWeapi<NeteaseCommentResult>(
+                `${BASE_URL}/weapi/v1/resource/hotcomments/${rid}`,
+                { rid, limit, offset, beforeTime: 0 },
+                cookie
+            );
+            return res.data;
+        },
+        TTL_SHORT
+    );
+
+export const getNewComments = (
+    id: string,
+    pageNo: number = 1,
+    pageSize: number = 20,
+    sortType: number = 2, // 1:推荐 2:热度 3:时间
+    cursor: string | number = 0,
+    cookie: string = ''
+) =>
+    cachedFetch<NeteaseNewCommentResult['data']>(
+        `netease:comments:new:${id.replace(/^(netrack_|ne_track_)/, '')}:${sortType}:${pageNo}:${cursor}`,
+        async () => {
+            const realId = id.replace(/^(netrack_|ne_track_)/, '');
+            const res = await requestWeapi<NeteaseNewCommentResult>(
+                `${BASE_URL}/weapi/comment/new`,
+                {
+                    type: 0, // 0: 歌曲
+                    id: realId,
+                    sortType,
+                    cursor,
+                    pageSize,
+                    pageNo,
+                },
+                cookie
+            );
+            return res.data?.data;
+        },
+        TTL_SHORT
+    );
+
+export const getMusicComments = (id: string, limit: number = 20, offset: number = 0, cookie: string = '') => {
+    // 优先使用热门评论接口
+    return getHotComments(id, limit, offset, cookie);
+};
 
 export function resolveUrl(urlStr: string): ResolveUrlResult | null {
     try {

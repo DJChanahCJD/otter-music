@@ -195,3 +195,48 @@ export interface SearchSuggestResult {
   playlists?: Array<{ id: number; name: string; coverImgUrl: string; creator: { nickname: string }; trackCount: number; playCount: number; bookCount: number }>;
   order?: string[];
 }
+
+export interface NeteaseCommentUser {
+  userId: number;
+  nickname: string;
+  avatarUrl: string;
+}
+
+export interface NeteaseComment {
+  user: NeteaseCommentUser;
+  commentId: number;
+  content: string;
+  time: number;
+  likedCount: number;
+}
+
+export interface NeteaseCommentResult {
+  isMusician: boolean;
+  cnum: number;
+  userId: number;
+  topComments: NeteaseComment[];
+  moreHot: boolean;
+  hotComments: NeteaseComment[];
+  commentBanner?: unknown;
+  code: number;
+  comments: NeteaseComment[];
+  total: number;
+  more: boolean;
+}
+
+export interface NeteaseNewCommentResult {
+  code: number;
+  data: {
+    comments: NeteaseComment[];
+    currentComment: unknown;
+    totalCount: number;
+    hasMore: boolean;
+    cursor: string;
+    sortType: number;
+    sortTypeList: Array<{
+      sortType: number;
+      sortTypeName: string;
+      isDefault: boolean;
+    }>;
+  };
+}
