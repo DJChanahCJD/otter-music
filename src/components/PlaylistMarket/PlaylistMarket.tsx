@@ -172,7 +172,9 @@ export function PlaylistMarket() {
   const activeCategory = useMusicStore((s) => s.lastPlaylistCategory);
   const setActiveCategory = useMusicStore((s) => s.setLastPlaylistCategory);
   
-  const [featuredTab, setFeaturedTab] = useState(FEATURED_SUB_FILTERS[0].id);
+  const featuredTab = useMusicStore((s) => s.lastFeaturedTab || FEATURED_SUB_FILTERS[0].id);
+  const setFeaturedTab = useMusicStore((s) => s.setLastFeaturedTab);
+
   const [items, setItems] = useState<MarketPlaylist[]>([]);
   const [loading, setLoading] = useState(true);
   const [offset, setOffset] = useState(0);
@@ -208,7 +210,7 @@ export function PlaylistMarket() {
       
       const res = await cachedFetch<MarketPlaylist[]>(
         cacheKey,
-        () => isToplist ? getToplist("") : getPlaylists(requestCategory, "hot", PAGE_SIZE, currentOffset, ""),
+        () => isToplist ? getToplist("") : getPlaylists(requestCategory || "全部", "hot", PAGE_SIZE, currentOffset, ""),
         1 * 24 * 60 * 60 * 1000
       );
 
@@ -328,11 +330,6 @@ export function PlaylistMarket() {
       <main ref={scrollRef} className="flex-1 overflow-y-auto custom-scrollbar">
         {activeCategory === "mine" ? (
           <MineSection />
-        ) : loading ? (
-          <div className="h-full flex flex-col items-center justify-center gap-3 text-muted-foreground">
-            <Loader2 className="h-6 w-6 animate-spin text-primary" />
-            <span className="text-xs tracking-widest uppercase opacity-50">加载中...</span>
-          </div>
         ) : (
           <div className="p-4 pb-24">
             {activeCategory === "featured" && (
@@ -351,20 +348,29 @@ export function PlaylistMarket() {
                 ))}
               </div>
             )}
-            
-            <PlaylistGrid list={items} onClick={(id) => navigate(`/netease-playlist/${id}`)} />
-            
-            <div ref={observerTarget} className="h-12 w-full mt-6 flex items-center justify-center opacity-80">
-              {isFetching && !loading && (
-                <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  <span>加载中...</span>
+
+            {loading ? (
+              <div className="h-60 flex flex-col items-center justify-center gap-3 text-muted-foreground">
+                <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                <span className="text-xs tracking-widest uppercase opacity-50">加载中...</span>
+              </div>
+            ) : (
+              <>
+                <PlaylistGrid list={items} onClick={(id) => navigate(`/netease-playlist/${id}`)} />
+                
+                <div ref={observerTarget} className="h-12 w-full mt-6 flex items-center justify-center opacity-80">
+                  {isFetching && (
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <span>加载中...</span>
+                    </div>
+                  )}
+                  {!hasMore && items.length > 0 && (
+                    <span className="text-xs text-muted-foreground/50 tracking-wide uppercase">没有更多了-_-</span>
+                  )}
                 </div>
-              )}
-              {!hasMore && items.length > 0 && (
-                <span className="text-xs text-muted-foreground/50 tracking-wide uppercase">没有更多了-_-</span>
-              )}
-            </div>
+              </>
+            )}
           </div>
         )}
       </main>
