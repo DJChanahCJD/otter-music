@@ -96,83 +96,89 @@ export function MusicTrackItem({
         isSelected && showCheckbox ? "bg-primary/10" : "hover:bg-muted/50",
         className
       )}
-      onClick={showCheckbox ? onSelect : onPlay}
     >
-      {/* Column 1: Index / Checkbox / Play State */}
-      <div 
-        className="flex justify-center shrink-0 "
+      <div
+        className="col-span-2 grid grid-cols-[1.75rem_1fr] gap-4 items-center"
+        onClick={showCheckbox ? onSelect : onPlay}
       >
-        {showCheckbox ? (
-          <Checkbox
-            checked={isSelected}
-            onCheckedChange={() => onSelect?.()}
-          />
-        ) : (
-          <div className="relative w-4 h-4 flex items-center justify-center">
-            {isCurrent && isPlaying ? (
-              <span className="relative flex h-3 w-3">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-3 w-3 bg-primary"></span>
-              </span>
-            ) : (
-              <span
+        <div className="flex justify-center shrink-0">
+          {showCheckbox ? (
+            <Checkbox
+              checked={isSelected}
+              onClick={(e) => e.stopPropagation()}
+              onCheckedChange={() => onSelect?.()}
+            />
+          ) : (
+            <div className="relative w-4 h-4 flex items-center justify-center">
+              {isCurrent && isPlaying ? (
+                <span className="relative flex h-3 w-3">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-3 w-3 bg-primary"></span>
+                </span>
+              ) : (
+                <span
+                  className={cn(
+                    "font-mono text-muted-foreground opacity-70",
+                    isCurrent && "text-primary opacity-100"
+                  )}
+                >
+                  {index + 1}
+                </span>
+              )}
+            </div>
+          )}
+        </div>
+
+        <div className="min-w-0 flex flex-col gap-0.5">
+          <div
+            className={cn(
+              "font-medium flex items-center gap-1.5",
+              isCurrent && "text-primary"
+            )}
+          >
+            <span className="truncate" title={track.name}>
+              {track.name}
+            </span>
+
+            {showSourceBadge && (
+              <Badge
+                variant="outline"
                 className={cn(
-                  "font-mono text-muted-foreground opacity-70",
-                  isCurrent && "text-primary opacity-100"
+                  "shrink-0 text-[9px] px-1 py-0 h-3.5 leading-none font-normal",
+                  sourceBadgeStyles[track.source] || sourceBadgeStyles.default
                 )}
               >
-                {index + 1}
-              </span>
+                {sourceLabels[track.source] || track.source}
+              </Badge>
             )}
+
+            {badge && (
+              <Badge
+                variant="secondary"
+                className={cn(
+                  "h-3.5 px-1 text-[9px] gap-0.5 flex items-center leading-none font-bold border",
+                  badge.className
+                )}
+              >
+                <badge.icon className="h-2.5 w-2.5" />
+                {badge.label}
+              </Badge>
+            )}
+
+            {isDownloaded && (
+              <DatabaseZap className="h-3.5 w-3.5 text-muted-foreground/60" />
+            )}
+            <MusicTrackVariants variants={variants} />
           </div>
-        )}
-      </div>
-
-      {/* Column 2: Title & Artist & Album */}
-      <div 
-        className="min-w-0 flex flex-col gap-0.5"
-      >
-        <div className={cn("font-medium flex items-center gap-1.5", isCurrent && "text-primary")}>
-          <span className="truncate" title={track.name}>
-            {track.name}
-          </span>
-
-          {showSourceBadge && (
-            <Badge
-              variant="outline"
-              className={cn(
-                "shrink-0 text-[9px] px-1 py-0 h-3.5 leading-none font-normal",
-                sourceBadgeStyles[track.source] || sourceBadgeStyles.default
-              )}
-            >
-              {sourceLabels[track.source] || track.source}
-            </Badge>
-          )}
-
-          {badge && (
-            <Badge
-              variant="secondary"
-              className={cn(
-                "h-3.5 px-1 text-[9px] gap-0.5 flex items-center leading-none font-bold border",
-                badge.className
-              )}
-            >
-              <badge.icon className="h-2.5 w-2.5" />
-              {badge.label}
-            </Badge>
-          )}
-
-          {isDownloaded && <DatabaseZap className="h-3.5 w-3.5 text-muted-foreground/60" />}
-          <MusicTrackVariants variants={variants} />
-        </div>
-        <div className="text-xs text-muted-foreground truncate opacity-70">
-          {track.artist.join(" / ")}
-          {track.album && ` • ${track.album}`}
+          <div className="text-xs text-muted-foreground truncate opacity-70">
+            {track.artist.join(" / ")}
+            {track.album && ` • ${track.album}`}
+          </div>
         </div>
       </div>
 
       {/* Column 3: Actions */}
-      <div className="flex items-center justify-end gap-1" onClick={(e) => e.stopPropagation()}>
+      <div className="flex items-center justify-end gap-1">
         <MusicTrackMobileMenu
           track={track}
           playlistId={playlistId}
