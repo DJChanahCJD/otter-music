@@ -8,6 +8,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { MusicCover } from "@/components/MusicCover";
 import { searchPodcast } from "@/lib/api";
 import { usePodcastStore } from "@/store/podcast-store";
 import type { SearchPodcastItem } from "@/types/podcast";
@@ -171,13 +172,12 @@ export function PodcastAdd({ open, onOpenChange }: PodcastAddProps) {
                       className="flex items-center gap-3 rounded-lg border p-2.5"
                     >
                       <div className="w-11 h-11 rounded-md border bg-muted/40 overflow-hidden shrink-0">
-                        {item.cover ? (
-                          <img src={item.cover} alt={item.title} className="w-full h-full object-cover" />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center">
-                            <Radio className="w-4 h-4 text-muted-foreground/60" />
-                          </div>
-                        )}
+                        <MusicCover
+                          src={item.cover}
+                          alt={item.title}
+                          className="bg-transparent"
+                          fallbackIcon={<Radio className="w-4 h-4 text-muted-foreground/60" />}
+                        />
                       </div>
                       <div className="min-w-0 flex-1">
                         <p className="text-sm font-medium line-clamp-1">{item.title}</p>

@@ -9,11 +9,6 @@ import type {
 } from "./netease-raw-types";
 import type { MarketPlaylist, QrStatusResult } from "./netease-models";
 
-export function forceHttpsUrl(url: string | undefined | null): string {
-  if (!url) return "";
-  return url.replace(/^http:\/\//i, "https://");
-}
-
 export function unwrapRawResponse<T>(res: RawNeteaseResponse<T>): T | undefined {
   return res.data ?? res.result;
 }
@@ -49,32 +44,32 @@ export function unwrapRecommendResult(res: unknown): RecommendPlaylist[] {
 }
 
 export function toMarketPlaylistFromRecommend(p: RecommendPlaylist): MarketPlaylist {
-  const cover = p.picUrl ?? p.coverImgUrl ?? p.coverUrl ?? "";
+  const coverUrl = p.picUrl ?? p.coverImgUrl ?? p.coverUrl ?? "";
   return {
     id: String(p.id),
     name: p.name,
-    coverUrl: forceHttpsUrl(cover),
+    coverUrl: coverUrl,
     playCount: p.playCount ?? 0,
   };
 }
 
 export function toMarketPlaylistFromUserPlaylist(p: UserPlaylist): MarketPlaylist {
-  const cover = p.coverImgUrl ?? p.coverUrl ?? p.picUrl ?? "";
+  const coverUrl = p.coverImgUrl ?? p.coverUrl ?? p.picUrl ?? "";
   return {
     id: String(p.id),
     name: p.name,
-    coverUrl: forceHttpsUrl(cover),
+    coverUrl: coverUrl,
     playCount: p.playCount ?? 0,
     userId: String(p.creator?.userId ?? ""),
   };
 }
 
 export function toMarketPlaylistFromToplist(p: Toplist): MarketPlaylist {
-  const cover = p.coverImgUrl ?? p.coverUrl ?? p.picUrl ?? "";
+  const coverUrl = p.coverImgUrl ?? p.coverUrl ?? p.picUrl ?? "";
   return {
     id: String(p.id),
     name: p.name,
-    coverUrl: forceHttpsUrl(cover),
+    coverUrl: coverUrl,
     playCount: p.playCount ?? 0,
   };
 }

@@ -76,7 +76,7 @@ export function MusicCommentsDrawer({ track, open, onOpenChange }: MusicComments
                   {comments.map((comment) => (
                     <div 
                       key={comment.commentId} 
-                      className="flex flex-col gap-2 py-3 border-b border-border/20 last:border-0 group"
+                      className="flex flex-col gap-2 py-3 px-0.5 border-b border-border/20 last:border-0 group"
                     >
                       <div className="flex justify-between items-center">
                         <span className="text-[13px] font-medium text-foreground/60 group-hover:text-foreground/80 transition-colors">
