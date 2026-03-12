@@ -4,7 +4,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { useAppStore } from "@/store";
 import { Download, Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { formatDateZN } from "@/lib/utils";
+import { format } from "date-fns";
 
 interface UpdateDialogProps {
   open: boolean;
@@ -54,7 +54,7 @@ export function UpdateDialog({ open, onOpenChange }: UpdateDialogProps) {
                 <div className="text-xs text-muted-foreground space-y-1">
                   <div className="flex justify-between">
                     <span>
-                      {formatDateZN(latestVersionInfo!.publishDate)}
+                      {format(latestVersionInfo!.publishDate, "yyyy-MM-dd HH:mm")}
                     </span>
                     <span>
                       {(latestVersionInfo!.size / 1024 / 1024).toFixed(2)} MB

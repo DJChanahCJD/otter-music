@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { MusicCover } from "@/components/MusicCover";
-import { formatDateZN } from "@/lib/utils/index";
+import { format } from "date-fns";
 
 export interface CommonDetailHeaderProps {
   title: string;
@@ -54,7 +54,9 @@ export function CommonDetailHeader({
               {countDesc}
             </span>
             {publishDateStr && (
-              <span className="shrink-0">发布于 {formatDateZN(publishDateStr)}</span>
+              <span className="shrink-0">
+                {format(publishDateStr, "yyyy-MM-dd")}
+              </span>
             )}
           </div>
 
