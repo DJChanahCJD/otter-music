@@ -1,8 +1,7 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Button } from "@/components/ui/button";
 import { MusicCover } from "@/components/MusicCover";
 import { getArtistAlbums } from "@/lib/netease/netease-api";
 import { ArtistAlbum } from "@/lib/netease/netease-raw-types";
@@ -19,6 +18,8 @@ interface ArtistAlbumSheetProps {
 const PAGE_LIMIT = 30;
 
 // TODO: 支持排序、自动加载更多
+
+// TODO: 专辑编年史线？直接放到tracklist上方左右滑动？
 export function ArtistAlbumSheet({
   artistId,
   isOpen,
@@ -32,6 +33,7 @@ export function ArtistAlbumSheet({
   const [hasLoaded, setHasLoaded] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const [offset, setOffset] = useState(0);
+  const observerTarget = useRef<HTMLDivElement>(null);
 
   const fetchAlbums = useCallback(async (isLoadMore = false) => {
     if (!artistId) return;
@@ -80,11 +82,28 @@ export function ArtistAlbumSheet({
     setHasMore(true);
   }, [artistId]);
 
-  const handleLoadMore = () => {
+  const handleLoadMore = useCallback(() => {
     if (!loadingMore && hasMore) {
       fetchAlbums(true);
     }
-  };
+  }, [loadingMore, hasMore, fetchAlbums]);
+
+  useEffect(() => {
+    const element = observerTarget.current;
+    if (!element || loading || loadingMore || !hasMore) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          handleLoadMore();
+        }
+      },
+      { threshold: 0.1 }
+    );
+
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [handleLoadMore, loading, loadingMore, hasMore]);
 
   const handleAlbumClick = (albumId: number | string) => {
     onOpenChange(false);
@@ -150,26 +169,19 @@ export function ArtistAlbumSheet({
                   </div>
                   
                   {hasMore ? (
-                    <div className="flex justify-center mt-8 pb-4">
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        onClick={handleLoadMore}
-                        disabled={loadingMore}
-                        className="text-muted-foreground hover:text-foreground"
-                      >
-                        {loadingMore ? (
-                          <>
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            加载中...
-                          </>
-                        ) : (
-                          "加载更多"
-                        )}
-                      </Button>
+                    <div 
+                      ref={observerTarget}
+                      className="flex justify-center mt-8 pb-4 h-10 items-center opacity-80"
+                    >
+                      {loadingMore && (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin text-muted-foreground" />
+                          <span className="text-sm text-muted-foreground">加载中...</span>
+                        </>
+                      )}
                     </div>
                   ) : (
-                    <div className="flex justify-center mt-8 pb-4 text-xs text-muted-foreground/50">
+                    <div className="flex justify-center mt-8 pb-4 text-xs text-muted-foreground/50 tracking-wide">
                       没有更多了
                     </div>
                   )}
