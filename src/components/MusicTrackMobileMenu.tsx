@@ -191,7 +191,6 @@ export function MusicTrackMobileMenu({
   ) => {
     // 如果支持详情查询，但没有 ID，尝试获取详情
     if ((provider.getArtistDetail || provider.getAlbumDetail) && (!id || id === "0") && provider.getSongDetail) {
-      const toastId = toastUtils.loading("正在获取信息...");
       try {
         const detail = await provider.getSongDetail(track.id);
         if (detail) {
@@ -203,8 +202,6 @@ export function MusicTrackMobileMenu({
         }
       } catch (e) {
         console.error("Failed to get song detail", e);
-      } finally {
-        toastUtils.dismiss(toastId);
       }
     }
 
