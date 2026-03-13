@@ -26,6 +26,7 @@ export interface MusicState {
   removeFromFavorites: (trackId: string) => void;
   restoreFromFavorites: (trackId: string) => void;
   setFavorites: (tracks: MusicTrack[]) => void;
+  reorderFavorites: (tracks: MusicTrack[]) => void;
   isFavorite: (trackId: string) => boolean;
   createPlaylist: (name: string, coverUrl?: string) => string;
   deletePlaylist: (id: string) => void;
@@ -131,6 +132,9 @@ export const useMusicStore = create<MusicState>()(
       removeFromFavorites: (id) => set(s => ({ favorites: updateList(s.favorites, id, { is_deleted: true }) })),
       restoreFromFavorites: (id) => set(s => ({ favorites: updateList(s.favorites, id, { is_deleted: false }) })),
       setFavorites: (favorites) => set({ favorites: favorites.map(withMeta) }),
+      reorderFavorites: (favorites) => set(s => ({ 
+        favorites: [...favorites, ...s.favorites.filter(t => t.is_deleted)] 
+      })),
       isFavorite: (id) => get().favorites.some(t => t.id === id && !t.is_deleted),
 
       playlists: [],

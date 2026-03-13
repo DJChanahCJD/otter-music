@@ -20,6 +20,7 @@ interface FavoritesViewProps {
   onRemove: (track: MusicTrack) => void;
   currentTrackId?: string;
   isPlaying?: boolean;
+  onReorder?: (tracks: MusicTrack[]) => void;
 }
 
 export function FavoritesView({
@@ -28,6 +29,7 @@ export function FavoritesView({
   onRemove,
   currentTrackId,
   isPlaying,
+  onReorder,
 }: FavoritesViewProps) {
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -116,6 +118,7 @@ export function FavoritesView({
           onRemove={(track) => onRemove(track)}
           removeLabel="取消喜欢"
           playlistId="favorites"
+          onReorder={!searchQuery.trim() ? onReorder : undefined}
         />
       </div>
     </div>

@@ -81,6 +81,7 @@ export const FavoritesRoute = withSuspense(() => {
         store.playContext(activeFavorites, Math.max(0, idx), "favorites");
       }}
       onRemove={(track) => useMusicStore.getState().removeFromFavorites(track.id)}
+      onReorder={(newOrder) => useMusicStore.getState().reorderFavorites(newOrder)}
     />
   );
 });
