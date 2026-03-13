@@ -1,15 +1,10 @@
 import { mutate } from 'swr';
 
-/* -------------------------------------------------- */
-/* CacheStorage + SWR Persistence Utility */
-/* -------------------------------------------------- */
-
 const CACHE_NAME = 'otter-cache-v1';
 const DEFAULT_TTL = 7 * 24 * 60 * 60 * 1000;
+const STORAGE_PRESSURE_RATIO = 0.8;
 
 const now = () => Date.now();
-
-/** 构造稳定 Request */
 const req = (key: string) =>
   new Request(`https://cache.local/${encodeURIComponent(key)}`);
 
@@ -17,12 +12,16 @@ const req = (key: string) =>
 async function saveToDisk<T>(key: string, data: T, ttl: number) {
   try {
     const cache = await caches.open(CACHE_NAME);
+    const ts = now();
+
     const res = new Response(JSON.stringify(data), {
       headers: {
         'Content-Type': 'application/json',
-        'x-expiry': String(now() + ttl)
+        'x-expiry': String(ts + ttl),
+        'x-created-at': String(ts)
       }
     });
+
     await cache.put(req(key), res);
   } catch (e) {
     console.warn('[Cache] Save failed', e);
@@ -30,58 +29,97 @@ async function saveToDisk<T>(key: string, data: T, ttl: number) {
 }
 
 /** 从磁盘读取（含读时清理） */
-async function getFromDisk<T>(key: string): Promise<{ data: T; expired: boolean } | null> {
+async function getFromDisk<T>(key: string): Promise<T | null> {
   try {
     const cache = await caches.open(CACHE_NAME);
     const request = req(key);
     const res = await cache.match(request);
-    
+
     if (!res) return null;
 
-    const expiry = Number(res.headers.get('x-expiry') || 0);
-    const isExpired = expiry < now();
-
-    // --- 读时清理逻辑 ---
+    const isExpired = Number(res.headers.get('x-expiry') || 0) <= now();
     if (isExpired) {
-      // 异步删除，不阻塞读取流程
-      cache.delete(request).catch(() => {});
+      void cache.delete(request);
+      return null;
     }
-    // ------------------
 
-    const data = (await res.json()) as T;
-    return { data, expired: isExpired };
+    return (await res.json()) as T;
   } catch {
     return null;
   }
 }
 
-/**
- * 核心缓存函数 (基于 SWR 优化)
- * - 利用 SWR 的 mutate 实现请求去重 (Deduping)
- * - 利用 CacheStorage 实现持久化 (Persistence)
- */
+async function isUnderStoragePressure() {
+  try {
+    if (!navigator.storage?.estimate) return false;
+    const { usage, quota } = await navigator.storage.estimate();
+    return !!usage && !!quota && usage / quota >= STORAGE_PRESSURE_RATIO;
+  } catch {
+    return false;
+  }
+}
+
+/** 核心清理：始终删过期；只有在存储压力大时才删旧 */
+export async function cleanupCache() {
+  try {
+    const cache = await caches.open(CACHE_NAME);
+    const requests = await cache.keys();
+    const nowTime = now();
+
+    const items: { request: Request; createdAt: number }[] = [];
+    const expiredDeletes: Promise<boolean>[] = [];
+
+    for (const request of requests) {
+      const res = await cache.match(request);
+      if (!res) continue;
+
+      if (Number(res.headers.get('x-expiry') || 0) <= nowTime) {
+        expiredDeletes.push(cache.delete(request));
+        continue;
+      }
+
+      items.push({
+        request,
+        createdAt: Number(res.headers.get('x-created-at') || 0)
+      });
+    }
+
+    if (expiredDeletes.length) {
+      await Promise.all(expiredDeletes);
+    }
+
+    // 平时不做人为容量限制；只有在接近配额时才删一部分老数据
+    if (await isUnderStoragePressure()) {
+      items.sort((a, b) => a.createdAt - b.createdAt);
+      const deleteCount = Math.ceil(items.length * 0.3); // 删最旧的 30%
+      const toDelete = items.slice(0, deleteCount);
+      await Promise.all(toDelete.map(item => cache.delete(item.request)));
+    }
+  } catch (e) {
+    console.warn('[Cache] Prune failed', e);
+  }
+}
+
+/** 核心请求函数 */
 export async function cachedFetch<T>(
   key: string,
   fetcher: () => Promise<T | null>,
   ttl: number = DEFAULT_TTL
 ): Promise<T | null> {
-  // 1. 优先读磁盘
   const disk = await getFromDisk<T>(key);
+  if (disk !== null) return disk;
 
-  // 2. 如果命中且未过期，直接返回 (SWR 会在后台处理逻辑，这里保持简单)
-  if (disk && !disk.expired) {
-    return disk.data;
-  }
-
-  // 3. 未命中或已过期：利用 SWR 的 mutate 保证并发调用时 fetcher 只执行一次
-  // revalidate: false 表示我们手动控制数据的写入
-  const result = await mutate(key, async () => {
-    const fresh = await fetcher();
-    if (fresh !== null) {
-      await saveToDisk(key, fresh, ttl);
-    }
-    return fresh;
-  }, { revalidate: false });
+  const result = await mutate(
+    key,
+    async () => {
+      const fresh = await fetcher();
+      if (fresh !== null) {
+        await saveToDisk(key, fresh, ttl);
+      }
+      return fresh;
+    },
+    { revalidate: false }
+  );
 
   return result ?? null;
 }

@@ -5,6 +5,7 @@ import { useEffect, useRef } from "react";
 import { useAppStore, useDownloadStore } from "./store";
 import { useSyncStore } from "@/store/sync-store";
 import { checkAndSync } from "@/lib/sync";
+import { cleanupCache } from "@/lib/utils/cache";
 
 export default function App() {
   // Sync Logic
@@ -24,6 +25,13 @@ export default function App() {
     useAppStore.getState().checkUpdate(true);
     // 初始化下载记录
     useDownloadStore.getState().init()
+
+    // 延迟执行缓存清理，避免阻塞首屏
+    if ('requestIdleCallback' in window) {
+      (window as any).requestIdleCallback(() => cleanupCache());
+    } else {
+      setTimeout(() => cleanupCache(), 5000);
+    }
   }, []);
 
   return <RouterProvider router={router} />;
