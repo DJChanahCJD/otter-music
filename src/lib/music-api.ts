@@ -73,6 +73,7 @@ export const musicApi = {
   /* ---------------- URL ---------------- */
 
   async getUrl(idOrUrl: string, source: MusicSource, br = 192): Promise<string | null> {
+    if (idOrUrl.startsWith('http')) return idOrUrl;
     const key = `url:${source}:${idOrUrl}:${br}`;
 
     return cachedFetch<string | null>(
@@ -93,13 +94,13 @@ export const musicApi = {
   /* ---------------- 封面 ---------------- */
 
   async getPic(idOrUrl: string, source: MusicSource, size: number = 800): Promise<string | null> {
-    const idStr = String(idOrUrl || '');
-    const key = `pic:${source}:${idStr}:${size}`;
+    if (idOrUrl.startsWith('http')) return idOrUrl;
+    const key = `pic:${source}:${idOrUrl}:${size}`;
     return cachedFetch<string | null>(
       key,
       async () => {
         try {
-          const track = { id: idStr, pic_id: idStr, source } as MusicTrack;
+          const track = { id: idOrUrl, pic_id: idOrUrl, source } as MusicTrack;
           return await MusicProviderFactory.getProvider(source).getPic(track, size);
         } catch (e) {
           console.error('getPic failed:', e);
