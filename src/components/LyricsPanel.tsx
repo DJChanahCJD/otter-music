@@ -109,13 +109,14 @@ const LyricLineView = memo(function LyricLineView({
   return (
     <div
       className={cn(
-        "px-6 w-full max-w-xl transition-all duration-500 ease-out text-center cursor-pointer",
+        "px-8 w-full max-w-xl transition-all duration-500 ease-out text-center cursor-pointer",
+        "origin-center will-change-transform",
         isActive
-          ? "text-white text-[22px] font-bold scale-100 drop-shadow-md"
-          : "text-white/40 text-[18px] scale-95 hover:text-white/60",
+          ? "text-white scale-110 drop-shadow-md opacity-100"
+          : "text-white/40 scale-100 hover:text-white/60 opacity-100",
       )}
     >
-      <p className="leading-relaxed tracking-wide wrap-break-word">{line.text}</p>
+      <p className="text-lg font-medium leading-8 min-h-8 tracking-wide wrap-break-word">{line.text}</p>
       {line.ttext && (
         <p className={cn(
           "mt-1.5 font-medium text-[15px] wrap-break-word transition-colors duration-500",
@@ -353,7 +354,7 @@ export function LyricsPanel({ track, active = true }: LyricsPanelProps) {
 
       {/* 调整时间轴 UI 的通透感 */}
       {isUserScrolling && centerLine && (
-        <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 flex items-center px-6 pointer-events-none z-10">
+        <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 flex items-center px-3 pointer-events-none z-10">
           <span className="text-xs text-white/70 font-medium min-w-[40px] drop-shadow-md">
             {formatTime(centerLine.time)}
           </span>
