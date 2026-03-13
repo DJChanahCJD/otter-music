@@ -239,7 +239,6 @@ export function MusicTrackList({
 
   const renderHeader = () => (
     <div className="sticky top-0 z-20 border-b bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/60">
-      {/* 调整为 h-10, px-3, gap-3, text-xs */}
       <div className="grid items-center gap-4 px-4 h-10 text-xs text-muted-foreground grid-cols-[1.75rem_1fr_auto]">
         {!isSelectionMode ? (
           <>
@@ -253,47 +252,78 @@ export function MusicTrackList({
           </>
         ) : (
           <>
+            {/* 第一列：全选复选框 */}
             <div className="flex justify-center">
-              <Checkbox checked={selectedIds.size > 0 && selectedIds.size === tracks.length} onCheckedChange={toggleSelectAll} />
+              <Checkbox 
+                checked={selectedIds.size > 0 && selectedIds.size === tracks.length} 
+                onCheckedChange={toggleSelectAll} 
+              />
             </div>
+
+            {/* 第二列：已选统计和基础操作 */}
             <div className="flex items-center min-w-0 justify-between">
               <span className="text-foreground">已选 {selectedIds.size} 首</span>
-              <div className="flex items-center gap-1.5">
-                <Button size="sm" variant="secondary" className="h-7 px-2 text-[11px]" onClick={() => handleBatch(addToNextPlay, "已添加")} disabled={selectedIds.size === 0}>
-                  <Plus className="w-3 h-3 mr-1" /> 下一首
-                </Button>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button size="icon" variant="ghost" className="h-7 w-7" disabled={selectedIds.size === 0}>
-                      <MoreVertical className="w-3.5 h-3.5" />
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent side="bottom" align="end" className="w-40 p-1">
-                    <div className="flex items-center px-2 py-1.5 text-xs rounded-sm hover:bg-accent cursor-pointer" onClick={() => handleBatch(addToFavorites, "已添加到喜欢")}><Heart className="mr-2 h-3.5 w-3.5" /> 喜欢</div>
-                    <div className="flex items-center px-2 py-1.5 text-xs rounded-sm hover:bg-accent cursor-pointer" onClick={handleBatchDownload}><Download className="mr-2 h-3.5 w-3.5" /> 下载</div>
-                    <div className="border-t my-1" />
-                    {playlists.map((p) => (
-                      <div key={p.id} className="flex items-center px-2 py-1.5 text-xs rounded-sm hover:bg-accent cursor-pointer" onClick={() => handleBatch((t) => addToPlaylist(p.id, t), `已添加到「${p.name}」`)}>
-                        <ListMusic className="mr-2 h-3.5 w-3.5 opacity-50" /> <span className="truncate">{p.name}</span>
-                      </div>
-                    ))}
-                    <div className="flex items-center px-2 py-1.5 text-xs rounded-sm hover:bg-accent cursor-pointer text-muted-foreground" onClick={handleCreatePlaylist}><Plus className="mr-2 h-3.5 w-3.5" /> 新建歌单</div>
-                    {onRemove && (
-                      <><div className="border-t my-1" /><div className="flex items-center px-2 py-1.5 text-xs rounded-sm hover:bg-accent cursor-pointer text-destructive" onClick={handleBatchRemove}><Trash2 className="mr-2 h-3.5 w-3.5" /> {removeLabel}</div></>
-                    )}
-                  </PopoverContent>
-                </Popover>
-              </div>
+              <Button 
+                size="sm" 
+                variant="secondary" 
+                className="h-7 px-2 text-[11px]" 
+                onClick={() => handleBatch(addToNextPlay, "已添加")} 
+                disabled={selectedIds.size === 0}
+              >
+                <Plus className="w-3 h-3" /> 下一首
+              </Button>
             </div>
-            <div className="flex justify-end">
-              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={resetSelection}><Check className="w-4 h-4" /></Button>
+
+            {/* 第三列：更多操作 + 确认/退出 */}
+            <div className="flex items-center gap-1 justify-end">
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button 
+                    size="icon" 
+                    variant="ghost" 
+                    className="h-7 w-7 mr-1.5" // 对齐下方 GripVertical
+                    disabled={selectedIds.size === 0}
+                  >
+                    <MoreVertical className="w-3.5 h-3.5" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent side="bottom" align="end" className="w-40 p-1">
+                  <div className="flex items-center px-2 py-1.5 text-xs rounded-sm hover:bg-accent cursor-pointer" onClick={() => handleBatch(addToFavorites, "已添加到喜欢")}>
+                    <Heart className="mr-2 h-3.5 w-3.5" /> 喜欢
+                  </div>
+                  <div className="flex items-center px-2 py-1.5 text-xs rounded-sm hover:bg-accent cursor-pointer" onClick={handleBatchDownload}>
+                    <Download className="mr-2 h-3.5 w-3.5" /> 下载
+                  </div>
+                  <div className="border-t my-1" />
+                  {playlists.map((p) => (
+                    <div key={p.id} className="flex items-center px-2 py-1.5 text-xs rounded-sm hover:bg-accent cursor-pointer" onClick={() => handleBatch((t) => addToPlaylist(p.id, t), `已添加到「${p.name}」`)}>
+                      <ListMusic className="mr-2 h-3.5 w-3.5 opacity-50" /> <span className="truncate">{p.name}</span>
+                    </div>
+                  ))}
+                  <div className="flex items-center px-2 py-1.5 text-xs rounded-sm hover:bg-accent cursor-pointer text-muted-foreground" onClick={handleCreatePlaylist}>
+                    <Plus className="mr-2 h-3.5 w-3.5" /> 新建歌单
+                  </div>
+                  {onRemove && (
+                    <>
+                      <div className="border-t my-1" />
+                      <div className="flex items-center px-2 py-1.5 text-xs rounded-sm hover:bg-accent cursor-pointer text-destructive" onClick={handleBatchRemove}>
+                        <Trash2 className="mr-2 h-3.5 w-3.5" /> {removeLabel}
+                      </div>
+                    </>
+                  )}
+                </PopoverContent>
+              </Popover>
+
+              {/* 退出选择模式按钮 */}
+              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={resetSelection}>
+                <Check className="w-4 h-4" />
+              </Button>
             </div>
           </>
         )}
       </div>
     </div>
   );
-
   return (
     <div className="flex flex-col w-full" ref={internalRef}>
       {renderHeader()}
