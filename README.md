@@ -100,6 +100,12 @@ src/
 * [ ] **错误自动上报**：集成前端全局拦截器与后端 CF KV 日志存储（保留 7 天）
 * [ ] **数据合并优化**：优化多源合并算法，确保本地或最新获取的数据优先置顶
 * [ ] 是否还支持播客入口，应该放到哪里更加优雅？[可能的方案](.trae\documents\260313_1204_migrate_podcast_entry.md)
+* [] 是否接入 Meting API 以支持更多官方 API
+* [] 是否引入 原生 View Transitions API 以优化动画体验
+* [] 是否从“Dialog”转向“BottomSheet”以提升用户体验
+* [] 是否引入 Capacitor Haptics、@use-gesture/react、auto-animate、colorthief
+* [] “Otter 呼吸”进度条：
+取消传统的直线进度条。在播放时，歌单封面的边框像水波纹一样缓缓扩散（利用 CSS box-shadow 动画）。当音乐暂停，波纹静止。这非常符合“Otter（水獭）”在水边生活的意象。  波浪进度条？ 如何做更加优雅简洁美观
 
 
 ## 参考资料
