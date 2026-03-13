@@ -3,9 +3,12 @@ import { Button } from "@/components/ui/button";
 import { 
   getRecommendPlaylists,
   getUserPlaylists,
+  getSubscribedAlbums,
   getMyInfo,
   NETEASE_COOKIE_KEY,
 } from "@/lib/netease/netease-api";
+import type { ArtistAlbum } from "@/lib/netease/netease-types";
+import { MusicCover } from "@/components/MusicCover";
 import { Loader2, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
@@ -41,6 +44,7 @@ function useMineData() {
 
       if (mineTab === "recommend" && mineData.recommend) return;
       if ((mineTab === "created" || mineTab === "subscribed") && mineData.created) return;
+      if (mineTab === "albums" && mineData.albums) return;
       if (mineTab === "podcast") return;
 
       try {
@@ -66,6 +70,10 @@ function useMineData() {
             created: userPlaylists.filter((p) => p.userId === String(userId)),
             subscribed: userPlaylists.filter((p) => p.userId !== String(userId)),
           }));
+        } else if (mineTab === "albums" && !mineData.albums) {
+          // 默认加载前100个收藏专辑
+          const albums = await getSubscribedAlbums(100, 0, cookie).catch(() => []);
+          setMineData((prev) => ({ ...prev, albums }));
         }
       } catch (err) {
         console.error("Mine Data Load Error:", err);
@@ -75,7 +83,7 @@ function useMineData() {
     };
 
     fetchMineData();
-  }, [mineTab, currentUserId, mineData.recommend, mineData.created, setMineData, setCurrentUserId]);
+  }, [mineTab, currentUserId, mineData.recommend, mineData.created, mineData.albums, setMineData, setCurrentUserId]);
 
   return {
     mineTab,
@@ -105,6 +113,34 @@ function EmptyState({ text = "空空如也~", action }: { text?: string; action?
     </div>
   );
 }
+
+const AlbumGrid = ({ list, onClick }: { list: ArtistAlbum[]; onClick: (id: string | number) => void }) => (
+  <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 gap-x-3 gap-y-4">
+    {list.map((item) => (
+      <div 
+        key={item.id} 
+        className="group flex flex-col gap-2.5 transition-all hover:translate-y-[-4px]" 
+        onClick={() => onClick(item.id)}
+      >
+        <div className="relative aspect-square rounded-md overflow-hidden shadow-md ring-1 ring-black/5 hover:shadow-xl transition-shadow cursor-pointer">
+          <MusicCover 
+            src={item.picUrl} 
+            alt={item.name} 
+            className="transition-transform duration-500 group-hover:scale-110" 
+          />
+        </div>
+        <div className="px-0.5 flex flex-col gap-0.5">
+          <h3 className="text-[13px] font-medium leading-snug line-clamp-2 text-foreground/80 group-hover:text-primary transition-colors cursor-pointer">
+            {item.name}
+          </h3>
+          <span className="text-[11px] text-muted-foreground/60 tracking-wider">
+            {item.artist?.name}
+          </span>
+        </div>
+      </div>
+    ))}
+  </div>
+);
 
 export function MineSection() {
   const navigate = useNavigate();
@@ -142,6 +178,16 @@ export function MineSection() {
       content: !currentUserId ? <LoginPrompt /> : (
         (mineData.subscribed && mineData.subscribed.length > 0) ? (
           <PlaylistGrid list={mineData.subscribed} onClick={(id) => navigate(`/netease-playlist/${id}`)} />
+        ) : <EmptyState />
+      )
+    },
+    {
+      id: "albums",
+      label: "专辑",
+      count: mineData.albums?.length,
+      content: !currentUserId ? <LoginPrompt /> : (
+        (mineData.albums && mineData.albums.length > 0) ? (
+          <AlbumGrid list={mineData.albums} onClick={(id) => navigate(`/netease-album/${id}`)} />
         ) : <EmptyState />
       )
     },

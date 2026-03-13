@@ -33,6 +33,7 @@ import { cachedFetch } from "@/lib/utils/cache";
 import { API_URL } from "@/lib/api/config";
 import { Capacitor, CapacitorHttp } from '@capacitor/core';
 
+// TODO: 当前是被动清除缓存，需要优雅实现静默 LRU 清除
 const TTL_SHORT = 60 * 60 * 1000;           // 1 hour
 const TTL_MEDIUM = 24 * 60 * 60 * 1000;     // 1 day
 const TTL_LONG = 7 * 24 * 60 * 60 * 1000;   // 7 days
@@ -236,6 +237,10 @@ export const checkQrStatus = async (key: string): Promise<QrStatusResult> => {
     const res = await fetchLocalApi<RawQrCheckResponse>(`/music-api/netease/login/qr/check?key=${key}&timestamp=${Date.now()}`);
     return normalizeQrStatus(res);
 };
+/* 3. 游客登录
+说明 : 直接调用此接口, 可获取游客cookie,如果遇到其他接口未登录状态报400状态码需要验证的错误,可使用此接口获取游客cookie避免报错
+
+接口地址 : /register/anonimous */
 
 export const getMyInfo = async (cookie: string = ''): Promise<UserProfile | null> => {
     const res = await cachedFetch<UserProfile | null>(
@@ -376,6 +381,22 @@ export const getArtistAlbums = (id: string, limit: number = 30, offset: number =
         },
         TTL_LONG
     ); 
+
+export const getSubscribedAlbums = async (limit: number = 25, offset: number = 0, cookie: string = ''): Promise<ArtistAlbum[]> => {
+    const res = await cachedFetch<ArtistAlbum[]>(
+        `netease:subscribed-albums:${limit}:${offset}`,
+        async () => {
+            const r = await requestWeapi<{ data: ArtistAlbum[], count: number }>(
+                `${BASE_URL}/weapi/album/sublist`,
+                { limit, offset, total: true },
+                cookie
+            );
+            return r.data.data;
+        },
+        TTL_SHORT
+    );
+    return res ?? [];
+}; 
 
 export const getPlaylists = (cat: string = '全部', order: string = 'hot', limit: number = 30, offset: number = 0, cookie: string = '') => 
     cachedFetch( 

@@ -1,11 +1,12 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
-import type { MarketPlaylist } from "@/lib/netease/netease-types";
+import type { MarketPlaylist, ArtistAlbum } from "@/lib/netease/netease-types";
 
 export interface MineDataState {
   recommend: MarketPlaylist[] | null;
   created: MarketPlaylist[] | null;
   subscribed: MarketPlaylist[] | null;
+  albums: ArtistAlbum[] | null;
 }
 
 export interface ListSnapshot {
@@ -32,6 +33,7 @@ export const useMarketSession = create<MarketSessionState>()(
         recommend: null,
         created: null,
         subscribed: null,
+        albums: null,
       },
       currentUserId: null,
       listSnapshots: {},
@@ -53,7 +55,7 @@ export const useMarketSession = create<MarketSessionState>()(
 
       clearSession: () =>
         set({
-          mineData: { recommend: null, created: null, subscribed: null },
+          mineData: { recommend: null, created: null, subscribed: null, albums: null },
           currentUserId: null,
           listSnapshots: {},
         }),
