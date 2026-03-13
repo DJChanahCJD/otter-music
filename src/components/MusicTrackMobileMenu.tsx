@@ -35,6 +35,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { haptics } from "@/lib/utils/haptics";
+import { ImpactStyle, NotificationType } from "@capacitor/haptics";
 
 interface MusicTrackMobileMenuProps {
   track: MusicTrack;
@@ -142,6 +144,7 @@ export function MusicTrackMobileMenu({
 
       if (!match) {
         toastUtils.error("未找到匹配的完整版", { id: toastId });
+        haptics.notification(NotificationType.Error);
         return;
       }
 
@@ -175,9 +178,11 @@ export function MusicTrackMobileMenu({
       toastUtils.success(`已切换至完整版: ${match.name}（${match.source}）`, {
         id: toastId,
       });
+      haptics.notification(NotificationType.Success);
     } catch (e) {
       console.error(e);
       toastUtils.error("匹配失败", { id: toastId });
+      haptics.notification(NotificationType.Error);
     }
   };
 
@@ -211,12 +216,14 @@ export function MusicTrackMobileMenu({
         onOpenChange(false);
         setShowArtistSelection(false);
         onNavigate?.();
+        haptics.impact(ImpactStyle.Light);
         return;
       }
       if (type === "album" && provider.getAlbumDetail) {
         navigate(`/netease-album/${id}`);
         onOpenChange(false);
         onNavigate?.();
+        haptics.impact(ImpactStyle.Light);
         return;
       }
     }
@@ -244,6 +251,7 @@ export function MusicTrackMobileMenu({
     onOpenChange(false);
     setShowArtistSelection(false);
     onNavigate?.();
+    haptics.impact(ImpactStyle.Light);
   };
 
   return (
@@ -333,6 +341,7 @@ export function MusicTrackMobileMenu({
                 onClick={() => {
                   onOpenChange(false);
                   setShowComments(true);
+                  haptics.impact(ImpactStyle.Light);
                 }}
               >
                 查看评论
@@ -343,16 +352,19 @@ export function MusicTrackMobileMenu({
             {(provider.searchArtist || provider.getArtistDetail) && (
               <ActionButton
                 icon={User}
-                onClick={() =>
-                  track.artist.length > 1
-                    ? setShowArtistSelection(true)
-                    : handleSearch(
-                        track.artist[0],
-                        "artist",
-                        undefined,
-                        track.artist_ids?.[0],
-                      )
-                }
+                onClick={() => {
+                  if (track.artist.length > 1) {
+                    setShowArtistSelection(true);
+                  } else {
+                    handleSearch(
+                      track.artist[0],
+                      "artist",
+                      undefined,
+                      track.artist_ids?.[0],
+                    );
+                  }
+                  haptics.impact(ImpactStyle.Light);
+                }}
               >
                 歌手：{track.artist.join(" / ")}
               </ActionButton>
@@ -362,14 +374,15 @@ export function MusicTrackMobileMenu({
             {(provider.searchAlbum || provider.getAlbumDetail) && track.album && (
               <ActionButton
                 icon={Disc}
-                onClick={() =>
+                onClick={() => {
                   handleSearch(
                     track.album!,
                     "album",
                     track.artist[0],
                     track.album_id,
-                  )
-                }
+                  );
+                  haptics.impact(ImpactStyle.Light);
+                }}
               >
                 专辑：{track.album}
               </ActionButton>
@@ -394,12 +407,15 @@ export function MusicTrackMobileMenu({
                 className="text-destructive hover:text-destructive"
                 onClick={() => {
                   onOpenChange(false);
+                  haptics.notification(NotificationType.Warning);
                   if (
                     window.confirm(
                       `确定${removeLabel}歌曲「${track.name}」吗？`,
                     )
-                  )
+                  ) {
                     onRemove();
+                    haptics.notification(NotificationType.Success);
+                  }
                 }}
               >
                 {removeLabel}

@@ -106,7 +106,6 @@ src/
 - [ ] Meting API 接入：评估新增官方音源覆盖、稳定性与维护成本。
 - [ ] View Transitions：评估页面切换动画收益与平台兼容性。
 - [ ] Dialog → BottomSheet：评估统一移动端交互范式的范围与改造成本。
-- [ ] 新库引入评估：Capacitor Haptics、@use-gesture/react、auto-animate、colorthief。
 
 
 ## 参考资料

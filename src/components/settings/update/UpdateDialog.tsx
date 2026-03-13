@@ -1,6 +1,6 @@
 import { Footer } from "@/components/footer";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
 import { useAppStore } from "@/store";
 import { Download, Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -22,23 +22,23 @@ export function UpdateDialog({ open, onOpenChange }: UpdateDialogProps) {
   const hasUpdate = Boolean(latestVersionInfo);
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader className="items-center pt-4">
+    <Drawer open={open} onOpenChange={onOpenChange}>
+      <DrawerContent className="max-h-[85vh]">
+        <DrawerHeader className="items-center pt-4">
           <img
             src="/favicon.svg"
             alt="Otter Music"
             className="w-16 h-16 rounded-xl shadow"
           />
-          <DialogTitle className="text-xl font-bold mt-2">
+          <DrawerTitle className="text-xl font-bold mt-2">
             Otter Music
-          </DialogTitle>
+          </DrawerTitle>
           <div className="text-xs font-mono text-muted-foreground">
             {currentVersion}
           </div>
-        </DialogHeader>
+        </DrawerHeader>
 
-        <div className="space-y-4">
+        <div className="space-y-4 overflow-y-auto px-4 pb-5">
           <div className="border rounded-lg p-4 space-y-3">
             <div className="flex items-center justify-between">
               <span className="text-sm font-medium">版本更新</span>
@@ -93,7 +93,7 @@ export function UpdateDialog({ open, onOpenChange }: UpdateDialogProps) {
 
           <Footer />
         </div>
-      </DialogContent>
-    </Dialog>
+      </DrawerContent>
+    </Drawer>
   );
 }

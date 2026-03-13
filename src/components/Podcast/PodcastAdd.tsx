@@ -2,12 +2,12 @@ import { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+  Drawer,
+  DrawerContent,
+  DrawerDescription,
+  DrawerHeader,
+  DrawerTitle,
+} from "@/components/ui/drawer";
 import { MusicCover } from "@/components/MusicCover";
 import { searchPodcast } from "@/lib/api";
 import { usePodcastStore } from "@/store/podcast-store";
@@ -126,22 +126,22 @@ export function PodcastAdd({ open, onOpenChange }: PodcastAddProps) {
   };
 
   return (
-    <Dialog
+    <Drawer
       open={open}
       onOpenChange={(val) => {
         onOpenChange(val);
         if (!val) resetDialogState();
       }}
     >
-      <DialogContent className="p-6 sm:max-w-[380px]">
-        <DialogHeader className="mb-1">
-          <DialogTitle className="text-center text-lg">添加播客订阅</DialogTitle>
-          <DialogDescription className="text-center text-xs">
+      <DrawerContent className="max-h-[90vh]">
+        <DrawerHeader className="mb-1 px-4">
+          <DrawerTitle className="text-center text-lg">添加播客订阅</DrawerTitle>
+          <DrawerDescription className="text-center text-xs">
             {mode === "search" ? "先搜索，再一键订阅" : "手动填写 RSS 地址订阅"}
-          </DialogDescription>
-        </DialogHeader>
+          </DrawerDescription>
+        </DrawerHeader>
 
-        <div className="space-y-4">
+        <div className="space-y-4 overflow-y-auto px-4 pb-5">
           {mode === "search" ? (
             <div className="space-y-3">
               <div className="flex gap-2">
@@ -240,7 +240,7 @@ export function PodcastAdd({ open, onOpenChange }: PodcastAddProps) {
             {mode === "search" ? "改用手动 RSS 订阅" : "返回搜索订阅"}
           </Button>
         </div>
-      </DialogContent>
-    </Dialog>
+      </DrawerContent>
+    </Drawer>
   );
 }

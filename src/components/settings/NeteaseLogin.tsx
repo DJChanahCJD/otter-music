@@ -1,12 +1,12 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { User, RefreshCw, Check, Loader2, ScanLine, Info } from "lucide-react";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog";
+  Drawer,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerDescription,
+} from "@/components/ui/drawer";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
@@ -235,26 +235,26 @@ export function NeteaseLogin() {
         }
       />
 
-      <Dialog
+      <Drawer
         open={showDialog}
         onOpenChange={(open) => {
           setShowDialog(open);
           if (!open) resetDialogState();
         }}
       >
-        <DialogContent className="p-6 sm:max-w-[360px]">
-          <DialogHeader className="mb-2">
-            <DialogTitle className="text-center text-lg">
+        <DrawerContent className="max-h-[90vh]">
+          <DrawerHeader className="mb-2 px-4">
+            <DrawerTitle className="text-center text-lg">
               {loginMode === "qr" ? "扫码登录" : "Cookie 登录"}
-            </DialogTitle>
-            <DialogDescription className="text-center text-xs">
+            </DrawerTitle>
+            <DrawerDescription className="text-center text-xs">
               {loginMode === "qr"
                 ? "打开网易云音乐 APP 扫一扫"
                 : "输入完整 Cookie 或 MUSIC_U"}
-            </DialogDescription>
-          </DialogHeader>
+            </DrawerDescription>
+          </DrawerHeader>
 
-          <div className="flex flex-col items-center space-y-5">
+          <div className="flex flex-col items-center space-y-5 overflow-y-auto px-4 pb-5">
             {loginMode === "qr" ? (
               <>
                 <div className="relative flex h-[180px] w-[180px] items-center justify-center">
@@ -316,7 +316,7 @@ export function NeteaseLogin() {
                   placeholder="粘贴 MUSIC_U 或完整 Cookie 字符串..."
                   value={cookieInput}
                   onChange={(e) => setCookieInput(e.target.value)}
-                  className="h-[140px] w-full resize-none overflow-y-auto rounded-xl border-0 bg-muted/20 p-4 font-mono text-[13px] leading-relaxed whitespace-pre-wrap break-all [overflow-wrap:anywhere] placeholder:text-muted-foreground/50 focus-visible:ring-1 focus-visible:ring-primary/20"
+                  className="h-[140px] w-full resize-none overflow-y-auto rounded-xl border-0 bg-muted/20 p-4 font-mono text-[13px] leading-relaxed whitespace-pre-wrap break-all wrap-anywhere placeholder:text-muted-foreground/50 focus-visible:ring-1 focus-visible:ring-primary/20"
                 />
 
                 <div className="bg-muted/30 rounded-lg p-3 space-y-1.5">
@@ -368,8 +368,8 @@ export function NeteaseLogin() {
               {loginMode === "qr" ? "改用 Cookie 登录" : "返回扫码登录"}
             </Button>
           </div>
-        </DialogContent>
-      </Dialog>
+        </DrawerContent>
+      </Drawer>
     </>
   );
 }

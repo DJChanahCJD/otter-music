@@ -4,13 +4,13 @@ import { useState } from "react";
 import { Trash2, RefreshCw } from "lucide-react";
 import { Button } from "../ui/button";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "../ui/dialog";
+  Drawer,
+  DrawerContent,
+  DrawerDescription,
+  DrawerFooter,
+  DrawerHeader,
+  DrawerTitle,
+} from "../ui/drawer";
 import { Input } from "../ui/input";
 import { useSyncStore } from "@/store/sync-store";
 import { SettingItem } from "./SettingItem";
@@ -67,17 +67,17 @@ export function SyncConfig() {
         onClick={() => setDialogOpen(true)}
       />
 
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>配置同步密钥</DialogTitle>
-            <DialogDescription>
+      <Drawer open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DrawerContent className="max-h-[85vh]">
+          <DrawerHeader>
+            <DrawerTitle>配置同步密钥</DrawerTitle>
+            <DrawerDescription>
               {syncKey
                 ? `当前密钥: ${maskKey(syncKey)}`
                 : "请输入您的 SYNC_KEY 用于数据同步"}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="py-4">
+            </DrawerDescription>
+          </DrawerHeader>
+          <div className="px-4 pb-4">
             <Input
               type="password"
               placeholder="请输入 SYNC_KEY"
@@ -86,7 +86,7 @@ export function SyncConfig() {
               onKeyDown={(e) => e.key === "Enter" && handleConfirm()}
             />
           </div>
-          <DialogFooter className="flex-col sm:flex-row gap-2">
+          <DrawerFooter className="gap-2 pt-0">
             {syncKey && (
               <Button
                 variant="outline"
@@ -97,16 +97,15 @@ export function SyncConfig() {
                 清除密钥
               </Button>
             )}
-            <div className="flex-1" />
-            <Button variant="outline" onClick={() => setDialogOpen(false)}>
+            <Button variant="outline" onClick={() => setDialogOpen(false)} className="h-11">
               取消
             </Button>
-            <Button onClick={handleConfirm} disabled={!inputKey.trim()}>
+            <Button onClick={handleConfirm} disabled={!inputKey.trim()} className="h-11">
               确认
             </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </DrawerFooter>
+        </DrawerContent>
+      </Drawer>
     </>
   );
 }

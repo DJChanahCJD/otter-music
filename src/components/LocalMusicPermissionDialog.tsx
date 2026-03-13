@@ -1,4 +1,4 @@
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerDescription, DrawerFooter } from "@/components/ui/drawer";
 import { Button } from "@/components/ui/button";
 import { LocalMusicPlugin } from "@/plugins/local-music";
 
@@ -14,25 +14,25 @@ export function LocalMusicPermissionDialog({ open, onOpenChange }: LocalMusicPer
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle>文件管理授权</DialogTitle>
-        </DialogHeader>
+    <Drawer open={open} onOpenChange={onOpenChange}>
+      <DrawerContent className="max-h-[70vh]">
+        <DrawerHeader>
+          <DrawerTitle>文件管理授权</DrawerTitle>
+        </DrawerHeader>
 
-        <DialogDescription>
+        <DrawerDescription className="px-4">
           请在系统设置中开启「授权管理所有文件的权限」后返回。
-        </DialogDescription>
+        </DrawerDescription>
 
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+        <DrawerFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)} className="h-11">
             取消
           </Button>
-          <Button onClick={handleOpenSettings}>
+          <Button onClick={handleOpenSettings} className="h-11">
             打开设置
           </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </DrawerFooter>
+      </DrawerContent>
+    </Drawer>
   );
 }

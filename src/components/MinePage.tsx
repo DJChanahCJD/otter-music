@@ -7,13 +7,12 @@ import { useMusicStore } from "@/store/music-store";
 import { useShallow } from "zustand/react/shallow";
 import { Button } from "./ui/button";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-  DialogTrigger,
-} from "./ui/dialog";
+  Drawer,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerFooter,
+} from "./ui/drawer";
 import { Input } from "./ui/input";
 import { format } from "date-fns";
 import toast from "react-hot-toast";
@@ -122,18 +121,16 @@ export function MinePage({ onSelectPlaylist }: MinePageProps) {
 
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-lg font-semibold text-foreground">我的歌单</h2>
-        <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
-          <DialogTrigger asChild>
-            <Button variant="ghost" size="sm" className="gap-1">
-              <SquarePlus className="h-4 w-4" />
-              新建
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>新建歌单</DialogTitle>
-            </DialogHeader>
-            <div className="py-4">
+        <Button variant="ghost" size="sm" className="gap-1" onClick={() => setIsCreateOpen(true)}>
+          <SquarePlus className="h-4 w-4" />
+          新建
+        </Button>
+        <Drawer open={isCreateOpen} onOpenChange={setIsCreateOpen}>
+          <DrawerContent className="max-h-[80vh]">
+            <DrawerHeader>
+              <DrawerTitle>新建歌单</DrawerTitle>
+            </DrawerHeader>
+            <div className="px-4 pb-4">
               <Input
                 placeholder="歌单名称"
                 value={newPlaylistName}
@@ -141,11 +138,11 @@ export function MinePage({ onSelectPlaylist }: MinePageProps) {
                 onKeyDown={(e) => e.key === "Enter" && handleCreatePlaylist()}
               />
             </div>
-            <DialogFooter>
-              <Button onClick={handleCreatePlaylist}>创建</Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+            <DrawerFooter className="pt-0">
+              <Button onClick={handleCreatePlaylist} className="h-11">创建</Button>
+            </DrawerFooter>
+          </DrawerContent>
+        </Drawer>
       </div>
 
       {activePlaylists.length === 0 ? (

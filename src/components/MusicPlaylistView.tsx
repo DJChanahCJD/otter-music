@@ -17,12 +17,12 @@ import { toastUtils } from "@/lib/utils/toast";
 import { exportPlaylist } from "@/lib/utils/playlist-backup";
 import { musicApi } from "@/lib/music-api";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
+  Drawer,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerFooter,
+} from "@/components/ui/drawer";
 import { Label } from "@/components/ui/label";
 
 import { format } from "date-fns";
@@ -254,12 +254,12 @@ export function MusicPlaylistView({
         />
       </div>
 
-      <Dialog open={isCoverDialogOpen} onOpenChange={setIsCoverDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>设置封面</DialogTitle>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
+      <Drawer open={isCoverDialogOpen} onOpenChange={setIsCoverDialogOpen}>
+        <DrawerContent className="max-h-[85vh]">
+          <DrawerHeader>
+            <DrawerTitle>设置封面</DrawerTitle>
+          </DrawerHeader>
+          <div className="grid gap-4 px-4 pb-4">
             <div className="grid gap-2">
               <Label htmlFor="coverUrl">封面图片链接</Label>
               <Input
@@ -273,14 +273,14 @@ export function MusicPlaylistView({
               从第一首歌曲获取
             </Button>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsCoverDialogOpen(false)}>
+          <DrawerFooter className="pt-0">
+            <Button variant="outline" onClick={() => setIsCoverDialogOpen(false)} className="h-11">
               取消
             </Button>
-            <Button onClick={handleSaveCover}>保存</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+            <Button onClick={handleSaveCover} className="h-11">保存</Button>
+          </DrawerFooter>
+        </DrawerContent>
+      </Drawer>
     </div>
   );
 }

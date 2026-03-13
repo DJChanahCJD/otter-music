@@ -4,7 +4,7 @@ import type { MusicTrack } from "@/types/music";
 import { ListMusic, Plus } from "lucide-react";
 import toast from "react-hot-toast";
 import { Button } from "./ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog";
+import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "./ui/drawer";
 import { ScrollArea } from "./ui/scroll-area";
 
 interface AddToPlaylistDialogProps {
@@ -21,7 +21,7 @@ export function AddToPlaylistDialog({ open, onOpenChange, track }: AddToPlaylist
 
   const handleAddToPlaylist = (playlistId: string, playlistName: string) => {
     addToPlaylist(playlistId, track);
-    toast.success(`已添加到歌单「${playlistName}」`);
+    toast.success(`已加入「${playlistName}」`);
     onOpenChange(false);
   };
 
@@ -30,18 +30,19 @@ export function AddToPlaylistDialog({ open, onOpenChange, track }: AddToPlaylist
     if (name) {
       const id = createPlaylist(name);
       addToPlaylist(id, track);
-      toast.success(`已创建并添加到歌单「${name}」`);
+      toast.success(`已创建并加入「${name}」`);
       onOpenChange(false);
     }
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[425px] p-0 gap-0 overflow-hidden" onClick={(e) => e.stopPropagation()}>
-        <DialogHeader className="px-6 py-4 border-b">
-          <DialogTitle>添加到歌单</DialogTitle>
-        </DialogHeader>
-        <ScrollArea className="h-[50vh] max-h-[400px] p-2">
+    <Drawer open={open} onOpenChange={onOpenChange}>
+      <DrawerContent className="h-[85vh] p-0 gap-0 overflow-hidden" onClick={(e) => e.stopPropagation()}>
+        <DrawerHeader className="px-6 py-4 border-b">
+          <DrawerTitle>添加到歌单</DrawerTitle>
+        </DrawerHeader>
+        <div className="flex-1 min-h-0">
+          <ScrollArea className="h-full p-2">
             {playlists.map((p) => (
               <div
                 key={p.id}
@@ -57,14 +58,15 @@ export function AddToPlaylistDialog({ open, onOpenChange, track }: AddToPlaylist
                     暂无歌单
                 </div>
             )}
-        </ScrollArea>
+          </ScrollArea>
+        </div>
         <div className="p-2 border-t bg-muted/20">
-            <Button variant="ghost" className="w-full justify-start pl-4" onClick={handleCreatePlaylist}>
+            <Button variant="ghost" className="w-full justify-start pl-4 h-11" onClick={handleCreatePlaylist}>
                 <Plus className="mr-2 h-5 w-5" />
                 新建歌单
             </Button>
         </div>
-      </DialogContent>
-    </Dialog>
+      </DrawerContent>
+    </Drawer>
   );
 }
