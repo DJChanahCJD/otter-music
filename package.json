@@ -36,6 +36,7 @@
     "@tanstack/react-virtual": "^3.13.21",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "colord": "^2.9.3",
     "date-fns": "^4.1.0",
     "idb-keyval": "^6.2.2",
     "lucide-react": "^0.563.0",
