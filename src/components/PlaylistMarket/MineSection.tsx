@@ -1,0 +1,212 @@
+import { useEffect, useState, useMemo } from "react";
+import { Button } from "@/components/ui/button";
+import { 
+  getRecommendPlaylists,
+  getUserPlaylists,
+  getMyInfo,
+  NETEASE_COOKIE_KEY,
+} from "@/lib/netease/netease-api";
+import { Loader2, Plus } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { useNavigate } from "react-router-dom";
+import { useMusicStore, type MusicState } from "@/store/music-store";
+import { toast } from "react-hot-toast";
+import { PodcastAdd } from "@/components/Podcast/PodcastAdd";
+import { PodcastCard } from "@/components/Podcast/PodcastCard";
+import { usePodcastStore } from "@/store/podcast-store";
+import { useMarketSession } from "@/store/session/market-session";
+import { PlaylistGrid } from "./PlaylistGrid";
+
+const SUB_TAB_HEIGHT = "h-8";
+
+interface MineTabConfig {
+  id: MusicState["lastMineTab"];
+  label: string;
+  count?: number;
+  content: React.ReactNode;
+  action?: React.ReactNode;
+}
+
+function useMineData() {
+  const mineTab = useMusicStore((s) => s.lastMineTab);
+  const setMineTab = useMusicStore((s) => s.setLastMineTab);
+  const rssSources = usePodcastStore((s) => s.rssSources);
+  const { mineData, setMineData, currentUserId, setCurrentUserId } = useMarketSession();
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const fetchMineData = async () => {
+      const cookie = localStorage.getItem(NETEASE_COOKIE_KEY);
+      if (!cookie) return;
+
+      if (mineTab === "recommend" && mineData.recommend) return;
+      if ((mineTab === "created" || mineTab === "subscribed") && mineData.created) return;
+      if (mineTab === "podcast") return;
+
+      try {
+        setLoading(true);
+        let userId = currentUserId;
+        if (!userId) {
+          const userInfo = await getMyInfo(cookie);
+          userId = userInfo?.userId ?? null;
+          if (!userId) {
+            toast.error("获取用户信息失败");
+            return;
+          }
+          setCurrentUserId(userId);
+        }
+
+        if (mineTab === "recommend" && !mineData.recommend) {
+          const recommend = await getRecommendPlaylists(cookie).catch(() => []);
+          setMineData((prev) => ({ ...prev, recommend }));
+        } else if ((mineTab === "created" || mineTab === "subscribed") && !mineData.created) {
+          const userPlaylists = await getUserPlaylists(String(userId), cookie);
+          setMineData((prev) => ({
+            ...prev,
+            created: userPlaylists.filter((p) => p.userId === String(userId)),
+            subscribed: userPlaylists.filter((p) => p.userId !== String(userId)),
+          }));
+        }
+      } catch (err) {
+        console.error("Mine Data Load Error:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchMineData();
+  }, [mineTab, currentUserId, mineData.recommend, mineData.created, setMineData, setCurrentUserId]);
+
+  return {
+    mineTab,
+    setMineTab,
+    rssSources,
+    mineData,
+    loading,
+    currentUserId,
+  };
+}
+
+function LoginPrompt() {
+  const navigate = useNavigate();
+  return (
+    <div className="flex flex-col items-center justify-center py-20 text-muted-foreground space-y-4">
+      <p className="text-sm">请先登录网易云账号以查看歌单</p>
+      <Button variant="outline" size="sm" onClick={() => navigate("/settings")}>前往设置</Button>
+    </div>
+  );
+}
+
+function EmptyState({ text = "空空如也~", action }: { text?: string; action?: React.ReactNode }) {
+  return (
+    <div className="flex flex-col items-center justify-center py-20 text-muted-foreground space-y-4">
+      <p className={cn("text-sm", !action && "tracking-widest")}>{text}</p>
+      {action}
+    </div>
+  );
+}
+
+export function MineSection() {
+  const navigate = useNavigate();
+  const { mineTab, setMineTab, rssSources, mineData, loading, currentUserId } = useMineData();
+  const [showPodcastDialog, setShowPodcastDialog] = useState(false);
+
+  const validRssSources = rssSources.filter((s) => !s.is_deleted);
+
+  // Tab Configurations
+  const tabs: MineTabConfig[] = useMemo(() => [
+    {
+      id: "recommend",
+      label: "推荐",
+      count: mineData.recommend?.length,
+      content: !currentUserId ? <LoginPrompt /> : (
+        (mineData.recommend && mineData.recommend.length > 0) ? (
+          <PlaylistGrid list={mineData.recommend} onClick={(id) => navigate(`/netease-playlist/${id}`)} />
+        ) : <EmptyState />
+      )
+    },
+    {
+      id: "created",
+      label: "创建",
+      count: mineData.created?.length,
+      content: !currentUserId ? <LoginPrompt /> : (
+        (mineData.created && mineData.created.length > 0) ? (
+          <PlaylistGrid list={mineData.created} onClick={(id) => navigate(`/netease-playlist/${id}`)} />
+        ) : <EmptyState />
+      )
+    },
+    {
+      id: "subscribed",
+      label: "收藏",
+      count: mineData.subscribed?.length,
+      content: !currentUserId ? <LoginPrompt /> : (
+        (mineData.subscribed && mineData.subscribed.length > 0) ? (
+          <PlaylistGrid list={mineData.subscribed} onClick={(id) => navigate(`/netease-playlist/${id}`)} />
+        ) : <EmptyState />
+      )
+    },
+    {
+      id: "podcast",
+      label: "播客",
+      count: validRssSources.length,
+      action: (
+        <Button 
+          variant="ghost" 
+          size="sm" 
+          className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground" 
+          onClick={() => setShowPodcastDialog(true)}
+        >
+          <Plus className="h-5 w-5" />
+        </Button>
+      ),
+      content: (
+        <>
+          {validRssSources.length > 0 ? (
+            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 gap-x-3 gap-y-4">
+              {validRssSources.map((rss) => <PodcastCard key={rss.id} rssSource={rss} />)}
+            </div>
+          ) : <EmptyState text="暂无订阅播客" action={<Button onClick={() => setShowPodcastDialog(true)}>立即添加</Button>} />}
+          <PodcastAdd open={showPodcastDialog} onOpenChange={setShowPodcastDialog} />
+        </>
+      )
+    }
+  ], [mineData, currentUserId, validRssSources, showPodcastDialog, navigate]);
+
+  const activeTabConfig = tabs.find(t => t.id === mineTab) || tabs[0];
+  const isDataReady = mineTab === "podcast" ? true : !!mineData[mineTab as keyof typeof mineData];
+
+  return (
+    <div className="p-4 pb-24 space-y-6">
+      <div className={cn("flex items-center justify-between mb-4 px-1 relative", SUB_TAB_HEIGHT)}>
+        <div className="flex items-center gap-6">
+          {tabs.map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setMineTab(tab.id)}
+              className={cn(
+                "text-[15px] transition-all whitespace-nowrap",
+                mineTab === tab.id ? "font-bold text-foreground tracking-wide" : "font-medium text-muted-foreground hover:text-foreground"
+              )}
+            >
+              {tab.label} {tab.count !== undefined && <span className="text-xs opacity-60 ml-0.5">{tab.count}</span>}
+            </button>
+          ))}
+        </div>
+        {/* Action Button Area */}
+        <div className="transition-opacity animate-in fade-in duration-200">
+          {activeTabConfig.action}
+        </div>
+      </div>
+
+      <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+        {loading && !isDataReady ? (
+          <div className="h-60 flex items-center justify-center text-muted-foreground">
+            <Loader2 className="h-6 w-6 animate-spin text-primary" />
+          </div>
+        ) : (
+          activeTabConfig.content
+        )}
+      </div>
+    </div>
+  );
+}
