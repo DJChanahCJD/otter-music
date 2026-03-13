@@ -1,0 +1,15 @@
+
+1. 重构 provider
+2. 优化网易云专辑功能，改为tracklist上方的时间编年史，允许左右滑动？（滑动进度需要进session）
+3. 提供缓存清理（按类型分类，如url歌词、封面等）
+
+
+
+5. 错误自动上报？哪一个最优雅简单，能够快速定位bug并修复？“前端：全局拦截器 (React 层)
+在 src/main.tsx 或 App.tsx 中加入全局监听。利用 Capacitor 的插件可以获取更详细的设备信息。”
+“后端：Cloudflare Worker (Serverless 层)
+利用 Cloudflare 的 KV (Key-Value Storage) 存储错误日志，这比数据库更轻量且自带过期功能。”
+
+
+6. 数据合并时并没有按时间来合并？（本地的新数据可以默认放到前面）
+7. 音质切换是否真的有用

@@ -1,4 +1,5 @@
 # Otter Music
+
 [网页端](https://github.com/DJChanahCJD/otter-music-web)
 
 <p align="center">
@@ -19,14 +20,12 @@
   <img src="https://img.shields.io/badge/State-Zustand-orange" />
 </p>
 
----
+***
 
 <p align="center">
   <img src="https://github.com/user-attachments/assets/a20b5785-c4b3-4f44-86d9-f07350caf873" width="45%" />
   <img src="https://github.com/user-attachments/assets/475cb456-ed0f-40e9-829d-a746dffd2688" width="45%" />
 </p>
-
-
 
 ## 功能
 
@@ -36,13 +35,11 @@
 - **歌词显示**：支持滚动歌词、实时跳转
 - **其他**：明/暗主题切换、数据定期同步
 
-> API 来自GD音乐台(https://music.gdstudio.xyz)
+> API 来自GD音乐台(<https://music.gdstudio.xyz>)
 >
 > 数据同步功能依赖主项目 [Otter Music Web](https://github.com/DJChanahCJD/otter-music-web)
 >
 > ⚠️ 当前仅支持 Android，欢迎 PR
-
-
 
 ## 开发
 
@@ -56,9 +53,12 @@ npm run dev
 # 构建生产版本
 npm run build
 ```
+
 # 运行测试
+
 npm run test
-```
+
+````
 > ⚠ 必须加 `--legacy-peer-deps`，因为`@jofr/capacitor-media-session` 与 Capacitor 8 存在 peer 版本冲突
 
 
@@ -74,10 +74,9 @@ npm run cap:add:android
 
 # 同步并构建 Debug 版本
 npm run build:android:debug
-```
+````
+
 > 构建完成后，APK 文件位于 `android/app/build/outputs/apk/debug/app-debug.apk`
-
-
 
 ## 目录结构
 
@@ -93,12 +92,9 @@ src/
 
 ## TODO
 
-- [] 是否将前后端放到一起，方便开发（无需单独维护另一个网页端？）
-- [] 改为 7天后清除回收站
-- [] 如何优化整体架构？[重构方案](.trae\documents\260312_1000_refactor_music_provider.md)
-- [] 修复媒体控制栏同步问题
-- [] 优化锁屏控制栏（喜欢、随机播放模式）
-
+- \[] 是否将前后端放到一起，方便开发（无需单独维护另一个网页端？）
+- \[] 改为 7天后清除回收站
+- \[] 修复媒体控制栏同步问题
 
 ## 参考资料
 
