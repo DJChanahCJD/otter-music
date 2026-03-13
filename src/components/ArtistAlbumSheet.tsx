@@ -119,7 +119,7 @@ export function ArtistAlbumSheet({ artistId, isOpen, onOpenChange, artistName }:
     }
   }, [isOpen, albums]);
 
-  // 中心对齐计算与震动反馈
+  // 中心对齐计算
   const syncSelectedByFlowCenter = useCallback(() => {
     const container = flowRef.current;
     if (!container || albums.length === 0) return;
@@ -192,7 +192,6 @@ export function ArtistAlbumSheet({ artistId, isOpen, onOpenChange, artistName }:
 
   return (
     <Drawer open={isOpen} onOpenChange={onOpenChange} direction="bottom">
-      {/* 移除了固定高度，让内容自适应撑开 */}
       <DrawerContent className="border-none rounded-t-[28px] bg-background/95 backdrop-blur-xl pb-10">
         <DrawerHeader className="px-6 pb-6 text-left">
           <DrawerTitle className="text-xl font-semibold tracking-tight">
@@ -222,7 +221,7 @@ export function ArtistAlbumSheet({ artistId, isOpen, onOpenChange, artistName }:
                     getCoverFlowClass(index)
                   )}
                 >
-                  <div className="relative aspect-square overflow-hidden rounded-2xl shadow-[0_18px_40px_-24px_rgba(0,0,0,.8)]">
+                  <div className="relative aspect-square overflow-hidden rounded-2xl shadow-lg">
                     <MusicCover src={album.picUrl} alt={album.name} className="h-full w-full object-cover" />
                   </div>
                 </button>

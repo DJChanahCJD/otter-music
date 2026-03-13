@@ -172,29 +172,35 @@ export function NeteaseDetail({
       title={detail?.name || "详情"}
       onBack={onBack}
       action={
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground">
-              <MoreVertical className="w-5 h-5" />
+        <div className="flex items-center">
+          {type === "artist" && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="text-muted-foreground hover:text-foreground"
+              onClick={() => setIsAlbumSheetOpen(true)}
+            >
+              <Album className="w-5 h-5" />
             </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={handleShare}>
-              <SquareArrowOutUpRight className="w-4 h-4 mr-2" />
-              分享
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={handleImportPlaylist}>
-              <Import className="w-4 h-4 mr-2" />
-              导入歌单
-            </DropdownMenuItem>
-            {type === 'artist' && (
-              <DropdownMenuItem onClick={() => setIsAlbumSheetOpen(true)}>
-                <Album className="w-4 h-4 mr-2" />
-                查看专辑
+          )}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground">
+                <MoreVertical className="w-5 h-5" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={handleShare}>
+                <SquareArrowOutUpRight className="w-4 h-4 mr-2" />
+                分享
               </DropdownMenuItem>
-            )}
-          </DropdownMenuContent>
-        </DropdownMenu>
+              <DropdownMenuItem onClick={handleImportPlaylist}>
+                <Import className="w-4 h-4 mr-2" />
+                导入歌单
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       }
     >
       <div
