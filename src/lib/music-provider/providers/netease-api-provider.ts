@@ -39,10 +39,11 @@ export class NeteaseApiProvider implements IMusicProvider {
   }
 
   async getPic(track: MusicTrack, size: number = 800): Promise<string | null> {
+    // TODO: 当前 MusicCover 里已经确保forceHttps， 这里是否还需要forceHttps？    
     try {
       const song = await getSongDetail(track.id);
       const url = song?.al?.picUrl;
-      return url ? forceHttps(`${url}?param=${size}y${size}`) : null;
+      return url ? `${url}?param=${size}y${size}` : null;
     } catch (e) {
       console.error('NeteaseProvider getPic failed:', e);
       return null;
