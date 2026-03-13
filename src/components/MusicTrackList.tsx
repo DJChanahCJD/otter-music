@@ -197,7 +197,7 @@ export function MusicTrackList({
         await downloadMusicTrack(track, parseInt(quality));
       },
       (c, t) => toast.loading(`下载中 ${c}/${t}`, { id: toastId }),
-      1
+      3
     );
     resetSelection();
   };
