@@ -1,7 +1,6 @@
 import { Button } from "@/components/ui/button";
 import {
   Drawer,
-  DrawerClose,
   DrawerContent,
   DrawerTitle,
   DrawerTrigger,
@@ -414,11 +413,6 @@ export function MusicTrackMobileMenu({
               <div className="flex flex-col gap-2">{customActions}</div>
             )}
           </div>
-          <DrawerClose asChild>
-            <Button variant="outline" className="mx-4 mb-4">
-              取消
-            </Button>
-          </DrawerClose>
         </DrawerContent>
       </Drawer>
 
