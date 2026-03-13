@@ -50,7 +50,7 @@ export function MusicCommentsDrawer({ track, open, onOpenChange }: MusicComments
         className="h-[85vh] flex flex-col p-0 gap-0 rounded-t-3xl border-none bg-background/95 backdrop-blur-xl outline-none"
       >
         <DrawerHeader className="px-6 py-5 pb-2 border-none text-left">
-          <DrawerTitle className="text-lg font-semibold tracking-tight">{track?.name ? `《${track.name}》的评论` : "评论"}</DrawerTitle>
+          <DrawerTitle className="text-lg font-semibold tracking-tight">{track?.name ? `${track.name} · 评论` : "评论"}</DrawerTitle>
         </DrawerHeader>
 
         <div className="flex-1 min-h-0 w-full">

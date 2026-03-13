@@ -41,8 +41,6 @@ import { MusicTrack } from "@/types/music";
 import toast from "react-hot-toast";
 import { processBatchCPU, processBatchIO } from "@/lib/utils";
 import { useShallow } from "zustand/react/shallow";
-import { haptics } from "@/lib/utils/haptics";
-import { ImpactStyle } from "@capacitor/haptics";
 
 interface MusicTrackListProps {
   tracks: MusicTrack[];
@@ -118,13 +116,12 @@ export function MusicTrackList({
 
   const handleDragStart = (event: DragStartEvent) => {
     setActiveId(event.active.id as string);
-    haptics.impact(ImpactStyle.Medium);
   };
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
     setActiveId(null);
-    haptics.impact(ImpactStyle.Light);
+    
     if (active.id !== over?.id && onReorder) {
        const oldIndex = tracks.findIndex((t) => t.id === active.id);
        const newIndex = tracks.findIndex((t) => t.id === over?.id);

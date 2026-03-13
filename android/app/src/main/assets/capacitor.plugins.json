@@ -16,10 +16,6 @@
 		"classpath": "com.capacitorjs.plugins.filesystem.FilesystemPlugin"
 	},
 	{
-		"pkg": "@capacitor/haptics",
-		"classpath": "com.capacitorjs.plugins.haptics.HapticsPlugin"
-	},
-	{
 		"pkg": "@jofr/capacitor-media-session",
 		"classpath": "io.github.jofr.capacitor.mediasessionplugin.MediaSessionPlugin"
 	}

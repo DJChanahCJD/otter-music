@@ -18,8 +18,6 @@ import { Checkbox } from "./ui/checkbox";
 import { Badge } from "./ui/badge";
 import { DatabaseZap, DollarSign, Gem, GripVertical } from "lucide-react";
 import { NeteasePrivilege } from "@/lib/netease/netease-types";
-import { haptics } from "@/lib/utils/haptics";
-import { ImpactStyle, NotificationType } from "@capacitor/haptics";
 
 // 预定义 Badge 样式，避免每次渲染都重新计算
 const PRIVILEGE_BADGES = {
@@ -105,13 +103,7 @@ export function MusicTrackItem({
     >
       <div
         className="col-span-2 grid grid-cols-[1.75rem_1fr] gap-4 items-center"
-        onClick={showCheckbox ? () => {
-          onSelect?.();
-          haptics.impact(ImpactStyle.Light);
-        } : () => {
-          onPlay();
-          haptics.impact(ImpactStyle.Light);
-        }}
+        onClick={showCheckbox ? onSelect : onPlay}
       >
         <div className="flex justify-center shrink-0">
           {showCheckbox ? (
@@ -206,34 +198,27 @@ export function MusicTrackItem({
           open={isMobileMenuOpen}
           onOpenChange={(open) => {
             setIsMobileMenuOpen(open);
-            if (open) haptics.impact(ImpactStyle.Medium);
           }}
           onAddToNextPlay={() => {
             addToNextPlay(track);
             toast.success("已添加到下一首播放");
-            haptics.impact(ImpactStyle.Light);
           }}
           onAddToPlaylist={() => {
             setIsAddToPlaylistOpen(true);
-            haptics.impact(ImpactStyle.Light);
           }}
           onDownload={() => {
             downloadMusicTrack(track, parseInt(quality));
-            haptics.impact(ImpactStyle.Light);
           }}
           onToggleLike={() => {
             if (isFavorite(track.id)) {
               removeFromFavorites(track.id);
               toast.success("已取消喜欢");
-              haptics.impact(ImpactStyle.Light);
             } else {
               const error = addToFavorites(track);
                 if (error) {
                   toastUtils.info(error);
-                  haptics.notification(NotificationType.Warning);
                 } else {
                   toast.success("已喜欢");
-                  haptics.notification(NotificationType.Success);
                 }
             }
           }}

@@ -33,8 +33,6 @@ import { useShallow } from "zustand/react/shallow";
 import toast from "react-hot-toast";
 import { ColorExtractor } from "react-color-extractor";
 import { pickBestColor } from "@/lib/utils/color";
-import { haptics } from "@/lib/utils/haptics";
-import { ImpactStyle, NotificationType } from "@capacitor/haptics";
 
 interface ModeIconProps {
   isRepeat: boolean;
@@ -178,7 +176,6 @@ export function FullScreenPlayer({
   const playTrack = (index: number) => setCurrentIndexAndPlay(index);
 
   const handleClearQueue = () => {
-    haptics.notification(NotificationType.Warning);
     if (confirm("确定要清空播放列表吗？")) {
       clearQueue();
       toast.success("播放列表已清空");
@@ -195,10 +192,8 @@ export function FullScreenPlayer({
         )}\n${currentAudioUrl}`,
       );
       toast.success("已复制到剪贴板");
-      haptics.notification(NotificationType.Success);
     } catch {
       toast.error("复制失败，请重试");
-      haptics.notification(NotificationType.Error);
     }
   };
 
@@ -206,7 +201,6 @@ export function FullScreenPlayer({
 
   const modeTitle = isRepeat ? "单曲循环" : isShuffle ? "随机播放" : "列表循环";
   const handleModeToggle = () => {
-    haptics.impact(ImpactStyle.Medium);
     if (!isShuffle && !isRepeat) onToggleRepeat();
     else if (isRepeat) {
       onToggleRepeat();
@@ -242,7 +236,7 @@ export function FullScreenPlayer({
           className="h-12 w-12 text-white/60 hover:bg-white/10 hover:text-white"
           onClick={() => {
             onClose();
-            haptics.impact(ImpactStyle.Light);
+            
           }}
         >
           <ChevronDown className="h-6 w-6" />
@@ -264,7 +258,7 @@ export function FullScreenPlayer({
         className="flex-1 flex flex-col items-center justify-center px-2 relative z-10 overflow-hidden cursor-pointer"
         onClick={() => {
           setShowLyrics(!showLyrics);
-          haptics.impact(ImpactStyle.Light);
+          
         }}
       >
         {showLyrics ? (
@@ -313,11 +307,6 @@ export function FullScreenPlayer({
               onClick={(e) => {
                 e.stopPropagation();
                 onToggleLike?.();
-                if (isFavorite) {
-                  haptics.impact(ImpactStyle.Light);
-                } else {
-                  haptics.notification(NotificationType.Success);
-                }
               }}
             >
               <Heart
@@ -334,29 +323,20 @@ export function FullScreenPlayer({
                   open={moreDrawerOpen}
                   onOpenChange={(open) => {
                     setMoreDrawerOpen(open);
-                    if (open) haptics.impact(ImpactStyle.Medium);
                   }}
                   onAddToPlaylist={() => {
                     setIsAddToPlaylistOpen(true);
-                    haptics.impact(ImpactStyle.Light);
                   }}
                   onDownload={() => {
                     downloadMusicTrack(currentTrack, parseInt(quality));
-                    haptics.impact(ImpactStyle.Light);
                   }}
                   isFavorite={isFavorite}
                   onToggleLike={() => {
                     onToggleLike?.();
-                    if (isFavorite) {
-                      haptics.impact(ImpactStyle.Light);
-                    } else {
-                      haptics.notification(NotificationType.Success);
-                    }
                   }}
                   triggerClassName="h-10 w-10 text-white/70 hover:bg-white/10 hover:text-white"
                   onNavigate={() => {
                     onClose();
-                    haptics.impact(ImpactStyle.Light);
                   }}
                   customActions={
                     <Button
@@ -398,7 +378,7 @@ export function FullScreenPlayer({
           className="h-12 w-12 text-white/70 hover:bg-white/10 hover:text-white"
           onClick={() => {
             onPrev();
-            haptics.impact(ImpactStyle.Light);
+            
           }}
         >
           <SkipBack className="h-6 w-6 fill-current" />
@@ -408,7 +388,7 @@ export function FullScreenPlayer({
           className="h-16 w-16 rounded-full bg-white text-black shadow-lg hover:scale-105 transition-all active:scale-95"
           onClick={() => {
             onTogglePlay();
-            haptics.impact(ImpactStyle.Light);
+            
           }}
           disabled={isLoading}
         >
@@ -426,7 +406,7 @@ export function FullScreenPlayer({
           className="h-12 w-12 text-white/70 hover:bg-white/10 hover:text-white"
           onClick={() => {
             onNext();
-            haptics.impact(ImpactStyle.Light);
+            
           }}
         >
           <SkipForward className="h-6 w-6 fill-current" />
@@ -444,7 +424,6 @@ export function FullScreenPlayer({
               variant="ghost"
               size="icon"
               className="h-12 w-12 text-white/70 hover:bg-white/10 hover:text-white"
-              onClick={() => haptics.impact(ImpactStyle.Medium)}
             >
               <ListVideo className="h-5 w-5" />
             </Button>
