@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from "react";
 import { PageLayout } from "@/components/PageLayout";
 import { MusicTrackList } from "@/components/MusicTrackList";
-import { getPlaylistDetail, getArtist, getAlbum, convertSongToMusicTrack } from "@/lib/netease/netease-api";
+import { getPlaylistDetail, getArtist, getAlbum, getArtistSongs, convertSongToMusicTrack } from "@/lib/netease/netease-api";
 import { MusicTrack } from "@/types/music";
 import { MoreVertical, Import, SquareArrowOutUpRight, Album } from "lucide-react";
 import toast from "react-hot-toast";
@@ -46,6 +46,9 @@ export function NeteaseDetail({
   const scrollRef = useRef<HTMLDivElement>(null);
   const [retryCount, setRetryCount] = useState(0);
   const [isAlbumSheetOpen, setIsAlbumSheetOpen] = useState(false);
+  const [offset, setOffset] = useState(0);
+  const [hasMore, setHasMore] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
 
   const [{ loading, error, detail, tracks }, setState] = useState<{
     loading: boolean;
@@ -86,11 +89,45 @@ export function NeteaseDetail({
     }
   };
 
+  const handleLoadMore = async () => {
+    if (!id || loadingMore || !hasMore || type !== 'artist') return;
+    setLoadingMore(true);
+    try {
+      const res = await getArtistSongs(id, 50, offset);
+      if (res?.songs?.length) {
+        const newTracks = res.songs.map(convertSongToMusicTrack);
+        
+        setState(prev => ({
+          ...prev,
+          tracks: [...prev.tracks, ...newTracks]
+        }));
+        
+        const nextOffset = offset + newTracks.length;
+        setOffset(nextOffset);
+        
+        if (detail?.trackCount && nextOffset >= detail.trackCount) {
+             setHasMore(false);
+        } else {
+             setHasMore(res.more ?? true);
+        }
+      } else {
+        setHasMore(false);
+      }
+    } catch (err) {
+      toast.error("加载更多失败");
+      console.error(err);
+    } finally {
+      setLoadingMore(false);
+    }
+  };
+
   useEffect(() => {
     if (!id) return;
 
     let active = true;
     setState({ loading: true, error: false, detail: null, tracks: [] });
+    setOffset(0);
+    setHasMore(false);
 
     const loadData = async () => {
       try {
@@ -115,9 +152,13 @@ export function NeteaseDetail({
             name: res.artist.name,
             coverImgUrl: res.artist.picUrl,
             description: res.artist.briefDesc,
-            trackCount: res.hotSongs.length,
+            trackCount: res.artist.musicSize,
           };
           rawTracks = res.hotSongs;
+          if (active) {
+            setOffset(rawTracks.length);
+            setHasMore(res.artist.musicSize > rawTracks.length);
+          }
         } else {
           const res = await getAlbum(id, "");
           if (!res?.album) throw new Error("Not found");
@@ -225,6 +266,9 @@ export function NeteaseDetail({
               currentTrackId={currentTrackId}
               isPlaying={isPlaying}
               emptyMessage="列表为空"
+              onLoadMore={type === 'artist' ? handleLoadMore : undefined}
+              hasMore={hasMore}
+              loading={loading || loadingMore}
             />
         </div>
       </div>

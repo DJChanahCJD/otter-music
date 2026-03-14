@@ -368,6 +368,20 @@ export const getArtist = (id: string, cookie: string = '') =>
         TTL_LONG // 歌手基础信息低频变动 
     ); 
 
+export const getArtistSongs = (id: string, limit: number = 50, offset: number = 0, order: string = 'hot', cookie: string = '') =>
+    cachedFetch(
+        `netease:artist-songs:${id.replace(/^(neartist_|ne_artist_)/, '')}:${limit}:${offset}:${order}`,
+        async () => {
+            const res = await requestWeapi<{ songs: SongDetail[], total: number, more: boolean }>(
+                `${BASE_URL}/weapi/v1/artist/songs`,
+                { id: id.replace(/^(neartist_|ne_artist_)/, ''), limit, offset, order, total: true },
+                cookie
+            );
+            return res.data;
+        },
+        TTL_MEDIUM
+    );
+
 export const getArtistAlbums = (id: string, limit: number = 30, offset: number = 0, cookie: string = '') =>
     cachedFetch(
         `netease:artist-albums:${id.replace(/^(neartist_|ne_artist_)/, '')}:${limit}:${offset}`,
