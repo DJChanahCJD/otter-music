@@ -83,6 +83,7 @@ export function PodcastEditDrawer({ open, onOpenChange, source }: PodcastEditDra
             <div className="space-y-2">
               <Label htmlFor="podcast-name">名称</Label>
               <Input
+                autoFocus
                 id="podcast-name"
                 value={name}
                 onChange={(e) => setName(e.target.value)}

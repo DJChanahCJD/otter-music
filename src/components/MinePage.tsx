@@ -132,6 +132,7 @@ export function MinePage({ onSelectPlaylist }: MinePageProps) {
             </DrawerHeader>
             <div className="px-4 pb-4">
               <Input
+                autoFocus
                 placeholder="歌单名称"
                 value={newPlaylistName}
                 onChange={(e) => setNewPlaylistName(e.target.value)}
@@ -168,6 +169,7 @@ export function MinePage({ onSelectPlaylist }: MinePageProps) {
               <div className="flex-1 min-w-0">
                 {editingPlaylistId === playlist.id ? (
                   <Input
+                    autoFocus
                     value={editingName}
                     onChange={(e) => setEditingName(e.target.value)}
                     onKeyDown={(e) => {
@@ -180,14 +182,13 @@ export function MinePage({ onSelectPlaylist }: MinePageProps) {
                     }}
                     onBlur={() => handleRename(playlist.id)}
                     className="h-7 text-sm"
-                    autoFocus
                     onClick={(e) => e.stopPropagation()}
                   />
                 ) : (
                   <>
                     <p className="font-medium text-foreground truncate">{playlist.name}</p>
                     <p className="text-xs text-muted-foreground">
-                      {/* TODO: 是否去掉filter? */}
+                      {/* TODO: 是否简化同步流程, 不再需要is_deleted，仅歌单级别is_deleted, 以最新版本的歌单为主  */}
                       {playlist.tracks.filter((track) => track.is_deleted !== true).length} 首 · {format(playlist.createdAt, "yyyy-MM-dd")}
                     </p>
                   </>

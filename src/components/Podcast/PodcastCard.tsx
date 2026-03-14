@@ -34,7 +34,7 @@ export function PodcastCard({ rssSource }: PodcastCardProps) {
             fallbackIcon={<Podcast className="h-8 w-8 text-muted-foreground/50" />}
           />
           <div 
-            className="absolute top-1 right-1 z-10 md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-200"
+            className="absolute top-1 right-1 z-10 transition-opacity duration-200"
             onClick={(e) => e.stopPropagation()}
           >
              <Button

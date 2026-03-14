@@ -148,6 +148,7 @@ export function PodcastAdd({ open, onOpenChange }: PodcastAddProps) {
                 <div className="relative flex-1">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                   <Input
+                    autoFocus
                     className="pl-9"
                     placeholder="搜索播客名称..."
                     value={keyword}
