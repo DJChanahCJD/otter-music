@@ -17,11 +17,9 @@ export interface ListSnapshot {
 
 interface MarketSessionState {
   mineData: MineDataState;
-  currentUserId: number | null;
   listSnapshots: Record<string, ListSnapshot>;
 
   setMineData: (data: MineDataState | ((prev: MineDataState) => MineDataState)) => void;
-  setCurrentUserId: (id: number | null) => void;
   saveListSnapshot: (key: string, snapshot: ListSnapshot) => void;
   clearSession: () => void;
 }
@@ -35,15 +33,12 @@ export const useMarketSession = create<MarketSessionState>()(
         subscribed: null,
         albums: null,
       },
-      currentUserId: null,
       listSnapshots: {},
 
       setMineData: (data) =>
         set((state) => ({
           mineData: typeof data === "function" ? data(state.mineData) : data,
         })),
-
-      setCurrentUserId: (id) => set({ currentUserId: id }),
 
       saveListSnapshot: (key, snapshot) =>
         set((state) => ({
@@ -56,7 +51,6 @@ export const useMarketSession = create<MarketSessionState>()(
       clearSession: () =>
         set({
           mineData: { recommend: null, created: null, subscribed: null, albums: null },
-          currentUserId: null,
           listSnapshots: {},
         }),
     }),
@@ -65,7 +59,6 @@ export const useMarketSession = create<MarketSessionState>()(
       storage: createJSONStorage(() => sessionStorage),
       partialize: (state) => ({
         mineData: state.mineData,
-        currentUserId: state.currentUserId,
         listSnapshots: state.listSnapshots,
       }),
     }

@@ -7,3 +7,4 @@ export * from './local-music-store';
 export * from './source-quality-store';
 export * from './sync-store';
 export * from './app-store';
+export * from './netease-store';

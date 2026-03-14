@@ -4,8 +4,6 @@ import {
   getRecommendPlaylists,
   getUserPlaylists,
   getSubscribedAlbums,
-  getMyInfo,
-  NETEASE_COOKIE_KEY,
 } from "@/lib/netease/netease-api";
 import type { ArtistAlbum } from "@/lib/netease/netease-types";
 import { MusicCover } from "@/components/MusicCover";
@@ -13,12 +11,12 @@ import { Loader2, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
 import { useMusicStore, type MusicState } from "@/store/music-store";
-import { toast } from "react-hot-toast";
 import { PodcastAdd } from "@/components/Podcast/PodcastAdd";
 import { PodcastCard } from "@/components/Podcast/PodcastCard";
 import { usePodcastStore } from "@/store/podcast-store";
 import { useMarketSession } from "@/store/session/market-session";
 import { PlaylistGrid } from "./PlaylistGrid";
+import { useNeteaseStore } from "@/store/netease-store";
 
 const SUB_TAB_HEIGHT = "h-8";
 
@@ -34,12 +32,13 @@ function useMineData() {
   const mineTab = useMusicStore((s) => s.lastMineTab);
   const setMineTab = useMusicStore((s) => s.setLastMineTab);
   const rssSources = usePodcastStore((s) => s.rssSources);
-  const { mineData, setMineData, currentUserId, setCurrentUserId } = useMarketSession();
+  const { mineData, setMineData } = useMarketSession();
+  const { cookie, user } = useNeteaseStore();
+  const currentUserId = user?.userId ?? null;
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     const fetchMineData = async () => {
-      const cookie = localStorage.getItem(NETEASE_COOKIE_KEY);
       if (!cookie) return;
 
       if (mineTab === "recommend" && mineData.recommend) return;
@@ -49,26 +48,17 @@ function useMineData() {
 
       try {
         setLoading(true);
-        let userId = currentUserId;
-        if (!userId) {
-          const userInfo = await getMyInfo(cookie);
-          userId = userInfo?.userId ?? null;
-          if (!userId) {
-            toast.error("获取用户信息失败");
-            return;
-          }
-          setCurrentUserId(userId);
-        }
 
         if (mineTab === "recommend" && !mineData.recommend) {
           const recommend = await getRecommendPlaylists(cookie).catch(() => []);
           setMineData((prev) => ({ ...prev, recommend }));
         } else if ((mineTab === "created" || mineTab === "subscribed") && !mineData.created) {
-          const userPlaylists = await getUserPlaylists(String(userId), cookie);
+          if (!currentUserId) return;
+          const userPlaylists = await getUserPlaylists(String(currentUserId), cookie);
           setMineData((prev) => ({
             ...prev,
-            created: userPlaylists.filter((p) => p.userId === String(userId)),
-            subscribed: userPlaylists.filter((p) => p.userId !== String(userId)),
+            created: userPlaylists.filter((p) => p.userId === String(currentUserId)),
+            subscribed: userPlaylists.filter((p) => p.userId !== String(currentUserId)),
           }));
         } else if (mineTab === "albums" && !mineData.albums) {
           // 默认加载前100个收藏专辑
@@ -83,7 +73,7 @@ function useMineData() {
     };
 
     fetchMineData();
-  }, [mineTab, currentUserId, mineData.recommend, mineData.created, mineData.albums, setMineData, setCurrentUserId]);
+  }, [mineTab, currentUserId, cookie, mineData.recommend, mineData.created, mineData.albums, setMineData]);
 
   return {
     mineTab,

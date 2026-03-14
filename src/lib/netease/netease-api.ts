@@ -32,8 +32,8 @@ import { MusicTrack } from '@/types/music';
 import { cachedFetch } from "@/lib/utils/cache";
 import { API_URL } from "@/lib/api/config";
 import { Capacitor, CapacitorHttp } from '@capacitor/core';
+import { useNeteaseStore } from '@/store/netease-store';
 
-// TODO: 当前是被动清除缓存，需要优雅实现静默 LRU 清除
 const TTL_SHORT = 60 * 60 * 1000;           // 1 hour
 const TTL_MEDIUM = 24 * 60 * 60 * 1000;     // 1 day
 const TTL_LONG = 7 * 24 * 60 * 60 * 1000;   // 7 days
@@ -47,13 +47,12 @@ const PC_USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537
 const MOBILE_USER_AGENT = 'Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 MicroMessenger/8.0.27';
 const NETWORK_TIMEOUT_MS = 12000;
 
-export const NETEASE_COOKIE_KEY = "cookie:_netease";
 
 /* =========================================================
- * 核心伪装工具集 (Cookie & IP)
- * ========================================================= */
+* 核心伪装工具集 (Cookie & IP)
+* ========================================================= */
 
-export const getStoredCookie = () => localStorage.getItem(NETEASE_COOKIE_KEY) || "";
+export const getStoredCookie = () => useNeteaseStore.getState().cookie || "";
 
 const getRandomDomesticIp = () => `113.108.${Math.floor(Math.random() * 255)}.${Math.floor(Math.random() * 255)}`;
 const getIpForRequest = (cookie: string) => cookie.includes('MUSIC_U') ? '' : getRandomDomesticIp();

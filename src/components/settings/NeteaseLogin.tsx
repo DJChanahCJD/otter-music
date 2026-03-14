@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useRef, useCallback } from "react";
 import { User, RefreshCw, Check, Loader2, ScanLine, Info } from "lucide-react";
 import {
   Drawer,
@@ -15,11 +15,11 @@ import {
   getQrKey,
   checkQrStatus,
   getMyInfo,
-  NETEASE_COOKIE_KEY,
 } from "@/lib/netease/netease-api";
 import type { UserProfile } from "@/lib/netease/netease-types";
 import toast from "react-hot-toast";
 import { QRCodeSVG } from "qrcode.react";
+import { useNeteaseStore } from "@/store/netease-store";
 
 const STATUS_MESSAGES = {
   loading: "正在获取二维码...",
@@ -33,7 +33,7 @@ type QrStatus = keyof typeof STATUS_MESSAGES;
 type LoginMode = "qr" | "cookie";
 
 export function NeteaseLogin() {
-  const [user, setUser] = useState<UserProfile | null>(null);
+  const { user, setLogin, logout } = useNeteaseStore();
   const [showDialog, setShowDialog] = useState(false);
   const [loading, setLoading] = useState(false);
   const [loginMode, setLoginMode] = useState<LoginMode>("qr");
@@ -62,31 +62,12 @@ export function NeteaseLogin() {
 
   const onLoginSuccess = useCallback(
     (cookie: string, profile: UserProfile) => {
-      localStorage.setItem(NETEASE_COOKIE_KEY, cookie);
-      localStorage.setItem("cookie:netease", cookie);
-      setUser(profile);
+      setLogin(cookie, profile);
       setShowDialog(false);
       resetDialogState();
     },
-    [resetDialogState],
+    [resetDialogState, setLogin],
   );
-
-  const checkLoginStatus = useCallback(async () => {
-    const cookie = localStorage.getItem(NETEASE_COOKIE_KEY);
-    if (!cookie) return;
-
-    try {
-      const profile = await getMyInfo(cookie);
-      if (profile) setUser(profile);
-    } catch (error) {
-      console.error("User info fetch failed:", error);
-    }
-  }, []);
-
-  useEffect(() => {
-    void checkLoginStatus();
-    return () => clearTimer();
-  }, [checkLoginStatus, clearTimer]);
 
   const scheduleNextPoll = useCallback((key: string) => {
     if (!pollingRef.current) return;
@@ -199,9 +180,9 @@ export function NeteaseLogin() {
   const handleLogout = () => {
     if (!window.confirm("确定要退出网易云登录吗？")) return;
 
-    localStorage.removeItem(NETEASE_COOKIE_KEY);
-    localStorage.removeItem("cookie:netease");
-    setUser(null);
+    logout();
+    // localStorage.removeItem(NETEASE_COOKIE_KEY);
+    // localStorage.removeItem("cookie:netease");
     toast.success("已退出登录");
   };
 

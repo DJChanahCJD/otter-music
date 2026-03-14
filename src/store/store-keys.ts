@@ -7,4 +7,5 @@ export enum storeKey {
     HistoryStore = "oh_history_store",
     DownloadStore = "oh_download_store",
     AppStore = "oh_app_store",
+    NeteaseStore = "oh_netease_store",
 }
