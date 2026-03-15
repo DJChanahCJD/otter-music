@@ -89,15 +89,16 @@ export function useAudioEventHandlers(
     /** 播放开始 */
     const onPlay = () => {
       settleLoading();
-      if (audio.paused || hasRecordedRef.current) return;
-
-      hasRecordedRef.current = true;
+      if (audio.paused) return;
 
       const state = useMusicStore.getState();
       const track = state.queue[state.currentIndex];
 
       if (!state.isPlaying) state.setIsPlaying(true);
       state.resetFailures();
+
+      if (hasRecordedRef.current) return;
+      hasRecordedRef.current = true;
 
       if (track) {
         useSourceQualityStore.getState().recordSuccess(track.source);

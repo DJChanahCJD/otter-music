@@ -35,10 +35,10 @@ export function useMediaSessionIntegration(
   }, [currentTrack, coverUrl]);
 
   useEffect(() => {
+    const audio = audioRef.current;
+
     const updatePlaybackState = async () => {
       try {
-        // 以 audio 实际状态作为播放态真源
-        const audio = audioRef.current;
         const playbackState = audio
           ? (audio.paused ? "paused" : "playing")
           : (isPlaying ? "playing" : "paused");
@@ -50,8 +50,34 @@ export function useMediaSessionIntegration(
         console.error("MediaSession state error:", e);
       }
     };
-    updatePlaybackState();
-  }, [isPlaying]);
+
+    const syncPlaybackState = () => {
+      void updatePlaybackState();
+    };
+
+    syncPlaybackState();
+
+    if (!audio) return;
+
+    const playbackEvents: Array<keyof HTMLMediaElementEventMap> = [
+      "play",
+      "pause",
+      "ended",
+      "waiting",
+      "stalled",
+      "error",
+    ];
+
+    playbackEvents.forEach(event => {
+      audio.addEventListener(event, syncPlaybackState);
+    });
+
+    return () => {
+      playbackEvents.forEach(event => {
+        audio.removeEventListener(event, syncPlaybackState);
+      });
+    };
+  }, [audioRef, isPlaying, currentTrack?.id]);
 
   useEffect(() => {
     const actionHandlers: [string, (details?: { seekTime?: number | null }) => void][] = [
