@@ -4,6 +4,7 @@ import { MusicTrackList } from "./MusicTrackList";
 import { Input } from "@/components/ui/input";
 import { useState, useMemo } from "react";
 import { MusicCover } from "./MusicCover";
+import { PlaylistCover } from "./PlaylistCover";
 import { cn } from "@/lib/utils";
 import { PlaylistOperations } from "./PlaylistOperations";
 import { MusicTrack } from "@/types/music";
@@ -76,9 +77,10 @@ export function MusicPlaylistView({
   const [coverUrlInput, setCoverUrlInput] = useState("");
 
   const playlists = useMusicStore(useShallow(state => state.playlists));
+  const playlist = playlists.find(p => p.id === playlistId);
   const isPersonalPlaylist = useMemo(() => {
-    return playlistId && playlists.some(p => p.id === playlistId);
-  }, [playlistId, playlists]);
+    return !!playlist;
+  }, [playlist]);
 
   const handleReorder = (newOrder: MusicTrack[]) => {
     if (playlistId && isPersonalPlaylist) {
@@ -184,13 +186,22 @@ export function MusicPlaylistView({
         showTitle ? "items-end" : "items-center"
       )}>
         <div className="h-22 w-22 bg-primary/10 rounded-lg flex items-center justify-center shadow-sm border overflow-hidden shrink-0">
-          <MusicCover
-            src={coverUrl}
-            alt={title}
-            className="h-full w-full"
-            iconClassName="h-8 w-8 text-primary/80"
-            fallbackIcon={icon}
-          />
+          {playlist ? (
+            <PlaylistCover
+              playlist={playlist}
+              className="h-full w-full"
+              iconClassName="h-8 w-8 text-primary/80"
+              fallbackIcon={icon}
+            />
+          ) : (
+            <MusicCover
+              src={coverUrl}
+              alt={title}
+              className="h-full w-full"
+              iconClassName="h-8 w-8 text-primary/80"
+              fallbackIcon={icon}
+            />
+          )}
         </div>
         <div className="flex-1 space-y-1">
           {showTitle && <h1 className="text-xl font-bold tracking-tight">{title}</h1>}

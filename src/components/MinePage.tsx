@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { ListVideo, Settings, ListMusic, SquarePlus, MoreHorizontal, Trash2, Pencil, HardDriveDownload, History } from "lucide-react";
-import { MusicCover } from "./MusicCover";
+import { PlaylistCover } from "./PlaylistCover";
 import { useMusicStore } from "@/store/music-store";
 import { useShallow } from "zustand/react/shallow";
 import { Button } from "./ui/button";
@@ -160,11 +160,9 @@ export function MinePage({ onSelectPlaylist }: MinePageProps) {
               className="flex items-center gap-3 p-3 rounded-xl bg-card/50 hover:bg-card transition-colors cursor-pointer group"
               onClick={() => onSelectPlaylist(playlist.id)}
             >
-              <MusicCover
-                src={playlist.coverUrl}
-                alt={playlist.name}
-                className="h-11 w-11 rounded-lg bg-primary/10"
-                fallbackIcon={<ListMusic className="h-5 w-5 text-primary" />}
+              <PlaylistCover
+                playlist={playlist}
+                className="h-11 w-11 rounded-lg bg-primary/10 shrink-0"
               />
               <div className="flex-1 min-w-0">
                 {editingPlaylistId === playlist.id ? (
