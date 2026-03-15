@@ -6,7 +6,7 @@ import {
   convertSongToMusicTrack, toggleSubAlbum, getAlbumDynamicDetail 
 } from "@/lib/netease/netease-api";
 import { MusicTrack } from "@/types/music";
-import { MoreVertical, Import, SquareArrowOutUpRight, Album, Heart, HeartCrack } from "lucide-react";
+import { MoreVertical, Import, SquareArrowOutUpRight, Album, Bookmark } from "lucide-react";
 import toast from "react-hot-toast";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
@@ -227,6 +227,15 @@ export function NeteaseDetail({
               <Album className="w-5 h-5" />
             </Button>
           )}
+          {cookie && type === "album" && (
+            <Button
+              variant="ghost" size="icon"
+              className={detail?.sub ? "text-primary" : "text-muted-foreground hover:text-foreground"}
+              onClick={handleToggleSub}
+            >
+              <Bookmark className={`w-5 h-5 ${detail?.sub ? "fill-current" : ""}`} />
+            </Button>
+          )}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground">
@@ -234,16 +243,6 @@ export function NeteaseDetail({
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              {/* 仅在类型为专辑时展示收藏/取消收藏按钮 */}
-              {cookie && type === "album" && (
-                <DropdownMenuItem onClick={handleToggleSub}>
-                  {detail?.sub ? (
-                    <><HeartCrack className="w-4 h-4 mr-2" />取消收藏</>
-                  ) : (
-                    <><Heart className="w-4 h-4 mr-2" />收藏专辑</>
-                  )}
-                </DropdownMenuItem>
-              )}
               <DropdownMenuItem onClick={handleShare}>
                 <SquareArrowOutUpRight className="w-4 h-4 mr-2" />分享
               </DropdownMenuItem>
