@@ -38,6 +38,7 @@ export function PlaylistMarket() {
   const [hasMore, setHasMore] = useState(true);
   const [isFetching, setIsFetching] = useState(false);
   const observerTarget = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   const { listSnapshots, saveListSnapshot } = useMarketSession();
 
@@ -147,15 +148,27 @@ export function PlaylistMarket() {
     return () => observer.disconnect();
   }, [offset, hasMore, isFetching, loading, activeCategory, featuredTab, fetchItems]);
 
+  // 滚动选中分类到可视区域中心
+  useEffect(() => {
+    const activeBtn = scrollContainerRef.current?.querySelector(`[data-category-id="${activeCategory}"]`);
+    if (activeBtn) {
+      activeBtn.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
+    }
+  }, [activeCategory]);
+
   return (
     <div className="flex flex-col h-full bg-background/50 animate-in fade-in duration-500">
       <header className="sticky top-0 z-20 bg-background/90 backdrop-blur-xl border-b border-white/5 shadow-sm">
         <div className="flex items-center justify-between px-3 py-1.5 gap-2">
           <div className="flex-1 overflow-hidden relative">
-            <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar mask-[linear-gradient(to_right,black_calc(100%-32px),transparent_100%)]">
+            <div 
+              ref={scrollContainerRef}
+              className="flex items-center gap-1.5 overflow-x-auto no-scrollbar mask-[linear-gradient(to_right,black_calc(100%-32px),transparent_100%)]"
+            >
               {displayFilters.map((f) => (
                 <Button
                   key={f.id}
+                  data-category-id={f.id}
                   variant="ghost"
                   size="sm"
                   onClick={() => setActiveCategory(f.id)}
