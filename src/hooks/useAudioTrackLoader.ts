@@ -277,7 +277,11 @@ export function useAudioTrackLoader(
 
         const failures = incrementFailures();
         if (failures >= maxConsecutiveFailures) {
-          setIsPlaying(false);
+          if (audio.paused) {
+            setIsPlaying(false);
+          } else {
+            console.error("Skip setIsPlaying(false) because audio is still playing");
+          }
         } else {
           skipToNext();
         }

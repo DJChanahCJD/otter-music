@@ -39,6 +39,9 @@ export function useAudioEventHandlers(
 
       const state = useMusicStore.getState();
       state.setAudioCurrentTime(audio.currentTime);
+      if (!audio.paused && !state.isPlaying) {
+        state.setIsPlaying(true);
+      }
 
       MediaSession.setPositionState({
         duration: audio.duration || 0,

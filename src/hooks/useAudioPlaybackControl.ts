@@ -22,7 +22,9 @@ export function useAudioPlaybackControl(
     if (audio.paused) {
       audio.play().catch((e) => {
         console.error("Resume play failed:", e);
-        setIsPlaying(false);
+        if (audio.paused) {
+          setIsPlaying(false);
+        }
       });
     }
   }, [isPlaying, setIsPlaying]); // eslint-disable-line react-hooks/exhaustive-deps
