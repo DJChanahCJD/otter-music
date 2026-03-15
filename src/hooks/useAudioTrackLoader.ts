@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import { retry } from "@/lib/utils";
 import { musicApi } from "@/lib/music-api";
+import { getProxyUrl } from "@/lib/api";
 import { useMusicStore } from "@/store/music-store";
 import { useSourceQualityStore } from "@/store/source-quality-store";
 import { useDownloadStore } from "@/store/download-store";
@@ -9,6 +10,10 @@ import { buildDownloadKey } from "@/lib/utils/download";
 import type { MusicSource } from "@/types/music";
 import toast from "react-hot-toast";
 import { handleAutoMatch } from "@/lib/audio-match";
+
+const AUDIO_READY_TIMEOUT = 8000;
+
+type FallbackStage = "none" | "proxy" | "final";
 
 function isTrackPlayable(
   track: { source: MusicSource; id: string } | null,
@@ -48,7 +53,55 @@ function findNextPlayableTrack(
   return null;
 }
 
-async function resolveAudioUrl({
+function waitForAudioReady(audio: HTMLAudioElement, timeout = AUDIO_READY_TIMEOUT): Promise<void> {
+  return new Promise((resolve, reject) => {
+    let settled = false;
+
+    const cleanup = () => {
+      audio.removeEventListener("canplay", onReady);
+      audio.removeEventListener("loadedmetadata", onReady);
+      audio.removeEventListener("error", onError);
+      clearTimeout(timer);
+    };
+
+    const finish = (fn: () => void) => {
+      if (settled) return;
+      settled = true;
+      cleanup();
+      fn();
+    };
+
+    const onReady = () => finish(resolve);
+    const onError = () => finish(() => reject(new Error("AUDIO_NOT_READY")));
+    const timer = setTimeout(() => finish(() => reject(new Error("AUDIO_READY_TIMEOUT"))), timeout);
+
+    audio.addEventListener("canplay", onReady, { once: true });
+    audio.addEventListener("loadedmetadata", onReady, { once: true });
+    audio.addEventListener("error", onError, { once: true });
+  });
+}
+
+async function resolveLocalDownloadUrl({
+  trackId,
+  source,
+}: {
+  trackId: string
+  source: MusicSource
+}): Promise<{ url: string | null; downloadKey: string | null }> {
+  const isNative = Capacitor.isNativePlatform()
+  const isLocal = source === 'local'
+  if (isNative && !isLocal) {
+    const downloadKey = buildDownloadKey(source, trackId)
+    const uri = useDownloadStore.getState().getUri(downloadKey)
+    if (uri) {
+      return { url: Capacitor.convertFileSrc(uri), downloadKey }
+    }
+  }
+
+  return { url: null, downloadKey: null }
+}
+
+async function resolveRemoteAudioUrl({
   trackId,
   source,
   quality,
@@ -57,21 +110,10 @@ async function resolveAudioUrl({
   source: MusicSource
   quality: number
 }): Promise<string> {
-  const isNative = Capacitor.isNativePlatform()
-  const isLocal = source === 'local'
-  if (isNative && !isLocal) {
-    const key = buildDownloadKey(source, trackId)
-    const uri = useDownloadStore.getState().getUri(key)
-    if (uri) {
-      return Capacitor.convertFileSrc(uri)  //  如果本地有记录，优先播放本地资源
-    }
-  }
-
   return retry(async () => {
     const url = await musicApi.getUrl(trackId, source, quality)
     if (!url) {
-      toast.error(isLocal ? '本地文件无法访问' : '获取音频 URL 失败')
-      throw new Error(isLocal ? 'LOCAL_FILE_NOT_ACCESSIBLE' : 'EMPTY_URL')
+      throw new Error("EMPTY_URL")
     }
     return url
   }, 2, 800)
@@ -99,6 +141,11 @@ export function useAudioTrackLoader(
   const requestIdRef = useRef(0);
 
   const prevTrackRef = useRef<{ id?: string; source?: string } | null>(null);
+  const remoteUrlRef = useRef<string | null>(null);
+  const fallbackStageRef = useRef<{ trackKey: string | null; stage: FallbackStage }>({
+    trackKey: null,
+    stage: "none",
+  });
 
   useEffect(() => {
     if (!hasUserGesture) return;
@@ -115,6 +162,36 @@ export function useAudioTrackLoader(
 
     const load = async () => {
       const audio = audioRef.current!;
+      const trackKey = `${currentTrackSource}:${currentTrackId}:${currentTrackUrlId ?? ""}`;
+      if (fallbackStageRef.current.trackKey !== trackKey) {
+        fallbackStageRef.current = { trackKey, stage: "none" };
+        remoteUrlRef.current = null;
+      }
+
+      const getRemoteUrl = async () => {
+        if (remoteUrlRef.current) return remoteUrlRef.current;
+        const urlId = ((currentTrackSource as string) === 'local' || currentTrackSource === 'podcast')
+          ? currentTrackUrlId
+          : currentTrackId;
+        const remoteUrl = await resolveRemoteAudioUrl({
+          trackId: urlId || '',
+          source: currentTrackSource,
+          quality: parseInt(quality, 10),
+        });
+        remoteUrlRef.current = remoteUrl;
+        return remoteUrl;
+      };
+
+      const setSourceAndPlay = async (audioUrl: string) => {
+        if (audio.src !== audioUrl) {
+          setCurrentAudioUrl(audioUrl);
+          audio.src = audioUrl;
+          audio.load();
+        }
+        await waitForAudioReady(audio);
+        audio.currentTime = currentAudioTime;
+        await audio.play();
+      };
 
       try {
         setIsLoading(true);
@@ -129,89 +206,77 @@ export function useAudioTrackLoader(
         audio.pause();
 
         const isLocal = (currentTrackSource as string) === 'local';
-        const hasDownload = Capacitor.isNativePlatform()
-          ? useDownloadStore.getState().hasRecord(buildDownloadKey(currentTrackSource, currentTrackId || ''))
-          : false;
-
         const isOnline = navigator.onLine;
+        const { url: localDownloadUrl, downloadKey } = await resolveLocalDownloadUrl({
+          trackId: currentTrackId || "",
+          source: currentTrackSource,
+        });
+        const hasDownload = Boolean(localDownloadUrl);
 
         if (!isLocal && !hasDownload && !isOnline) {
           const { queue, currentIndex } = useMusicStore.getState();
           const nextPlayableIndex = findNextPlayableTrack(queue, currentIndex, isOnline);
 
           if (nextPlayableIndex !== null && nextPlayableIndex !== currentIndex) {
-            toast.error("网络不可用，切换到本地音乐");
             useMusicStore.getState().setCurrentIndexAndPlay(nextPlayableIndex);
             return;
           } else {
-            toast.error("网络不可用且无可播放曲目");
+            console.error("网络不可用且无可播放曲目");
             setIsPlaying(false);
             return;
           }
         }
 
-        const urlId = ((currentTrackSource as string) === 'local' || currentTrackSource === 'podcast')
-          ? currentTrackUrlId
-          : currentTrackId;
-        const br = parseInt(quality, 10);
+        try {
+          const primaryUrl = localDownloadUrl || await getRemoteUrl();
+          await setSourceAndPlay(primaryUrl);
+        } catch (primaryError) {
+          console.error("Primary audio load failed:", primaryError);
 
-        const audioUrl = await resolveAudioUrl({
-          trackId: urlId || '',
-          source: currentTrackSource,
-          quality: br,
-        });
+          if (downloadKey && localDownloadUrl && currentTrackSource !== "local") {
+            useDownloadStore.getState().removeRecord(downloadKey);
+            toast.error("本地文件失效，已切换在线播放");
+            const remoteUrl = await getRemoteUrl();
+            await setSourceAndPlay(remoteUrl);
+            return;
+          }
 
-        if (requestId !== requestIdRef.current) {
-          return;
-        }
+          if (currentTrackSource !== "local" && fallbackStageRef.current.stage === "none" && remoteUrlRef.current) {
+            const remoteUrl = remoteUrlRef.current;
+            const proxyUrl = getProxyUrl(remoteUrl);
+            fallbackStageRef.current.stage = "proxy";
+            toast("已切换备用线路", { icon: "🌐", id: "proxy-notice" });
+            await setSourceAndPlay(proxyUrl);
+            return;
+          }
 
-        setCurrentAudioUrl(audioUrl);
-
-        if (audio.src !== audioUrl) {
-          audio.src = audioUrl;
-          audio.load();
-        }
-
-        audio.currentTime = currentAudioTime;
-
-        const playPromise = audio.play();
-        if (playPromise !== undefined) {
-          playPromise.catch((error) => {
-            console.error("Auto-play failed:", error);
-            setIsPlaying(false);
-          });
+          throw primaryError;
         }
       } catch (err: unknown) {
         if (requestId !== requestIdRef.current) return;
         const errorMessage = err instanceof Error ? err.message : String(err);
         console.error("Audio load failed:", errorMessage);
 
-        if (errorMessage === "LOCAL_FILE_NOT_ACCESSIBLE") {
-          toast.error(`无法访问本地文件: ${currentTrack.name}`);
-        } else {
-          // 尝试自动匹配其他源
-          if (useMusicStore.getState().enableAutoMatch) {
-            try {
-              const success = await handleAutoMatch(currentTrack);
-              if (success) return;
-            } catch {
-              // 忽略匹配错误，继续原有流程
-            }
+        if (useMusicStore.getState().enableAutoMatch) {
+          try {
+            const success = await handleAutoMatch(currentTrack);
+            if (success) return;
+          } catch {
+            console.error("Auto match failed");
           }
-
-          toast.error(`无法播放: ${currentTrack.name}`);
         }
 
         if (currentTrackSource) {
           useSourceQualityStore.getState().recordFail(currentTrackSource);
         }
 
+        fallbackStageRef.current.stage = "final";
         audio.src = "";
         setCurrentAudioUrl(null);
+        toast.error("当前歌曲播放失败，已跳到下一首");
 
         const failures = incrementFailures();
         if (failures >= maxConsecutiveFailures) {
-          toast.error("多次加载失败，已停止播放");
           setIsPlaying(false);
         } else {
           skipToNext();
