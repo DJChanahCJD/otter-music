@@ -25,6 +25,7 @@
     "@capacitor/app": "^8.0.1",
     "@capacitor/app-launcher": "^8.0.1",
     "@capacitor/cli": "^8.1.0",
+    "@capacitor/clipboard": "^8.0.1",
     "@capacitor/core": "^8.1.0",
     "@capacitor/file-transfer": "^2.0.4",
     "@capacitor/filesystem": "^8.1.2",

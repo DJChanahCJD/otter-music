@@ -4,6 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Link, Music2, User } from "lucide-react";
 import toast from "react-hot-toast";
+import { Capacitor } from "@capacitor/core";
+import { Clipboard } from "@capacitor/clipboard";
 
 interface AddByUrlDialogProps {
   isOpen: boolean;
@@ -11,40 +13,108 @@ interface AddByUrlDialogProps {
   onConfirm: (title: string, url: string, artist?: string) => void;
 }
 
+function safeDecode(value: string) {
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return value;
+  }
+}
+
+function extractTitleFromUrl(url: string) {
+  try {
+    const { pathname } = new URL(url);
+    const name = pathname.split("/").filter(Boolean).pop() || "";
+    return safeDecode(name).replace(/\.[^/.]+$/, "").trim();
+  } catch {
+    return "";
+  }
+}
+
+function parseInput(text: string) {
+  const raw = text.trim();
+  const urlMatch = raw.match(/https?:\/\/[^\s]+/i);
+  if (!urlMatch) return { url: "", title: "" };
+
+  const url = urlMatch[0];
+  const title = raw
+    .replace(url, "")
+    .replace(/^[【[](.*?)[】\]]\s*/, "")
+    .trim();
+
+  return {
+    url,
+    title: title || extractTitleFromUrl(url),
+  };
+}
+
+async function readClipboardText() {
+  if (Capacitor.isNativePlatform()) {
+    const { value } = await Clipboard.read();
+    return value || "";
+  }
+  return navigator.clipboard?.readText?.() || "";
+}
+
 export function AddByUrlDialog({ isOpen, onClose, onConfirm }: AddByUrlDialogProps) {
   const [formData, setFormData] = useState({ title: "", url: "", artist: "" });
 
-  // 1. 极简状态管理
-  const updateField = (field: keyof typeof formData, value: string) => 
-    setFormData(prev => ({ ...prev, [field]: value }));
+  const updateField = (field: keyof typeof formData, value: string) => {
+    setFormData((prev) => {
+      const next = { ...prev, [field]: value };
 
-  // 2. 智能剪贴板辅助 (针对移动端高效优化)
-  useEffect(() => {
-    if (isOpen && !formData.url) {
-      navigator.clipboard.readText().then(text => {
-        if (text.startsWith('http')) {
-          updateField('url', text);
-          toast.success("已自动填充剪贴板链接", { id: "clipboard" });
+      if (field === "url") {
+        const parsed = parseInput(value);
+        if (parsed.url) {
+          next.url = parsed.url;
+          if (!prev.title.trim()) next.title = parsed.title;
         }
-      }).catch(() => {}); // 忽略权限拒绝
-    }
-  }, [isOpen]);
+      }
+
+      return next;
+    });
+  };
+
+  useEffect(() => {
+    if (!isOpen || formData.url) return;
+
+    readClipboardText()
+      .then((text) => {
+        const parsed = parseInput(text);
+        if (!parsed.url) return;
+
+        setFormData((prev) => ({
+          ...prev,
+          url: parsed.url,
+          title: prev.title || parsed.title,
+        }));
+
+        toast.success(parsed.title ? `识别到：${parsed.title}` : "已自动填充链接", {
+          id: "clipboard",
+        });
+      })
+      .catch(() => {});
+  }, [isOpen, formData.url]);
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
-    const { title, url, artist } = formData;
-    const cleanUrl = url.trim();
 
-    if (!title.trim()) return toast.error("请输入标题");
-    if (!cleanUrl) return toast.error("请输入链接");
+    const parsed = parseInput(formData.url);
+    const url = (parsed.url || formData.url).trim();
+    const title = formData.title.trim() || parsed.title;
+    const artist = formData.artist.trim();
+
+    if (!url) return toast.error("请输入链接");
 
     try {
-      new URL(cleanUrl);
+      new URL(url);
     } catch {
       return toast.error("链接格式不正确");
     }
 
-    onConfirm(title.trim(), cleanUrl, artist.trim());
+    if (!title) return toast.error("请输入标题");
+
+    onConfirm(title, url, artist);
     setFormData({ title: "", url: "", artist: "" });
     onClose();
   };
@@ -55,46 +125,43 @@ export function AddByUrlDialog({ isOpen, onClose, onConfirm }: AddByUrlDialogPro
         <DrawerHeader className="pb-2">
           <DrawerTitle className="text-center text-lg font-bold">通过 URL 添加</DrawerTitle>
         </DrawerHeader>
-        
+
         <form onSubmit={handleSubmit} className="px-5 space-y-5">
           <div className="space-y-4">
-            <div className="relative group">
+            <div className="relative">
               <Music2 className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
               <Input
-                className="pl-9 pr-9 h-11 bg-muted/40 border-none rounded-xl focus-visible:ring-1"
+                className="pl-9 h-11 bg-muted/40 border-none rounded-xl focus-visible:ring-1"
                 placeholder="歌曲标题"
                 value={formData.title}
-                onChange={(e) => updateField('title', e.target.value)}
-                enterKeyHint="next"
+                onChange={(e) => updateField("title", e.target.value)}
               />
             </div>
 
-            <div className="relative group">
+            <div className="relative">
               <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
               <Input
-                className="pl-9 pr-9 h-11 bg-muted/40 border-none rounded-xl focus-visible:ring-1"
-                placeholder="歌手 (可选，通过逗号分隔)"
+                className="pl-9 h-11 bg-muted/40 border-none rounded-xl focus-visible:ring-1"
+                placeholder="歌手 (可选)"
                 value={formData.artist}
-                onChange={(e) => updateField('artist', e.target.value)}
-                enterKeyHint="next"
+                onChange={(e) => updateField("artist", e.target.value)}
               />
             </div>
 
-            <div className="relative group">
+            <div className="relative">
               <Link className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
               <Input
-                className="pl-9 pr-9 h-11 bg-muted/40 border-none rounded-xl focus-visible:ring-1 font-mono text-sm"
-                type="url"
-                placeholder="音频 URL"
+                className="pl-9 h-11 bg-muted/40 border-none rounded-xl focus-visible:ring-1 font-mono text-sm"
+                type="text"
+                placeholder="音频 URL 或 标题 + URL"
                 value={formData.url}
-                onChange={(e) => updateField('url', e.target.value)}
-                enterKeyHint="done"
+                onChange={(e) => updateField("url", e.target.value)}
               />
             </div>
           </div>
-          
-          <DrawerFooter className="px-0 pt-2 pb-8 flex-row gap-3">
-            <Button type="submit" className="flex-2 h-12 rounded-2xl shadow-lg shadow-primary/20">
+
+          <DrawerFooter className="px-0 pt-2 pb-8">
+            <Button type="submit" className="h-12 rounded-2xl shadow-lg shadow-primary/20">
               添加
             </Button>
           </DrawerFooter>

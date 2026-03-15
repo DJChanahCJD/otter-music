@@ -33,6 +33,14 @@ export function useAudioEventHandlers(
       if (!state.isLoading) state.setIsLoading(true);
     };
 
+    const syncPositionState = (playbackRate: number) => {
+      MediaSession.setPositionState({
+        duration: audio.duration || 0,
+        playbackRate,
+        position: audio.currentTime,
+      }).catch(console.error);
+    };
+
     /** 播放进度更新（节流） */
     const onTimeUpdate = throttle(() => {
       if (isSwitchingTrackRef.current) return;
@@ -43,11 +51,7 @@ export function useAudioEventHandlers(
         state.setIsPlaying(true);
       }
 
-      MediaSession.setPositionState({
-        duration: audio.duration || 0,
-        playbackRate: audio.playbackRate,
-        position: audio.currentTime,
-      }).catch(console.error);
+      syncPositionState(audio.paused ? 0 : audio.playbackRate);
     }, 1000);
 
     /** 音频时长变化 */
@@ -74,6 +78,7 @@ export function useAudioEventHandlers(
     /** 播放结束 */
     const onEnded = () => {
       const state = useMusicStore.getState();
+      syncPositionState(0);
 
       if (state.isRepeat) {
         audio.currentTime = 0;
@@ -85,6 +90,7 @@ export function useAudioEventHandlers(
 
     /** 暂停 */
     const onPause = () => {
+      syncPositionState(0);
       if (isSwitchingTrackRef.current || audio.ended || audio.error) return;
       useMusicStore.getState().setIsPlaying(false);
     };
@@ -119,6 +125,7 @@ export function useAudioEventHandlers(
       error: () => {
         console.error("Audio error");
         useMusicStore.getState().setIsPlaying(false);
+        syncPositionState(0);
       },
 
       // loading 相关事件

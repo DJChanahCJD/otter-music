@@ -89,7 +89,17 @@ export function useMediaSessionIntegration(
         audio.play().catch(e => console.error("MediaSession play error:", e));
       }],
       ["pause", () => {
-        audioRef.current?.pause();
+        const audio = audioRef.current;
+        audio?.pause();
+        MediaSession.setPlaybackState({
+          playbackState: "paused",
+        }).catch(e => console.error("MediaSession pause state error:", e));
+        if (!audio) return;
+        MediaSession.setPositionState({
+          duration: audio.duration || 0,
+          playbackRate: 0,
+          position: audio.currentTime,
+        }).catch(e => console.error("MediaSession pause position error:", e));
       }],
       ["previoustrack", () => {
         const { queue, currentIndex } = useMusicStore.getState();

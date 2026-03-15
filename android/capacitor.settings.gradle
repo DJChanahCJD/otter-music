@@ -8,6 +8,9 @@ project(':capacitor-app').projectDir = new File('../node_modules/@capacitor/app/
 include ':capacitor-app-launcher'
 project(':capacitor-app-launcher').projectDir = new File('../node_modules/@capacitor/app-launcher/android')
 
+include ':capacitor-clipboard'
+project(':capacitor-clipboard').projectDir = new File('../node_modules/@capacitor/clipboard/android')
+
 include ':capacitor-file-transfer'
 project(':capacitor-file-transfer').projectDir = new File('../node_modules/@capacitor/file-transfer/android')
 
