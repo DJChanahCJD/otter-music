@@ -3,7 +3,8 @@ import { PageLayout } from "@/components/PageLayout";
 import { MusicTrackList } from "@/components/MusicTrackList";
 import { 
   getPlaylistDetail, getArtist, getAlbum, getArtistSongs, 
-  convertSongToMusicTrack, toggleSubAlbum, getAlbumDynamicDetail 
+  convertSongToMusicTrack, toggleSubAlbum, getAlbumDynamicDetail,
+  getPlaylistDynamicDetail, toggleSubPlaylist
 } from "@/lib/netease/netease-api";
 import { MusicTrack } from "@/types/music";
 import { MoreVertical, Import, SquareArrowOutUpRight, Album, Bookmark } from "lucide-react";
@@ -39,6 +40,8 @@ interface UnifiedDetail {
   albumCount?: number;
   publishTime?: number;
   sub?: boolean; 
+  playCount?: number;
+  creatorId?: string | number;
 }
 
 // export function NeteaseDetail(props: NeteaseDetailProps) {
@@ -78,7 +81,7 @@ export function NeteaseDetail({
 
   const { createPlaylist, setPlaylistTracks } = useMusicStore();
   const { cookie } = useNeteaseStore();
-  const { toggleAlbumInSession } = useMarketSession();
+  const { toggleAlbumInSession, togglePlaylistInSession } = useMarketSession();
 
   const handleShare = async () => {
     if (!detail || !id) return;
@@ -105,26 +108,53 @@ export function NeteaseDetail({
     }
   };
 
-  // 当前仅处理专辑的收藏逻辑
+  // 处理专辑和歌单的收藏逻辑
   const handleToggleSub = async () => {
-    if (!id || !cookie || type !== "album") return;
+    if (!id || !cookie) return;
     const shouldSub = !detail?.sub;
+    
+    // 取消收藏时增加二次确认
+    if (!shouldSub && !confirm("确定不再收藏吗？")) return;
+
     try {
-      const res = await toggleSubAlbum(id, shouldSub, cookie);
-      if (res.data?.code === 200) {
+      let success = false;
+      let msg = "";
+
+      if (type === "album") {
+        const res = await toggleSubAlbum(id, shouldSub, cookie);
+        success = res.data?.code === 200;
+        msg = res.data?.message || "";
+        if (success) {
+            toggleAlbumInSession({
+              id: Number(id),
+              name: detail?.name || "",
+              picUrl: detail?.coverImgUrl || "",
+              artistName: detail?.creator || "",
+            }, shouldSub);
+        }
+      } else if (type === "playlist") {
+        const res = await toggleSubPlaylist(id, shouldSub, cookie);
+        success = res.data?.code === 200;
+        msg = res.data?.message || "";
+        if (success) {
+            togglePlaylistInSession({
+                id: String(id),
+                name: detail?.name || "",
+                coverUrl: detail?.coverImgUrl || "",
+                playCount: detail?.playCount || 0,
+                userId: String(detail?.creatorId || ""),
+            }, shouldSub);
+        }
+      }
+
+      if (success) {
         toast.success(shouldSub ? "收藏成功" : "已取消收藏");
         setState((prev) => ({
           ...prev,
           detail: prev.detail ? { ...prev.detail, sub: shouldSub } : prev.detail,
         }));
-        toggleAlbumInSession({
-          id: Number(id),
-          name: detail?.name || "",
-          picUrl: detail?.coverImgUrl || "",
-          artistName: detail?.creator || "",
-        }, shouldSub);
       } else {
-        toast.error(res.data?.message || "操作失败");
+        toast.error(msg || "操作失败");
       }
     } catch (err) {
       toast.error("操作失败");
@@ -169,11 +199,17 @@ export function NeteaseDetail({
         let rawTracks: SongDetail[] = [];
 
         if (type === "playlist") {
-          const res = await getPlaylistDetail(id, cookie);
+          const [res, dynamicRes] = await Promise.all([
+            getPlaylistDetail(id, cookie),
+            getPlaylistDynamicDetail(id, cookie).catch(() => null),
+          ]);
           if (!res) throw new Error("Not found");
           rawDetail = {
             name: res.name, coverImgUrl: res.coverImgUrl, description: res.description,
-            creator: res.creator?.nickname, trackCount: res.trackCount, sub: res.subscribed,
+            creator: res.creator?.nickname, trackCount: res.trackCount, 
+            sub: dynamicRes ? dynamicRes.subscribed : res.subscribed,
+            playCount: res.playCount,
+            creatorId: res.creator?.userId,
           };
           rawTracks = res.tracks;
         } else if (type === "artist") {
@@ -242,7 +278,7 @@ export function NeteaseDetail({
               <Album className="w-5 h-5" />
             </Button>
           )}
-          {cookie && type === "album" && (
+          {cookie && (type === "album" || type === "playlist") && (
             <Button
               variant="ghost" size="icon"
               className={detail?.sub ? "text-primary" : "text-muted-foreground hover:text-foreground"}

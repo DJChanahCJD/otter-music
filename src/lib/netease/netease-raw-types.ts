@@ -73,6 +73,14 @@ export interface AlbumDynamicDetail {
   subCount: number;
 }
 
+export interface PlaylistDynamicDetail {
+  bookedCount: number;
+  subscribed: boolean;
+  shareCount: number;
+  commentCount: number;
+  playCount: number;
+}
+
 export interface NeteasePlayerUrlItem {
   id: number;
   url: string | null;

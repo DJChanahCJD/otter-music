@@ -7,6 +7,7 @@ import type {
     ArtistItem,
     NeteasePrivilege,
     PlaylistDetail,
+    PlaylistDynamicDetail,
     RawNeteaseResponse,
     RawQrCheckResponse,
     RawQrKeyData,
@@ -292,6 +293,20 @@ export const getPlaylistDetail = (playlistId: string, cookie: string = '') =>
         TTL_MEDIUM // 歌单可能会被创建者更新，使用中缓存 
     );
 
+export const getPlaylistDynamicDetail = async (id: string, cookie: string = '') => {
+    try {
+        const res = await requestWeapi<PlaylistDynamicDetail>(
+            `${BASE_URL}/weapi/playlist/detail/dynamic`,
+            { id: id.replace(/^(neplaylist_|ne_playlist_)/, '') },
+            cookie
+        );
+        return res.data;
+    } catch (e) {
+        console.warn('[API] getPlaylistDynamicDetail failed', e);
+        return null;
+    }
+};
+
 async function getTracksDetail(trackIds: number[], cookie: string = '') {
     const result: SongDetail[] = [];
     for (let i = 0; i < trackIds.length; i += 500) {
@@ -479,6 +494,15 @@ export const toggleSubAlbum = async (id: string, shouldSub: boolean, cookie: str
     return requestWeapi<{ code: number, message?: string }>(
         `${BASE_URL}/weapi/album/${action}`,
         { id: realId, t: shouldSub ? 1 : 0 },
+        cookie
+    );
+};
+
+export const toggleSubPlaylist = async (id: string, shouldSub: boolean, cookie: string = '') => {
+    const realId = id.replace(/^(neplaylist_|ne_playlist_)/, '');
+    return requestWeapi<{ code: number, message?: string }>(
+        `${BASE_URL}/weapi/playlist/subscribe`,
+        { id: realId, t: shouldSub ? 1 : 2 },
         cookie
     );
 };

@@ -31,6 +31,7 @@ interface MarketSessionState {
   setMineData: (data: Partial<MineDataState> | ((prev: MineDataState) => MineDataState)) => void;
   saveListSnapshot: (key: string, snapshot: ListSnapshot) => void;
   toggleAlbumInSession: (album: { id: string | number; name: string; picUrl: string; artistName?: string }, isSub: boolean) => void;
+  togglePlaylistInSession: (playlist: MarketPlaylist, shouldSub: boolean) => void;
   clearSession: () => void;
 }
 
@@ -71,6 +72,20 @@ export const useMarketSession = create<MarketSessionState>()(
 
           return {
             mineData: { ...state.mineData, albums: newAlbums },
+          };
+        }),
+
+      togglePlaylistInSession: (playlist, shouldSub) =>
+        set((state) => {
+          const { subscribed } = state.mineData;
+          if (!subscribed) return state;
+
+          const newSubscribed = shouldSub
+            ? [playlist, ...subscribed]
+            : subscribed.filter((p) => String(p.id) !== String(playlist.id));
+
+          return {
+            mineData: { ...state.mineData, subscribed: newSubscribed },
           };
         }),
 
