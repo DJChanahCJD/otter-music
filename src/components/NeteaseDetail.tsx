@@ -36,9 +36,23 @@ interface UnifiedDetail {
   description?: string;
   creator?: string;
   trackCount: number;
+  albumCount?: number;
   publishTime?: number;
   sub?: boolean; 
 }
+
+// export function NeteaseDetail(props: NeteaseDetailProps) {
+//   if (props.type === "artist" && props.id) {
+//     return <ArtistDetailView 
+//       id={props.id} 
+//       onBack={props.onBack} 
+//       onPlay={props.onPlay} 
+//       currentTrackId={props.currentTrackId} 
+//       isPlaying={props.isPlaying} 
+//     />;
+//   }
+//   return <LegacyNeteaseDetail {...props} />;
+// }
 
 export function NeteaseDetail({
   id,
@@ -94,21 +108,21 @@ export function NeteaseDetail({
   // 当前仅处理专辑的收藏逻辑
   const handleToggleSub = async () => {
     if (!id || !cookie || type !== "album") return;
-    const isSub = !detail?.sub;
+    const shouldSub = !detail?.sub;
     try {
-      const res = await toggleSubAlbum(id, isSub, cookie);
-      if (res.data?.code === 200 || res.data?.code === 250) {
-        toast.success(isSub ? "收藏成功" : "已取消收藏");
+      const res = await toggleSubAlbum(id, shouldSub, cookie);
+      if (res.data?.code === 200) {
+        toast.success(shouldSub ? "收藏成功" : "已取消收藏");
         setState((prev) => ({
           ...prev,
-          detail: prev.detail ? { ...prev.detail, sub: isSub } : prev.detail,
+          detail: prev.detail ? { ...prev.detail, sub: shouldSub } : prev.detail,
         }));
         toggleAlbumInSession({
           id: Number(id),
           name: detail?.name || "",
           picUrl: detail?.coverImgUrl || "",
           artistName: detail?.creator || "",
-        }, isSub);
+        }, shouldSub);
       } else {
         toast.error(res.data?.message || "操作失败");
       }
@@ -168,6 +182,7 @@ export function NeteaseDetail({
           rawDetail = {
             name: res.artist.name, coverImgUrl: res.artist.picUrl, description: res.artist.briefDesc,
             trackCount: res.artist.musicSize,
+            albumCount: res.artist.albumSize,
           };
           rawTracks = res.hotSongs;
           if (active) {
@@ -276,7 +291,7 @@ export function NeteaseDetail({
       </div>
       
       <ArtistAlbumSheet 
-        artistId={id} isOpen={isAlbumSheetOpen} onOpenChange={setIsAlbumSheetOpen} artistName={detail?.name}
+        artistId={id} isOpen={isAlbumSheetOpen} onOpenChange={setIsAlbumSheetOpen} artistName={detail?.name} albumCount={detail?.albumCount}
       />
     </PageLayout>
   );
