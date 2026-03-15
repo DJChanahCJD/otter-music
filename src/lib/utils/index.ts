@@ -129,3 +129,7 @@ export async function processBatchCPU<T>(
     await nextFrame();
   }
 }
+
+export const openUrl = (url: string) => {
+  window.open(url, "_system");
+};

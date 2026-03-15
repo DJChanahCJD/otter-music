@@ -5,6 +5,7 @@ import { useAppStore } from "@/store";
 import { Download, Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
+import { openUrl } from "@/lib/utils";
 
 interface UpdateDialogProps {
   open: boolean;
@@ -68,9 +69,7 @@ export function UpdateDialog({ open, onOpenChange }: UpdateDialogProps) {
 
                 <Button
                   className="w-full"
-                  onClick={() =>
-                    window.open(latestVersionInfo!.downloadUrl, "_system")
-                  }
+                  onClick={() => openUrl(latestVersionInfo!.downloadUrl)}
                 >
                   <Download className="mr-2 h-4 w-4" />
                   立即更新
