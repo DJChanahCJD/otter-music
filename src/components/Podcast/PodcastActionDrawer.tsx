@@ -2,7 +2,6 @@ import {
   Drawer,
   DrawerContent,
   DrawerTitle,
-  DrawerClose,
 } from "@/components/ui/drawer";
 import { Button } from "@/components/ui/button";
 import { usePodcastStore } from "@/store/podcast-store";
@@ -115,12 +114,6 @@ export function PodcastActionDrawer({
             取消订阅
           </ActionButton>
         </div>
-
-        <DrawerClose asChild>
-          <Button variant="outline" className="mx-4 mb-4">
-            取消
-          </Button>
-        </DrawerClose>
       </DrawerContent>
     </Drawer>
   );

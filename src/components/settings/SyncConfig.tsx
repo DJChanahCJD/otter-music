@@ -97,9 +97,6 @@ export function SyncConfig() {
                 清除密钥
               </Button>
             )}
-            <Button variant="outline" onClick={() => setDialogOpen(false)} className="h-11">
-              取消
-            </Button>
             <Button onClick={handleConfirm} disabled={!inputKey.trim()} className="h-11">
               确认
             </Button>

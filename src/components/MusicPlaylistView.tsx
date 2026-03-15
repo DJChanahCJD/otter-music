@@ -296,9 +296,6 @@ export function MusicPlaylistView({
             </Button>
           </div>
           <DrawerFooter className="pt-0">
-            <Button variant="outline" onClick={() => setIsCoverDialogOpen(false)} className="h-11">
-              取消
-            </Button>
             <Button onClick={handleSaveCover} className="h-11">保存</Button>
           </DrawerFooter>
         </DrawerContent>

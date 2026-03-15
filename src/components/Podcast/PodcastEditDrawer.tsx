@@ -105,9 +105,6 @@ export function PodcastEditDrawer({ open, onOpenChange, source }: PodcastEditDra
               {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               保存
             </Button>
-            <Button variant="outline" onClick={() => onOpenChange(false)}>
-              取消
-            </Button>
           </DrawerFooter>
         </div>
       </DrawerContent>

@@ -25,9 +25,6 @@ export function LocalMusicPermissionDialog({ open, onOpenChange }: LocalMusicPer
         </DrawerDescription>
 
         <DrawerFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)} className="h-11">
-            取消
-          </Button>
           <Button onClick={handleOpenSettings} className="h-11">
             打开设置
           </Button>
