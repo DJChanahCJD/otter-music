@@ -102,11 +102,16 @@ export function deduplicateTracks(
   };
 }
 
-export function createTrackFromUrl(title: string, url: string): MusicTrack {
+export function createTrackFromUrl(title: string, url: string, artist?: string): MusicTrack {
+  const artists =
+    artist?.trim()
+      ? artist.split(/[，,]/).map(a => a.trim()).filter(Boolean)  //  中英文逗号都可以分割
+      : ["Unknown Artist"];
+
   return {
     id: uuidv4(),
     name: title,
-    artist: [],
+    artist: artists.length ? artists : ["Unknown Artist"],
     album: "",
     pic_id: "",
     url_id: url,

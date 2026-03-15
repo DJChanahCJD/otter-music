@@ -69,8 +69,8 @@ export function FavoritesView({
     toast.success(`已移除 ${result.removedCount} 首重复歌曲`);
   };
 
-  const handleAddByUrl = (title: string, url: string) => {
-    const track = createTrackFromUrl(title, url);
+  const handleAddByUrl = (title: string, url: string, artist?: string) => {
+    const track = createTrackFromUrl(title, url, artist);
     const error = useMusicStore.getState().addToFavorites(track);
     if (error) {
       toast.error(error);

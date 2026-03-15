@@ -1,91 +1,100 @@
-import { useState, FormEvent } from "react";
-import {
-  Drawer,
-  DrawerContent,
-  DrawerHeader,
-  DrawerTitle,
-  DrawerFooter,
-} from "@/components/ui/drawer";
+import { useState, FormEvent, useEffect } from "react";
+import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerFooter } from "@/components/ui/drawer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Link, Music2, User } from "lucide-react";
 import toast from "react-hot-toast";
 
 interface AddByUrlDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  onConfirm: (title: string, url: string) => void;
+  onConfirm: (title: string, url: string, artist?: string) => void;
 }
 
-export function AddByUrlDialog({
-  isOpen,
-  onClose,
-  onConfirm,
-}: AddByUrlDialogProps) {
-  const [title, setTitle] = useState("");
-  const [url, setUrl] = useState("");
+export function AddByUrlDialog({ isOpen, onClose, onConfirm }: AddByUrlDialogProps) {
+  const [formData, setFormData] = useState({ title: "", url: "", artist: "" });
 
-  const clearFields = () => {
-    setTitle("");
-    setUrl("");
-  };
+  // 1. 极简状态管理
+  const updateField = (field: keyof typeof formData, value: string) => 
+    setFormData(prev => ({ ...prev, [field]: value }));
+
+  // 2. 智能剪贴板辅助 (针对移动端高效优化)
+  useEffect(() => {
+    if (isOpen && !formData.url) {
+      navigator.clipboard.readText().then(text => {
+        if (text.startsWith('http')) {
+          updateField('url', text);
+          toast.success("已自动填充剪贴板链接", { id: "clipboard" });
+        }
+      }).catch(() => {}); // 忽略权限拒绝
+    }
+  }, [isOpen]);
 
   const handleSubmit = (e: FormEvent) => {
-    e.preventDefault(); // 阻止表单默认刷新
-    
-    const cleanTitle = title.trim();
+    e.preventDefault();
+    const { title, url, artist } = formData;
     const cleanUrl = url.trim();
 
-    if (!cleanTitle) return toast.error("请输入标题");
+    if (!title.trim()) return toast.error("请输入标题");
     if (!cleanUrl) return toast.error("请输入链接");
 
     try {
       new URL(cleanUrl);
     } catch {
-      return toast.error("请输入有效的 HTTP/HTTPS 链接");
+      return toast.error("链接格式不正确");
     }
 
-    onConfirm(cleanTitle, cleanUrl);
-    clearFields();
+    onConfirm(title.trim(), cleanUrl, artist.trim());
+    setFormData({ title: "", url: "", artist: "" });
     onClose();
   };
 
   return (
     <Drawer open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DrawerContent className="max-h-[85vh]">
-        <DrawerHeader>
-          <DrawerTitle>URL 添加</DrawerTitle>
+      <DrawerContent className="max-h-[92vh] outline-none">
+        <DrawerHeader className="pb-2">
+          <DrawerTitle className="text-center text-lg font-bold">通过 URL 添加</DrawerTitle>
         </DrawerHeader>
         
-        <form onSubmit={handleSubmit}>
-          <div className="grid gap-4 px-4 pb-4">
-            <div className="grid gap-2">
-              <Label htmlFor="url-title">标题</Label>
+        <form onSubmit={handleSubmit} className="px-5 space-y-5">
+          <div className="space-y-4">
+            <div className="relative group">
+              <Music2 className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
               <Input
-                id="url-title"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                placeholder="请输入歌曲标题"
-                autoFocus
+                className="pl-9 pr-9 h-11 bg-muted/40 border-none rounded-xl focus-visible:ring-1"
+                placeholder="歌曲标题"
+                value={formData.title}
+                onChange={(e) => updateField('title', e.target.value)}
+                enterKeyHint="next"
               />
             </div>
-            <div className="grid gap-2">
-              <Label htmlFor="url-link">链接</Label>
+
+            <div className="relative group">
+              <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
               <Input
-                id="url-link"
-                type="url" // 触发移动端 URL 专属键盘
-                value={url}
-                onChange={(e) => setUrl(e.target.value)}
-                placeholder="请输入音频链接 (http/https)"
+                className="pl-9 pr-9 h-11 bg-muted/40 border-none rounded-xl focus-visible:ring-1"
+                placeholder="歌手 (可选，通过逗号分隔)"
+                value={formData.artist}
+                onChange={(e) => updateField('artist', e.target.value)}
+                enterKeyHint="next"
+              />
+            </div>
+
+            <div className="relative group">
+              <Link className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+              <Input
+                className="pl-9 pr-9 h-11 bg-muted/40 border-none rounded-xl focus-visible:ring-1 font-mono text-sm"
+                type="url"
+                placeholder="音频 URL"
+                value={formData.url}
+                onChange={(e) => updateField('url', e.target.value)}
+                enterKeyHint="done"
               />
             </div>
           </div>
           
-          <DrawerFooter className="pt-0 flex-row gap-3">
-            <Button type="button" variant="outline" onClick={onClose} className="flex-1 h-11">
-              取消
-            </Button>
-            <Button type="submit" className="flex-1 h-11">
+          <DrawerFooter className="px-0 pt-2 pb-8 flex-row gap-3">
+            <Button type="submit" className="flex-2 h-12 rounded-2xl shadow-lg shadow-primary/20">
               添加
             </Button>
           </DrawerFooter>

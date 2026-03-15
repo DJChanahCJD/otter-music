@@ -170,10 +170,10 @@ export function MusicPlaylistView({
     toast.success("封面设置成功");
   };
 
-  const handleAddByUrl = (title: string, url: string) => {
+  const handleAddByUrl = (title: string, url: string, artist?: string) => {
     if (!playlistId) return;
 
-    const track = createTrackFromUrl(title, url);
+    const track = createTrackFromUrl(title, url, artist);
     useMusicStore.getState().addToPlaylist(playlistId, track);
     toast.success("添加成功");
   };
