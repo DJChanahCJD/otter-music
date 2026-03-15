@@ -32,6 +32,28 @@ function useMineData() {
   const { cookie, user } = useNeteaseStore();
   const currentUserId = user?.userId ?? null;
   const [loading, setLoading] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+
+  const loadMoreAlbums = async () => {
+    if (!cookie || loadingMore || !mineData.hasMoreAlbums) return;
+    
+    try {
+      setLoadingMore(true);
+      const limit = 50;
+      const offset = mineData.albums?.length || 0;
+      const newAlbums = await getSubscribedAlbums(limit, offset, cookie);
+      
+      setMineData((prev) => ({
+        ...prev,
+        albums: [...(prev.albums || []), ...newAlbums],
+        hasMoreAlbums: newAlbums.length >= limit,
+      }));
+    } catch (err) {
+      console.error("Load More Albums Error:", err);
+    } finally {
+      setLoadingMore(false);
+    }
+  };
 
   useEffect(() => {
     const fetchMineData = async () => {
@@ -56,9 +78,13 @@ function useMineData() {
             subscribed: userPlaylists.filter((p) => p.userId !== String(currentUserId)),
           }));
         } else if (mineTab === "albums" && !mineData.albums) {
-          // 默认加载前100个收藏专辑
-          const albums = await getSubscribedAlbums(100, 0, cookie).catch(() => []);
-          setMineData((prev) => ({ ...prev, albums }));
+          const limit = 50;
+          const albums = await getSubscribedAlbums(limit, 0, cookie).catch(() => []);
+          setMineData((prev) => ({ 
+            ...prev, 
+            albums,
+            hasMoreAlbums: albums.length >= limit 
+          }));
         }
       } catch (err) {
         console.error("Mine Data Load Error:", err);
@@ -75,6 +101,8 @@ function useMineData() {
     setMineTab,
     mineData,
     loading,
+    loadingMore,
+    loadMoreAlbums,
     currentUserId,
   };
 }
@@ -128,7 +156,7 @@ const AlbumGrid = ({ list, onClick }: { list: ArtistAlbum[]; onClick: (id: strin
 
 export function MineSection() {
   const navigate = useNavigate();
-  const { mineTab, setMineTab, mineData, loading, currentUserId } = useMineData();
+  const { mineTab, setMineTab, mineData, loading, loadingMore, loadMoreAlbums, currentUserId } = useMineData();
 
   // Tab Configurations
   const tabs: MineTabConfig[] = useMemo(() => [
@@ -168,11 +196,26 @@ export function MineSection() {
       count: mineData.albums?.length,
       content: !currentUserId ? <LoginPrompt /> : (
         (mineData.albums && mineData.albums.length > 0) ? (
-          <AlbumGrid list={mineData.albums} onClick={(id) => navigate(`/netease-album/${id}`)} />
+          <div className="space-y-6">
+            <AlbumGrid list={mineData.albums} onClick={(id) => navigate(`/netease-album/${id}`)} />
+            {mineData.hasMoreAlbums && (
+              <div className="flex justify-center py-4">
+                <Button 
+                  variant="ghost" 
+                  onClick={loadMoreAlbums} 
+                  disabled={loadingMore}
+                  className="w-full max-w-[200px]"
+                >
+                  {loadingMore ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                  {loadingMore ? "加载中..." : "加载更多"}
+                </Button>
+              </div>
+            )}
+          </div>
         ) : <EmptyState />
       )
     },
-  ], [mineData, currentUserId, navigate]);
+  ], [mineData, currentUserId, navigate, loadingMore, loadMoreAlbums]);
 
   const activeTabConfig = tabs.find(t => t.id === mineTab) || tabs[0];
   const isDataReady = !!mineData[mineTab as keyof typeof mineData];

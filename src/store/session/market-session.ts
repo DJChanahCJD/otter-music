@@ -8,6 +8,7 @@ const INITIAL_MINE_DATA: MineDataState = {
   created: null,
   subscribed: null,
   albums: null,
+  hasMoreAlbums: true,
 };
 
 export interface MineDataState {
@@ -15,6 +16,7 @@ export interface MineDataState {
   created: MarketPlaylist[] | null;
   subscribed: MarketPlaylist[] | null;
   albums: ArtistAlbum[] | null;
+  hasMoreAlbums: boolean;
 }
 
 export interface ListSnapshot {
