@@ -37,8 +37,14 @@ export function useMediaSessionIntegration(
   useEffect(() => {
     const updatePlaybackState = async () => {
       try {
+        // 以 audio 实际状态作为播放态真源
+        const audio = audioRef.current;
+        const playbackState = audio
+          ? (audio.paused ? "paused" : "playing")
+          : (isPlaying ? "playing" : "paused");
+
         await MediaSession.setPlaybackState({
-          playbackState: isPlaying ? "playing" : "paused",
+          playbackState,
         });
       } catch (e) {
         console.error("MediaSession state error:", e);
@@ -52,19 +58,12 @@ export function useMediaSessionIntegration(
       ["play", () => {
         useMusicStore.getState().setUserGesture();
         const audio = audioRef.current;
-        if (!audio) {
-          useMusicStore.getState().setIsPlaying(true);
-          return;
-        }
-
-        audio.play().then(
-          () => useMusicStore.getState().setIsPlaying(true),
-          () => useMusicStore.getState().setIsPlaying(false)
-        );
+        if (!audio) return;
+        // 仅驱动 audio，store 交由 onPlay/onPause 事件同步
+        audio.play().catch(e => console.error("MediaSession play error:", e));
       }],
       ["pause", () => {
         audioRef.current?.pause();
-        useMusicStore.getState().setIsPlaying(false);
       }],
       ["previoustrack", () => {
         const { queue, currentIndex } = useMusicStore.getState();

@@ -112,7 +112,10 @@ export function useAudioEventHandlers(
       ended: onEnded,
       pause: onPause,
       play: onPlay,
-      error: () => console.error("Audio error"),
+      error: () => {
+        console.error("Audio error");
+        useMusicStore.getState().setIsPlaying(false);
+      },
 
       // loading 相关事件
       loadstart: markLoading,
