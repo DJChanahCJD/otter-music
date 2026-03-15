@@ -20,7 +20,7 @@ import type {
     NeteaseCommentResult,
     NeteaseNewCommentResult,
 } from './netease-raw-types';
-import type { MarketPlaylist, NeteaseSongLike, QrStatusResult } from "./netease-models";
+import type { MarketPlaylist, NeteaseSong, QrStatusResult } from "./netease-models";
 import {
     normalizeQrStatus,
     toMarketPlaylistFromRecommend,
@@ -316,7 +316,7 @@ export async function search(keyword: string, type: number = 1, page: number = 1
     const params = new URLSearchParams({ s: keyword, type: String(type), offset: String((page - 1) * limit), limit: String(limit) });
     
     const { data } = await crossFetch(`${BASE_URL}/api/search/pc`, { method: 'POST', headers, body: params.toString() });
-    return { data: data as { result: { songs?: NeteaseSongLike[]; songCount?: number; hasMore?: boolean }, code: number } };
+    return { data: data as { result: { songs?: NeteaseSong[]; songCount?: number; hasMore?: boolean }, code: number } };
 }
 
 export const getLyric = (id: string, cookie: string = '') => 
@@ -382,6 +382,20 @@ export const getArtist = (id: string, cookie: string = '') =>
         }, 
         TTL_LONG // 歌手基础信息低频变动 
     ); 
+
+export const getArtistDynamicDetail = async (id: string, cookie: string = '') => {
+    try {
+        const res = await requestWeapi<any>(
+            `${BASE_URL}/weapi/artist/detail/dynamic`,
+            { id: id.replace(/^(neartist_|ne_artist_)/, '') },
+            cookie
+        );
+        return res.data;
+    } catch (e) {
+        console.warn('[API] getArtistDynamicDetail failed', e);
+        return null;
+    }
+};
 
 export const getArtistSongs = (id: string, limit: number = 50, offset: number = 0, order: string = 'hot', cookie: string = '') =>
     cachedFetch(
@@ -449,22 +463,22 @@ export const getSubscribedArtists = async (
   }
 };
 
-export const toggleSubArtist = async (id: string, isSub: boolean, cookie: string = '') => {
+export const toggleSubArtist = async (id: string, shouldSub: boolean, cookie: string = '') => {
     const realId = id.replace(/^(neartist_|ne_artist_)/, '');
-    const action = isSub ? 'sub' : 'unsub';
+    const action = shouldSub ? 'sub' : 'unsub';
     return requestWeapi<{ code: number, message?: string }>(
         `${BASE_URL}/weapi/artist/${action}`,
-        { artistId: realId, artistIds: [realId] }, // !  TODO:当前收藏歌手会报 250 系统错误, 但功能是正常的, 可以暂时忽略
+        { artistId: realId, artistIds: [realId] }, // !  TODO:当前收藏歌手会报 250 系统错误, 暂时无法使用
         cookie
     );
 };
 
-export const toggleSubAlbum = async (id: string, isSub: boolean, cookie: string = '') => {
+export const toggleSubAlbum = async (id: string, shouldSub: boolean, cookie: string = '') => {
     const realId = id.replace(/^(nealbum_|ne_album_)/, '');
-    const action = isSub ? 'sub' : 'unsub';
+    const action = shouldSub ? 'sub' : 'unsub';
     return requestWeapi<{ code: number, message?: string }>(
         `${BASE_URL}/weapi/album/${action}`,
-        { id: realId, t: isSub ? 1 : 0 },
+        { id: realId, t: shouldSub ? 1 : 0 },
         cookie
     );
 };
@@ -562,10 +576,11 @@ export function resolveUrl(urlStr: string): ResolveUrlResult | null {
     return null;
 }
 
-export const convertSongToMusicTrack = (song: NeteaseSongLike): MusicTrack => {
+export const convertSongToMusicTrack = (song: NeteaseSong): MusicTrack => {
     // 兼容搜索接口返回的 artists 和 album
     const artists = song.ar || song.artists || [];
     const album = song.al || song.album || {};
+    const songId = String(song.id);
 
     // 构造 privilege 对象（如果搜索结果缺失）
     let privilege = song.privilege;
@@ -581,15 +596,14 @@ export const convertSongToMusicTrack = (song: NeteaseSongLike): MusicTrack => {
             freeTrialPrivilege: { remainTime: 0 }
         };
     }
-
     return {
-        id: String(song.id),
+        id: songId,
         name: song.name || '',
         artist: artists.map((a: { name: string }) => a.name),
         album: album.name || '',
-        pic_id: album.picUrl || '', 
-        url_id: String(song.id),
-        lyric_id: String(song.id),
+        pic_id: album.picUrl || songId,
+        url_id: songId,
+        lyric_id: songId,
         source: '_netease',
         privilege,
         artist_ids: artists.map((a: { id?: string | number }) => String(a.id || '')),

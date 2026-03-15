@@ -14,24 +14,24 @@ export interface MarketPlaylist {
   userId?: string;
 }
 
-export type NeteaseSongArtistLike = {
+export type NeteaseSongArtist = {
   id?: string | number;
   name: string;
 };
 
-export type NeteaseSongAlbumLike = {
+export type NeteaseSongAlbum = {
   id?: string | number;
   name?: string;
   picUrl?: string;
 };
 
-export type NeteaseSongLike = {
+export type NeteaseSong = {
   id: string | number;
   name?: string;
-  ar?: NeteaseSongArtistLike[];
-  artists?: NeteaseSongArtistLike[];
-  al?: NeteaseSongAlbumLike;
-  album?: NeteaseSongAlbumLike;
+  ar?: NeteaseSongArtist[];
+  artists?: NeteaseSongArtist[];
+  al?: NeteaseSongAlbum;
+  album?: NeteaseSongAlbum;
   fee?: number;
   st?: number;
   status?: number;

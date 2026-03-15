@@ -52,12 +52,12 @@ export const useMarketSession = create<MarketSessionState>()(
           listSnapshots: { ...state.listSnapshots, [key]: snapshot },
         })),
 
-      toggleAlbumInSession: (album, isSub) =>
+      toggleAlbumInSession: (album, shouldSub) =>
         set((state) => {
           const { albums } = state.mineData;
           if (!albums) return state;
 
-          const newAlbums = isSub
+          const newAlbums = shouldSub
             ? [
                 {
                   id: Number(album.id),
