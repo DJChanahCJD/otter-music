@@ -1,5 +1,6 @@
 import { MusicTrack, MergedMusicTrack } from "@/types/music";
 import { getExactKey } from "./music-key";
+import { v4 as uuidv4 } from "uuid";
 
 // 格式化音视频时间为分秒格式
 export const formatMediaTime = (time: number) => {
@@ -98,5 +99,19 @@ export function deduplicateTracks(
     tracks: newTracks,
     removedCount,
     tracksToLike,
+  };
+}
+
+export function createTrackFromUrl(title: string, url: string): MusicTrack {
+  return {
+    id: uuidv4(),
+    name: title,
+    artist: [],
+    album: "",
+    pic_id: "",
+    url_id: url,
+    lyric_id: "",
+    source: "podcast",
+    update_time: Date.now(),
   };
 }

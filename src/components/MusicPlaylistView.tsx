@@ -12,7 +12,7 @@ import { useShallow } from "zustand/react/shallow";
 import { useDownloadStore } from "@/store/download-store";
 import { buildDownloadKey } from "@/lib/utils/download";
 import toast from "react-hot-toast";
-import { deduplicateTracks } from "@/lib/utils/music";
+import { createTrackFromUrl, deduplicateTracks } from "@/lib/utils/music";
 import { toastUtils } from "@/lib/utils/toast";
 import { exportPlaylist } from "@/lib/utils/playlist-backup";
 import { musicApi } from "@/lib/music-api";
@@ -26,6 +26,7 @@ import {
 import { Label } from "@/components/ui/label";
 
 import { format } from "date-fns";
+import { AddByUrlDialog } from "./AddByUrlDialog";
 
 interface MusicPlaylistViewProps {
   title: string;
@@ -71,6 +72,7 @@ export function MusicPlaylistView({
 }: MusicPlaylistViewProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [isCoverDialogOpen, setIsCoverDialogOpen] = useState(false);
+  const [isAddByUrlOpen, setIsAddByUrlOpen] = useState(false);
   const [coverUrlInput, setCoverUrlInput] = useState("");
 
   const playlists = useMusicStore(useShallow(state => state.playlists));
@@ -166,6 +168,14 @@ export function MusicPlaylistView({
     toast.success("封面设置成功");
   };
 
+  const handleAddByUrl = (title: string, url: string) => {
+    if (!playlistId) return;
+
+    const track = createTrackFromUrl(title, url);
+    useMusicStore.getState().addToPlaylist(playlistId, track);
+    toast.success("添加成功");
+  };
+
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
@@ -224,6 +234,7 @@ export function MusicPlaylistView({
                    }
                  } : undefined}
                  onSetCover={handleSetCover}
+                 onAddByUrl={isPersonalPlaylist ? () => setIsAddByUrlOpen(true) : undefined}
                />
              )}
              
@@ -281,6 +292,12 @@ export function MusicPlaylistView({
           </DrawerFooter>
         </DrawerContent>
       </Drawer>
+
+      <AddByUrlDialog
+        isOpen={isAddByUrlOpen}
+        onClose={() => setIsAddByUrlOpen(false)}
+        onConfirm={handleAddByUrl}
+      />
     </div>
   );
 }

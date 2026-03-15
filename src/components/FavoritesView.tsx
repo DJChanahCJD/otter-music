@@ -10,9 +10,10 @@ import { useMusicStore } from "@/store/music-store";
 import { useDownloadStore } from "@/store/download-store";
 import { buildDownloadKey } from "@/lib/utils/download";
 import toast from "react-hot-toast";
-import { deduplicateTracks } from "@/lib/utils/music";
+import { createTrackFromUrl, deduplicateTracks } from "@/lib/utils/music";
 import { toastUtils } from "@/lib/utils/toast";
 import { exportPlaylist } from "@/lib/utils/playlist-backup";
+import { AddByUrlDialog } from "./AddByUrlDialog";
 
 interface FavoritesViewProps {
   tracks: MusicTrack[];
@@ -32,6 +33,7 @@ export function FavoritesView({
   onReorder,
 }: FavoritesViewProps) {
   const [searchQuery, setSearchQuery] = useState("");
+  const [isAddByUrlOpen, setIsAddByUrlOpen] = useState(false);
 
   const filteredTracks = useMemo(() => {
     if (!searchQuery.trim()) return tracks;
@@ -67,6 +69,16 @@ export function FavoritesView({
     toast.success(`已移除 ${result.removedCount} 首重复歌曲`);
   };
 
+  const handleAddByUrl = (title: string, url: string) => {
+    const track = createTrackFromUrl(title, url);
+    const error = useMusicStore.getState().addToFavorites(track);
+    if (error) {
+      toast.error(error);
+    } else {
+      toast.success("添加成功");
+    }
+  };
+
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
@@ -93,6 +105,7 @@ export function FavoritesView({
              <PlaylistOperations 
                 onDeduplicate={handleDeduplicate}
                 onExport={() => exportPlaylist("我喜欢的音乐", tracks)}
+                onAddByUrl={() => setIsAddByUrlOpen(true)}
              />
              
              <div className="relative ml-auto w-32">
@@ -121,6 +134,12 @@ export function FavoritesView({
           onReorder={!searchQuery.trim() ? onReorder : undefined}
         />
       </div>
+
+      <AddByUrlDialog
+        isOpen={isAddByUrlOpen}
+        onClose={() => setIsAddByUrlOpen(false)}
+        onConfirm={handleAddByUrl}
+      />
     </div>
   );
 }
