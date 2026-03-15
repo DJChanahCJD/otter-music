@@ -1,12 +1,11 @@
 import toast from "react-hot-toast";
 import { useSyncStore } from "@/store/sync-store";
-import { useMusicStore, usePodcastStore } from "@/store";
+import { useMusicStore } from "@/store";
 import { syncCheck, syncPull, syncPush } from "@/lib/api/sync";
 import { MusicTrack, Playlist } from "@/types/music";
-import { PodcastRssSource } from "@/types/podcast";
 
 /** --- 类型定义 --- */
-type SyncSnapshot = { favorites: MusicTrack[]; playlists: Playlist[]; podcasts: PodcastRssSource[] };
+type SyncSnapshot = { favorites: MusicTrack[]; playlists: Playlist[]; };
 export type SyncResult = { success: boolean; error?: string; skipped?: boolean };
 
 const SYNC_INTERVAL = 60 * 60 * 1000; // 1小时节流
@@ -14,8 +13,7 @@ const SYNC_INTERVAL = 60 * 60 * 1000; // 1小时节流
 /** --- 原子快照操作 --- */
 const getSnapshot = (): SyncSnapshot => {
   const { favorites, playlists } = useMusicStore.getState();
-  const { rssSources } = usePodcastStore.getState();
-  return { favorites, playlists, podcasts: rssSources };
+  return { favorites, playlists };  
 };
 
 const applySnapshot = (data: SyncSnapshot) => {
@@ -23,9 +21,6 @@ const applySnapshot = (data: SyncSnapshot) => {
     favorites: data.favorites ?? [],
     playlists: data.playlists ?? [],
   });
-  if (Array.isArray(data.podcasts)) {
-    usePodcastStore.setState({ rssSources: data.podcasts });
-  }
 };
 
 /**

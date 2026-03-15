@@ -179,7 +179,6 @@ export function useAudioTrackLoader(
           playPromise.catch((error) => {
             console.error("Auto-play failed:", error);
             setIsPlaying(false);
-            toast.error("重试中...")
           });
         }
       } catch (err: unknown) {

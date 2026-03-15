@@ -7,13 +7,10 @@ import {
 } from "@/lib/netease/netease-api";
 import type { ArtistAlbum } from "@/lib/netease/netease-types";
 import { MusicCover } from "@/components/MusicCover";
-import { Loader2, Plus } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
 import { useMusicStore, type MusicState } from "@/store/music-store";
-import { PodcastAdd } from "@/components/Podcast/PodcastAdd";
-import { PodcastCard } from "@/components/Podcast/PodcastCard";
-import { usePodcastStore } from "@/store/podcast-store";
 import { useMarketSession } from "@/store/session/market-session";
 import { PlaylistGrid } from "./PlaylistGrid";
 import { useNeteaseStore } from "@/store/netease-store";
@@ -31,7 +28,6 @@ interface MineTabConfig {
 function useMineData() {
   const mineTab = useMusicStore((s) => s.lastMineTab);
   const setMineTab = useMusicStore((s) => s.setLastMineTab);
-  const rssSources = usePodcastStore((s) => s.rssSources);
   const { mineData, setMineData } = useMarketSession();
   const { cookie, user } = useNeteaseStore();
   const currentUserId = user?.userId ?? null;
@@ -44,7 +40,6 @@ function useMineData() {
       if (mineTab === "recommend" && mineData.recommend) return;
       if ((mineTab === "created" || mineTab === "subscribed") && mineData.created) return;
       if (mineTab === "albums" && mineData.albums) return;
-      if (mineTab === "podcast") return;
 
       try {
         setLoading(true);
@@ -78,7 +73,6 @@ function useMineData() {
   return {
     mineTab,
     setMineTab,
-    rssSources,
     mineData,
     loading,
     currentUserId,
@@ -134,10 +128,7 @@ const AlbumGrid = ({ list, onClick }: { list: ArtistAlbum[]; onClick: (id: strin
 
 export function MineSection() {
   const navigate = useNavigate();
-  const { mineTab, setMineTab, rssSources, mineData, loading, currentUserId } = useMineData();
-  const [showPodcastDialog, setShowPodcastDialog] = useState(false);
-
-  const validRssSources = rssSources.filter((s) => !s.is_deleted);
+  const { mineTab, setMineTab, mineData, loading, currentUserId } = useMineData();
 
   // Tab Configurations
   const tabs: MineTabConfig[] = useMemo(() => [
@@ -181,35 +172,10 @@ export function MineSection() {
         ) : <EmptyState />
       )
     },
-    {
-      id: "podcast",
-      label: "播客",
-      count: validRssSources.length,
-      action: (
-        <Button 
-          variant="ghost" 
-          size="sm" 
-          className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground" 
-          onClick={() => setShowPodcastDialog(true)}
-        >
-          <Plus className="h-5 w-5" />
-        </Button>
-      ),
-      content: (
-        <>
-          {validRssSources.length > 0 ? (
-            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 gap-x-3 gap-y-4">
-              {validRssSources.map((rss) => <PodcastCard key={rss.id} rssSource={rss} />)}
-            </div>
-          ) : <EmptyState text="暂无订阅播客" action={<Button onClick={() => setShowPodcastDialog(true)}>立即添加</Button>} />}
-          <PodcastAdd open={showPodcastDialog} onOpenChange={setShowPodcastDialog} />
-        </>
-      )
-    }
-  ], [mineData, currentUserId, validRssSources, showPodcastDialog, navigate]);
+  ], [mineData, currentUserId, navigate]);
 
   const activeTabConfig = tabs.find(t => t.id === mineTab) || tabs[0];
-  const isDataReady = mineTab === "podcast" ? true : !!mineData[mineTab as keyof typeof mineData];
+  const isDataReady = !!mineData[mineTab as keyof typeof mineData];
 
   return (
     <div className="p-4 pb-24 space-y-6">

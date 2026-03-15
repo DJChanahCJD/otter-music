@@ -1,5 +1,5 @@
-import { Suspense, lazy, useEffect, useState } from "react";
-import { useParams, useNavigate, Navigate } from "react-router-dom";
+import { Suspense, lazy } from "react";
+import { useParams, useNavigate } from "react-router-dom";
 import { useMusicStore } from "@/store/music-store";
 import { useHistoryStore } from "@/store/history-store";
 import { usePlayHelper } from "@/hooks/usePlayHelper";
@@ -20,7 +20,6 @@ const HistoryPage = lazy(() => import("@/components/HistoryPage").then(m => ({ d
 const SettingsPage = lazy(() => import("@/components/SettingsPage").then(m => ({ default: m.SettingsPage })));
 const LocalMusicPage = lazy(() => import("@/components/LocalMusicPage").then(m => ({ default: m.LocalMusicPage })));
 const NeteaseDetail = lazy(() => import("@/components/NeteaseDetail").then(m => ({ default: m.NeteaseDetail })));
-const PodcastDetailPage = lazy(() => import("@/components/Podcast/PodcastDetailPage").then(m => ({ default: m.PodcastDetailPage })));
 const TrashPage = lazy(() => import("@/components/TrashPage").then(m => ({ default: m.TrashPage })));
 
 // ==========================================
@@ -135,19 +134,6 @@ export const MineRoute = withSuspense(() => {
   return <MinePage onSelectPlaylist={(id) => navigate(`/playlist/${id}`)} />;
 });
 
-export const PodcastRoute = withSuspense(() => {
-  const [shouldRedirect, setShouldRedirect] = useState(false);
-  const setLastPlaylistCategory = useMusicStore((s) => s.setLastPlaylistCategory);
-  const setLastMineTab = useMusicStore((s) => s.setLastMineTab);
-  useEffect(() => {
-    setLastPlaylistCategory("mine");
-    setLastMineTab("podcast");
-    setShouldRedirect(true);
-  }, [setLastPlaylistCategory, setLastMineTab]);
-  if (!shouldRedirect) return null;
-  return <Navigate to="/search" replace />;
-});
-
 export const LocalMusicRoute = withSuspense(() => {
   const { handlePlay } = usePlayHelper();
   const { currentTrackId, isPlaying } = usePlaybackState();
@@ -185,22 +171,6 @@ const createNeteaseRoute = (type: "playlist" | "artist" | "album", contextType: 
 export const MarketPlaylistDetailRoute = createNeteaseRoute("playlist", "playlist_market");
 export const ArtistDetailRoute = createNeteaseRoute("artist", "artist");
 export const AlbumDetailRoute = createNeteaseRoute("album", "album");
-export const PodcastDetailRoute = withSuspense(() => {
-  const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
-  const { handlePlay } = usePlayHelper();
-  const { currentTrackId, isPlaying } = usePlaybackState();
-
-  return (
-    <PodcastDetailPage
-      id={id || null}
-      onBack={() => navigate(-1)}
-      onPlay={(track, list) => handlePlay(track, list, `podcast-${id}`)}
-      currentTrackId={currentTrackId}
-      isPlaying={isPlaying}
-    />
-  );
-});
 
 export const QueueRoute = withSuspense(() => {
   const queue = useMusicStore(s => s.queue);

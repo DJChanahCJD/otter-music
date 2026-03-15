@@ -3,8 +3,6 @@ import { RootLayout } from "@/components/RootLayout";
 import {
   SearchRoute,
   FavoritesRoute,
-  PodcastRoute,
-  PodcastDetailRoute,
   MineRoute,
   PlaylistDetailRoute,
   LocalMusicRoute,
@@ -37,14 +35,6 @@ export const router = createBrowserRouter([
       {
         path: "favorites",
         element: <FavoritesRoute />,
-      },
-      {
-        path: "podcast",
-        element: <PodcastRoute />,
-      },
-      {
-        path: "podcast/:id",
-        element: <PodcastDetailRoute />,
       },
       {
         path: "mine",

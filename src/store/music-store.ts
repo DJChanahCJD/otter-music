@@ -42,14 +42,14 @@ export interface MusicState {
   searchSource: MusicSource;
   aggregatedSources: MusicSource[];
   lastPlaylistCategory: string;
-  lastMineTab: "recommend" | "created" | "subscribed" | "albums" | "podcast";
+  lastMineTab: "recommend" | "created" | "subscribed" | "albums";
   lastFeaturedTab: string;
   enableAutoMatch: boolean;
   setQuality: (quality: string) => void;
   setSearchSource: (source: MusicSource) => void;
   setAggregatedSources: (sources: MusicSource[]) => void;
   setLastPlaylistCategory: (category: string) => void;
-  setLastMineTab: (tab: "recommend" | "created" | "subscribed" | "albums" | "podcast") => void;
+  setLastMineTab: (tab: "recommend" | "created" | "subscribed" | "albums") => void;
   setLastFeaturedTab: (tab: string) => void;
   setEnableAutoMatch: (enable: boolean) => void;
 

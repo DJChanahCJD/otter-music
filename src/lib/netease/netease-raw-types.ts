@@ -150,7 +150,6 @@ export interface AlbumDetail {
     publishTime: number;
     company?: string;
     subType?: string;
-    info?: { liked: boolean };
   };
   songs: SongDetail[];
 }
