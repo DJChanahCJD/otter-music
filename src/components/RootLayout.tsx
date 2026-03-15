@@ -38,7 +38,7 @@ export function RootLayout() {
         } else {
             const path = locationRef.current.pathname;
             // 如果是主 Tab 页，最小化应用
-            if (path === "/" || path === "/search" || path === "/favorites" || path === "/podcast" || path === "/mine") {
+            if (path === "/" || path === "/search" || path === "/favorites" || path === "/mine") {
                 CapacitorApp.minimizeApp();
             } else {
                 // 否则后退

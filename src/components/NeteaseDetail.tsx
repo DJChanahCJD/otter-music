@@ -1,20 +1,25 @@
 import { useEffect, useState, useRef } from "react";
 import { PageLayout } from "@/components/PageLayout";
 import { MusicTrackList } from "@/components/MusicTrackList";
-import { getPlaylistDetail, getArtist, getAlbum, getArtistSongs, convertSongToMusicTrack } from "@/lib/netease/netease-api";
+import { 
+  getPlaylistDetail, getArtist, getAlbum, getArtistSongs, 
+  convertSongToMusicTrack, toggleSubAlbum, getAlbumDynamicDetail 
+} from "@/lib/netease/netease-api";
 import { MusicTrack } from "@/types/music";
-import { MoreVertical, Import, SquareArrowOutUpRight, Album } from "lucide-react";
+import { MoreVertical, Import, SquareArrowOutUpRight, Album, Heart, HeartCrack } from "lucide-react";
 import toast from "react-hot-toast";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { useMusicStore } from "@/store/music-store";
+import { useNeteaseStore } from "@/store/netease-store";
 import { PageError } from "@/components/PageError";
 import { DetailSkeleton } from "@/components/skeletons/DetailSkeleton";
 import { CommonDetailHeader } from "@/components/CommonDetailHeader";
 import { SongDetail } from "@/lib/netease/netease-raw-types";
 import { ArtistAlbumSheet } from "@/components/ArtistAlbumSheet";
+import { useMarketSession } from "@/store/session/market-session";
 
 interface NeteaseDetailProps {
   id: string | null;
@@ -32,8 +37,8 @@ interface UnifiedDetail {
   creator?: string;
   trackCount: number;
   publishTime?: number;
+  sub?: boolean; 
 }
-
 
 export function NeteaseDetail({
   id,
@@ -55,14 +60,11 @@ export function NeteaseDetail({
     error: boolean;
     detail: UnifiedDetail | null;
     tracks: MusicTrack[];
-  }>({
-    loading: true,
-    error: false,
-    detail: null,
-    tracks: [],
-  });
+  }>({ loading: true, error: false, detail: null, tracks: [] });
 
   const { createPlaylist, setPlaylistTracks } = useMusicStore();
+  const { cookie } = useNeteaseStore();
+  const { toggleAlbumInSession } = useMarketSession();
 
   const handleShare = async () => {
     if (!detail || !id) return;
@@ -89,6 +91,33 @@ export function NeteaseDetail({
     }
   };
 
+  // 当前仅处理专辑的收藏逻辑
+  const handleToggleSub = async () => {
+    if (!id || !cookie || type !== "album") return;
+    const isSub = !detail?.sub;
+    try {
+      const res = await toggleSubAlbum(id, isSub, cookie);
+      if (res.data?.code === 200 || res.data?.code === 250) {
+        toast.success(isSub ? "收藏成功" : "已取消收藏");
+        setState((prev) => ({
+          ...prev,
+          detail: prev.detail ? { ...prev.detail, sub: isSub } : prev.detail,
+        }));
+        toggleAlbumInSession({
+          id: Number(id),
+          name: detail?.name || "",
+          picUrl: detail?.coverImgUrl || "",
+          artistName: detail?.creator || "",
+        }, isSub);
+      } else {
+        toast.error(res.data?.message || "操作失败");
+      }
+    } catch (err) {
+      toast.error("操作失败");
+      console.error(err);
+    }
+  };
+
   const handleLoadMore = async () => {
     if (!id || loadingMore || !hasMore || type !== 'artist') return;
     setLoadingMore(true);
@@ -96,20 +125,11 @@ export function NeteaseDetail({
       const res = await getArtistSongs(id, 50, offset);
       if (res?.songs?.length) {
         const newTracks = res.songs.map(convertSongToMusicTrack);
-        
-        setState(prev => ({
-          ...prev,
-          tracks: [...prev.tracks, ...newTracks]
-        }));
+        setState(prev => ({ ...prev, tracks: [...prev.tracks, ...newTracks] }));
         
         const nextOffset = offset + newTracks.length;
         setOffset(nextOffset);
-        
-        if (detail?.trackCount && nextOffset >= detail.trackCount) {
-             setHasMore(false);
-        } else {
-             setHasMore(res.more ?? true);
-        }
+        setHasMore(detail?.trackCount ? nextOffset < detail.trackCount && (res.more ?? true) : res.more ?? true);
       } else {
         setHasMore(false);
       }
@@ -123,8 +143,8 @@ export function NeteaseDetail({
 
   useEffect(() => {
     if (!id) return;
-
     let active = true;
+    
     setState({ loading: true, error: false, detail: null, tracks: [] });
     setOffset(0);
     setHasMore(false);
@@ -135,23 +155,18 @@ export function NeteaseDetail({
         let rawTracks: SongDetail[] = [];
 
         if (type === "playlist") {
-          const res = await getPlaylistDetail(id, "");
+          const res = await getPlaylistDetail(id, cookie);
           if (!res) throw new Error("Not found");
           rawDetail = {
-            name: res.name,
-            coverImgUrl: res.coverImgUrl,
-            description: res.description,
-            creator: res.creator?.nickname ? res.creator.nickname : undefined,
-            trackCount: res.trackCount,
+            name: res.name, coverImgUrl: res.coverImgUrl, description: res.description,
+            creator: res.creator?.nickname, trackCount: res.trackCount, sub: res.subscribed,
           };
           rawTracks = res.tracks;
         } else if (type === "artist") {
-          const res = await getArtist(id, "");
+          const res = await getArtist(id, cookie);
           if (!res) throw new Error("Not found");
           rawDetail = {
-            name: res.artist.name,
-            coverImgUrl: res.artist.picUrl,
-            description: res.artist.briefDesc,
+            name: res.artist.name, coverImgUrl: res.artist.picUrl, description: res.artist.briefDesc,
             trackCount: res.artist.musicSize,
           };
           rawTracks = res.hotSongs;
@@ -160,50 +175,40 @@ export function NeteaseDetail({
             setHasMore(res.artist.musicSize > rawTracks.length);
           }
         } else {
-          const res = await getAlbum(id, "");
+          const [res, dynamicRes] = await Promise.all([
+            getAlbum(id, cookie),
+            getAlbumDynamicDetail(id, cookie).catch(() => null),
+          ]);
           if (!res?.album) throw new Error("Not found");
           rawDetail = {
-            name: res.album.name,
-            coverImgUrl: res.album.picUrl,
-            description: res.album.description,
-            creator: res.album.artist?.name,
-            trackCount: res.songs.length,
-            publishTime: res.album.publishTime,
+            name: res.album.name, coverImgUrl: res.album.picUrl, description: res.album.description,
+            creator: res.album.artist?.name, trackCount: res.songs.length, publishTime: res.album.publishTime,
+            sub: dynamicRes?.isSub || false,
           };
           rawTracks = res.songs;
         }
 
         if (!active) return;
-
         setState({
-          loading: false,
-          error: false,
-          detail: rawDetail,
+          loading: false, error: false, detail: rawDetail,
           tracks: rawTracks.map(convertSongToMusicTrack),
         });
       } catch (err) {
         console.error(err);
-        if (active) {
-          setState((s) => ({ ...s, loading: false, error: true }));
-        }
+        if (active) setState((s) => ({ ...s, loading: false, error: true }));
       }
     };
 
     loadData();
-    return () => {
-      active = false;
-    };
-  }, [id, type, retryCount]);
+    return () => { active = false; };
+  }, [id, type, retryCount, cookie]);
 
   if (loading) return <DetailSkeleton onBack={onBack} />;
 
   if (error) {
     return (
       <PageLayout title="错误" onBack={onBack}>
-        <PageError 
-          onBack={onBack} 
-          onRetry={() => setRetryCount((c) => c + 1)}
-        />
+        <PageError onBack={onBack} onRetry={() => setRetryCount((c) => c + 1)} />
       </PageLayout>
     );
   }
@@ -216,9 +221,7 @@ export function NeteaseDetail({
         <div className="flex items-center">
           {type === "artist" && (
             <Button
-              variant="ghost"
-              size="icon"
-              className="text-muted-foreground hover:text-foreground"
+              variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground"
               onClick={() => setIsAlbumSheetOpen(true)}
             >
               <Album className="w-5 h-5" />
@@ -231,13 +234,21 @@ export function NeteaseDetail({
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
+              {/* 仅在类型为专辑时展示收藏/取消收藏按钮 */}
+              {cookie && type === "album" && (
+                <DropdownMenuItem onClick={handleToggleSub}>
+                  {detail?.sub ? (
+                    <><HeartCrack className="w-4 h-4 mr-2" />取消收藏</>
+                  ) : (
+                    <><Heart className="w-4 h-4 mr-2" />收藏专辑</>
+                  )}
+                </DropdownMenuItem>
+              )}
               <DropdownMenuItem onClick={handleShare}>
-                <SquareArrowOutUpRight className="w-4 h-4 mr-2" />
-                分享
+                <SquareArrowOutUpRight className="w-4 h-4 mr-2" />分享
               </DropdownMenuItem>
               <DropdownMenuItem onClick={handleImportPlaylist}>
-                <Import className="w-4 h-4 mr-2" />
-                导入歌单
+                <Import className="w-4 h-4 mr-2" />导入歌单
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -251,33 +262,22 @@ export function NeteaseDetail({
       >
         {detail && (
           <CommonDetailHeader
-            title={detail.name}
-            coverUrl={detail.coverImgUrl}
-            description={detail.description}
-            creator={detail.creator}
-            countDesc={`${detail.trackCount} 首`}
-            publishTime={detail.publishTime}
+            title={detail.name} coverUrl={detail.coverImgUrl} description={detail.description}
+            creator={detail.creator} countDesc={`${detail.trackCount} 首`} publishTime={detail.publishTime}
           />
         )}
         <div className="flex-1 min-h-0">
-            <MusicTrackList
-              tracks={tracks}
-              onPlay={(track) => onPlay(track, tracks)}
-              currentTrackId={currentTrackId}
-              isPlaying={isPlaying}
-              emptyMessage="列表为空"
-              onLoadMore={type === 'artist' ? handleLoadMore : undefined}
-              hasMore={hasMore}
-              loading={loading || loadingMore}
-            />
+          <MusicTrackList
+            tracks={tracks} onPlay={(track) => onPlay(track, tracks)} currentTrackId={currentTrackId}
+            isPlaying={isPlaying} emptyMessage="列表为空"
+            onLoadMore={type === 'artist' ? handleLoadMore : undefined}
+            hasMore={hasMore} loading={loading || loadingMore}
+          />
         </div>
       </div>
       
       <ArtistAlbumSheet 
-        artistId={id} 
-        isOpen={isAlbumSheetOpen} 
-        onOpenChange={setIsAlbumSheetOpen}
-        artistName={detail?.name}
+        artistId={id} isOpen={isAlbumSheetOpen} onOpenChange={setIsAlbumSheetOpen} artistName={detail?.name}
       />
     </PageLayout>
   );

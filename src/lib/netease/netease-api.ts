@@ -1,8 +1,10 @@
 import { weapi, eapi } from './netease-crypto';
 import type {
     AlbumDetail,
+    AlbumDynamicDetail,
     ArtistDetail,
     ArtistAlbum,
+    ArtistItem,
     NeteasePrivilege,
     PlaylistDetail,
     RawNeteaseResponse,
@@ -357,6 +359,20 @@ export const getAlbum = (id: string, cookie: string = '') =>
         TTL_LONG // 专辑发布后信息基本固定 
     ); 
 
+export const getAlbumDynamicDetail = async (id: string, cookie: string = '') => {
+    try {
+        const res = await requestWeapi<AlbumDynamicDetail>(
+            `${BASE_URL}/weapi/album/detail/dynamic`,
+            { id: id.replace(/^(nealbum_|ne_album_)/, '') },
+            cookie
+        );
+        return res.data;
+    } catch (e) {
+        console.warn('[API] getAlbumDynamicDetail failed', e);
+        return null;
+    }
+}; 
+
 export const getArtist = (id: string, cookie: string = '') => 
     cachedFetch( 
         `netease:artist:${id.replace(/^(neartist_|ne_artist_)/, '')}`, 
@@ -392,24 +408,66 @@ export const getArtistAlbums = (id: string, limit: number = 30, offset: number =
             );
             return res.data;
         },
-        TTL_LONG
+        TTL_MEDIUM
     ); 
 
-export const getSubscribedAlbums = async (limit: number = 25, offset: number = 0, cookie: string = ''): Promise<ArtistAlbum[]> => {
-    const res = await cachedFetch<ArtistAlbum[]>(
-        `netease:subscribed-albums:${limit}:${offset}`,
-        async () => {
-            const r = await requestWeapi<{ data: ArtistAlbum[], count: number }>(
-                `${BASE_URL}/weapi/album/sublist`,
-                { limit, offset, total: true },
-                cookie
-            );
-            return r.data.data;
-        },
-        TTL_SHORT
+export const getSubscribedAlbums = async (
+  limit: number = 25,
+  offset: number = 0,
+  cookie: string = ''
+): Promise<ArtistAlbum[]> => {
+  try {
+    const r = await requestWeapi<{ data: ArtistAlbum[]; count: number }>(
+      `${BASE_URL}/weapi/album/sublist`,
+      { limit, offset, total: true },
+      cookie
     );
-    return res ?? [];
-}; 
+
+    return r.data.data ?? [];
+  } catch (e) {
+    console.warn('[API] getSubscribedAlbums failed', e);
+    return [];
+  }
+};
+
+export const getSubscribedArtists = async (
+  limit: number = 25,
+  offset: number = 0,
+  cookie: string = ''
+): Promise<ArtistItem[]> => {
+  try {
+    const r = await requestWeapi<{ data: ArtistItem[]; count: number }>(
+      `${BASE_URL}/weapi/artist/sublist`,
+      { limit, offset, total: true },
+      cookie
+    );
+
+    return r.data.data ?? [];
+  } catch (e) {
+    console.warn('[API] getSubscribedArtists failed', e);
+    return [];
+  }
+};
+
+export const toggleSubArtist = async (id: string, isSub: boolean, cookie: string = '') => {
+    const realId = id.replace(/^(neartist_|ne_artist_)/, '');
+    const action = isSub ? 'sub' : 'unsub';
+    return requestWeapi<{ code: number, message?: string }>(
+        `${BASE_URL}/weapi/artist/${action}`,
+        { artistId: realId, artistIds: [realId] }, // !  TODO:当前收藏歌手会报 250 系统错误, 但功能是正常的, 可以暂时忽略
+        cookie
+    );
+};
+
+export const toggleSubAlbum = async (id: string, isSub: boolean, cookie: string = '') => {
+    const realId = id.replace(/^(nealbum_|ne_album_)/, '');
+    const action = isSub ? 'sub' : 'unsub';
+    return requestWeapi<{ code: number, message?: string }>(
+        `${BASE_URL}/weapi/album/${action}`,
+        { id: realId, t: isSub ? 1 : 0 },
+        cookie
+    );
+};
 
 export const getPlaylists = (cat: string = '全部', order: string = 'hot', limit: number = 30, offset: number = 0, cookie: string = '') => 
     cachedFetch( 

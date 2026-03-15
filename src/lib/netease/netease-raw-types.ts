@@ -63,6 +63,16 @@ export interface NeteasePrivilege {
   };
 }
 
+export interface AlbumDynamicDetail {
+  onSale: boolean;
+  commentCount: number;
+  likedCount: number;
+  shareCount: number;
+  isSub: boolean;
+  subTime: number;
+  subCount: number;
+}
+
 export interface NeteasePlayerUrlItem {
   id: number;
   url: string | null;
@@ -81,6 +91,7 @@ export interface PlaylistDetail extends BaseEntity {
   tracks: SongDetail[];
   trackIds: Array<{ id: number }>;
   creator?: UserProfile;
+  subscribed?: boolean;
 }
 
 export interface UserPlaylist extends BaseEntity {
@@ -139,6 +150,7 @@ export interface AlbumDetail {
     publishTime: number;
     company?: string;
     subType?: string;
+    info?: { liked: boolean };
   };
   songs: SongDetail[];
 }
@@ -150,6 +162,7 @@ export interface ArtistDetail {
     musicSize: number;
     albumSize: number;
     mvSize: number;
+    followed: boolean;  //  传入 cookie 时才会返回
   };
   hotSongs: SongDetail[];
 }
@@ -157,8 +170,6 @@ export interface ArtistDetail {
 export interface ArtistItem extends BaseEntity {
   picUrl: string;
   albumSize: number;
-  musicSize: number;
-  alias?: string[];
 }
 
 export interface ArtistAlbum extends BaseEntity {

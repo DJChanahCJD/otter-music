@@ -12,6 +12,7 @@ import {
   CopyMinus,
   Trash2,
   Image,
+  Link,
   type LucideIcon,
   FileOutput,
 } from "lucide-react";
@@ -22,6 +23,7 @@ interface PlaylistOperationsProps {
   onExport: () => void;
   onDelete?: () => void;
   onSetCover?: () => void;
+  onAddByUrl?: () => void;
 }
 
 /**
@@ -59,6 +61,7 @@ export function PlaylistOperations({
   onExport,
   onDelete,
   onSetCover,
+  onAddByUrl,
 }: PlaylistOperationsProps) {
   // 普通操作项（配置驱动）
   const items = [
@@ -71,6 +74,11 @@ export function PlaylistOperations({
       icon: Image,
       label: "设置封面",
       onClick: onSetCover,
+    },
+    onAddByUrl && {
+      icon: Link,
+      label: "URL 添加",
+      onClick: onAddByUrl,
     },
     {
       icon: CopyMinus,
