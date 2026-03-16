@@ -20,6 +20,11 @@
   <img src="https://img.shields.io/badge/State-Zustand-orange" />
 </p>
 
+## 项目简介
+
+- 多源聚合播放，覆盖在线播放与本地文件。
+- 移动端优先，使用 Capacitor 打包 Android 应用。
+- 重点关注播放稳定性：失败重试、备用线路、自动换源。
 ***
 
 <p align="center">
@@ -27,93 +32,91 @@
   <img src="https://github.com/user-attachments/assets/475cb456-ed0f-40e9-829d-a746dffd2688" width="45%" />
 </p>
 
-## 功能
+## 核心功能
 
-- **多音源搜索**：网易云音乐、酷我音乐、Joox 聚合搜索
-- **本地音乐**：扫描播放本地音乐文件
-- **播放管理**：播放队列、喜欢、历史、自定义歌单
-- **歌词显示**：支持滚动歌词、实时跳转
-- **其他**：明/暗主题切换、数据定期同步
+- **多音源聚合与回退**：支持多源检索与播放失败回退（本地下载/直连/代理/下一首）。
+- **智能音源自动匹配**：在可配置开关下自动切换到可用免费音源，并同步队列/歌单/喜欢状态。
+- **歌单市场与播客**：支持网易云主题歌单、我的歌单，以及本地 RSS 播客入口。
+- **URL 快速添加**：支持粘贴“标题 + URL”自动识别，支持剪贴板自动填充。
+- **歌单管理增强**：支持搜索、去重、导出、封面设置、URL 添加歌曲。
+- **播放生态**：支持历史记录、喜欢列表、歌词显示、主题切换与数据同步配置。
 
 > API 来自GD音乐台(<https://music.gdstudio.xyz>)
 >
 > 数据同步功能依赖主项目 [Otter Music Web](https://github.com/DJChanahCJD/otter-music-web)
->
-> ⚠️ 当前仅支持 Android，欢迎 PR
 
-## 开发
+## 快速开始
 
 ```bash
-# 安装依赖
 npm install --legacy-peer-deps
-
-# 启动开发服务器
 npm run dev
-
-# 构建生产版本
-npm run build
 ```
 
-# 运行测试
+> 必须使用 `--legacy-peer-deps`，原因是 `@jofr/capacitor-media-session` 与 Capacitor 8 存在 peer 版本冲突。
 
+## 常用脚本
+
+```bash
+# 构建
+npm run build
+
+# 类型检查
+npm run typecheck
+
+# 代码检查
+npm run lint
+
+# 测试
 npm run test
-
-````
-> ⚠ 必须加 `--legacy-peer-deps`，因为`@jofr/capacitor-media-session` 与 Capacitor 8 存在 peer 版本冲突
-
-
+```
 
 ## Android 构建
 
 ```bash
-# 生成资源文件
+# 生成资源
 npm run resources
 
-# 添加 Android 平台
+# 首次添加 Android 平台
 npm run cap:add:android
 
-# 同步并构建 Debug 版本
+# 同步 Android 工程
+npm run cap:sync:android
+
+# 构建 Debug APK
 npm run build:android:debug
-````
-
-> 构建完成后，APK 文件位于 `android/app/build/outputs/apk/debug/app-debug.apk`
-
-## 目录结构
-
 ```
+
+Debug APK 输出路径：
+- `android/app/build/outputs/apk/debug/app-debug.apk`
+
+## 项目结构
+
+```text
 src/
-├── components/     # UI 组件
-├── hooks/          # 自定义 Hooks
-├── lib/api/        # API 服务
-├── store/          # Zustand 状态管理
-├── types/          # TypeScript 类型定义
-└── lib/utils/      # 工具函数
+├── components/                 # 页面与业务组件
+├── hooks/                      # 音频加载相关 Hook
+├── lib/                        # 核心能力（重点）
+│   ├── music-api.ts            # 统一音乐能力入口（搜索/URL/歌词/封面）
+│   ├── audio-match.ts          # 自动换源与匹配结果回写
+│   ├── api/                    # 服务端配置、同步、更新、播客接口
+│   ├── netease/                # 网易云 API 适配层
+│   ├── music-provider/         # Provider 抽象与实现（netease/kuwo/joox/local/podcast/aggregate）
+│   ├── sync.ts                 # 数据同步核心逻辑
+│   ├── storage-*.ts            # 存储适配与统一存储管理
+│   └── utils/                  # 缓存、下载、检索、歌名匹配等工具
+├── store/                      # Zustand 全局状态
+└── types/                      # 类型定义
 ```
 
 ## TODO
 
-### P0 近期必做（稳定性）
-- [ ] 回收站自动清理：启动时清理删除超过 7 天的歌曲，并更新页面文案为 7 天。
-- [ ] 媒体状态同步：补齐 Web 与 Native MediaSession 在暂停/切歌/进度更新的同步一致性。🌟
-- [ ] 错误自动上报：前端全局错误采集并写入服务端日志（保留 7 天）。
-
-### P1 待评估（方向决策）
-- [ ] 全栈单体化。
-- [ ] Meting API 接入：评估新增官方音源覆盖、稳定性与维护成本。（偏向于前端直接Copy逻辑过来）
-- [ ] 精简数据结构以便存储更多数据（添加created_at?） 
-
-
-### P2 低优先级
-- [ ] 歌单整体统一背景色，从歌单封面中提取
-- [ ] 歌手页面是否改为简介、歌曲、专辑三个tab, 置顶为歌手封面hero图
-- [] 是否简化同步流程, 不再需要is_deleted，仅歌单级别is_deleted, 以最新版本的歌单为主
-- [ ] 引入轻量化用户自定义功能，仅支持自定义头像url（随机头像通过dicebear生成）和昵称
-
+- [ ] 媒体状态同步一致性（Web 与 Native MediaSession）
+- [ ] 评估新增稳定音源接入方案 Meting API
 
 ## 参考资料
 
-- [GD Studio](https://music-api.gdstudio.xyz/api.php): 免费音源 API 服务支持
-- [Listen1](https://github.com/listen1/listen1_chrome_extension/blob/master/js/provider/netease.js): 网易云 API 实现参考
+- [GD Studio](https://music-api.gdstudio.xyz/api.php)：免费音源 API 服务支持
+- [Listen1](https://github.com/listen1/listen1_chrome_extension/blob/master/js/provider/netease.js)：网易云接口实现参考
 
 ## License
 
