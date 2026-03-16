@@ -1,6 +1,22 @@
 import { useEffect } from "react";
 import { useMusicStore } from "@/store/music-store";
 import { MediaSession } from "@jofr/capacitor-media-session";
+import { Capacitor } from "@capacitor/core";
+
+function getSafeArtwork(coverUrl: string | null | undefined, isOnline: boolean) {
+  if (!isOnline || !coverUrl) return [];
+
+  try {
+    const parsed = new URL(coverUrl);
+    // Native side is stricter with remote media URLs; skip non-HTTPS artwork.
+    if (Capacitor.isNativePlatform() && parsed.protocol !== "https:") {
+      return [];
+    }
+    return [{ src: parsed.toString() }];
+  } catch {
+    return [];
+  }
+}
 
 export function useMediaSessionIntegration(
   audioRef: React.RefObject<HTMLAudioElement | null>,
@@ -15,11 +31,7 @@ export function useMediaSessionIntegration(
 
       try {
         const isOnline = navigator.onLine;
-
-        const safeArtwork =
-          isOnline && coverUrl
-            ? [{ src: coverUrl }]
-            : [];
+        const safeArtwork = getSafeArtwork(coverUrl, isOnline);
 
         await MediaSession.setMetadata({
           title: currentTrack.name || "Unknown Track",
