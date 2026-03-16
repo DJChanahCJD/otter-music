@@ -15,6 +15,7 @@ dependencies {
     implementation project(':capacitor-file-transfer')
     implementation project(':capacitor-filesystem')
     implementation project(':jofr-capacitor-media-session')
+    implementation project(':sentry-capacitor')
 
 }
 

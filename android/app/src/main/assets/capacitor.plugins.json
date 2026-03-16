@@ -22,5 +22,9 @@
 	{
 		"pkg": "@jofr/capacitor-media-session",
 		"classpath": "io.github.jofr.capacitor.mediasessionplugin.MediaSessionPlugin"
+	},
+	{
+		"pkg": "@sentry/capacitor",
+		"classpath": "io.sentry.capacitor.SentryCapacitor"
 	}
 ]
