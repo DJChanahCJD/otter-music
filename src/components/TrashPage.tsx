@@ -63,7 +63,7 @@ export function TrashPage() {
         <div className="px-4 pt-4 pb-2">
           <div className="flex items-center gap-2 p-3 rounded-xl bg-muted/30 text-muted-foreground/80 text-[13px]">
             <Info className="h-4 w-4" />
-            <span>内容将保留 30 天，逾期后将永久移除。</span>
+            <span>内容将保留 7 天，逾期后将永久移除。</span>
           </div>
         </div>
         
