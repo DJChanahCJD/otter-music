@@ -21,6 +21,7 @@ const SettingsPage = lazy(() => import("@/components/SettingsPage").then(m => ({
 const LocalMusicPage = lazy(() => import("@/components/LocalMusicPage").then(m => ({ default: m.LocalMusicPage })));
 const NeteaseDetail = lazy(() => import("@/components/NeteaseDetail").then(m => ({ default: m.NeteaseDetail })));
 const TrashPage = lazy(() => import("@/components/TrashPage").then(m => ({ default: m.TrashPage })));
+const PodcastDetailPage = lazy(() => import("@/components/Podcast/PodcastDetailPage").then(m => ({ default: m.PodcastDetailPage })));
 
 // ==========================================
 // 2. 核心优化 Hooks & HOC
@@ -216,3 +217,20 @@ export const HistoryRoute = withSuspense(() => {
 
 export const SettingsRoute = withSuspense(() => <SettingsPage />);
 export const TrashRoute = withSuspense(() => <TrashPage />);
+
+export const PodcastDetailRoute = withSuspense(() => {
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const { handlePlay } = usePlayHelper();
+  const { currentTrackId, isPlaying } = usePlaybackState();
+
+  return (
+    <PodcastDetailPage
+      id={id || null}
+      onBack={() => navigate(-1)}
+      onPlay={(track, list) => handlePlay(track, list, "podcast")}
+      currentTrackId={currentTrackId}
+      isPlaying={isPlaying}
+    />
+  );
+});

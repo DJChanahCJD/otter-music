@@ -1,6 +1,6 @@
 import { toast } from "react-hot-toast";
 import { useMusicStore } from "@/store/music-store";
-import { getAggregatedSourcesForMatch } from "@/hooks/use-aggregated-sources";
+import { EXCLUDED_FOR_SEARCH, getAggregatedSourcesForMatch } from "@/hooks/use-aggregated-sources";
 import { musicApi } from "@/lib/music-api";
 import type { MusicTrack } from "@/types/music";
 import { isNameMatch, isArtistMatch } from "./utils/music-key";
@@ -11,6 +11,9 @@ import { isNameMatch, isArtistMatch } from "./utils/music-key";
  * @returns 是否匹配并切换成功
  */
 export async function handleAutoMatch(track: MusicTrack): Promise<boolean> {
+  if (track.source && EXCLUDED_FOR_SEARCH.includes(track.source)) {
+    return false;
+  }
   const toastId = toast.loading("正在搜索免费音源...", { id: `auto-match-${track.id}` });
   
   try {

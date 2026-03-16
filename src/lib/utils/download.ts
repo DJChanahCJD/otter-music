@@ -49,7 +49,7 @@ export async function downloadMusicTrack(track: MusicTrack, br = 192) {
       if (isProxyUrl(url)) throw err;
 
       console.warn("Direct download failed, retrying with proxy...", err);
-      toast.loading("已切换备用下载线路", { id: toastId });
+      toast.loading("已切换备用下载线路", { id: toastId, icon: "🌐" });
       
       const proxyUrl = getProxyUrl(url);
       await performDownload(proxyUrl);

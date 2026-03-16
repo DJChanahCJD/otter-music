@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 import { retry } from "@/lib/utils";
 import { musicApi } from "@/lib/music-api";
-import { getProxyUrl } from "@/lib/api";
+import { getProxyStreamUrl } from "@/lib/api";
 import { useMusicStore } from "@/store/music-store";
 import { useSourceQualityStore } from "@/store/source-quality-store";
 import { useDownloadStore } from "@/store/download-store";
@@ -243,7 +243,7 @@ export function useAudioTrackLoader(
 
           if (currentTrackSource !== "local" && fallbackStageRef.current.stage === "none" && remoteUrlRef.current) {
             const remoteUrl = remoteUrlRef.current;
-            const proxyUrl = getProxyUrl(remoteUrl);
+            const proxyUrl = getProxyStreamUrl(remoteUrl);
             fallbackStageRef.current.stage = "proxy";
             toast("已切换备用线路", { icon: "🌐", id: "proxy-notice" });
             await setSourceAndPlay(proxyUrl);
@@ -273,7 +273,7 @@ export function useAudioTrackLoader(
         fallbackStageRef.current.stage = "final";
         audio.src = "";
         setCurrentAudioUrl(null);
-        toast.error("当前歌曲播放失败，已跳到下一首");
+        toast.error("播放失败，已自动切到下一首");
 
         const failures = incrementFailures();
         if (failures >= maxConsecutiveFailures) {

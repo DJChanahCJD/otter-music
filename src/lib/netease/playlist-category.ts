@@ -115,6 +115,7 @@ export const ALL_FILTERS: FilterCategory[] = [
       F('ACG'),
       F('游戏'),
       F('经典'),
+      F('播客'),
       F('KTV'),
 
       // 扩展

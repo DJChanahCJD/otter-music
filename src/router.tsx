@@ -12,7 +12,8 @@ import {
   QueueRoute,
   HistoryRoute,
   SettingsRoute,
-  TrashRoute
+  TrashRoute,
+  PodcastDetailRoute
 } from "@/routes/RouteWrappers";
 import { RouteErrorPage } from "@/components/RouteErrorPage";
 
@@ -59,6 +60,10 @@ export const router = createBrowserRouter([
       {
         path: "netease-album/:id",
         element: <AlbumDetailRoute />,
+      },
+      {
+        path: "podcast/:id",
+        element: <PodcastDetailRoute />,
       },
       {
         path: "queue",

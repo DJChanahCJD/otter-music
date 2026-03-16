@@ -7,7 +7,7 @@ import {
 } from "@/lib/netease/netease-api";
 import type { MarketPlaylist } from "@/lib/netease/netease-types";
 import { cachedFetch } from "@/lib/utils/cache";
-import { Loader2, LayoutGrid } from "lucide-react";
+import { Loader2, LayoutGrid, Plus } from "lucide-react";
 import { PlaylistCategorySelector } from "./PlaylistCategorySelector";
 import { cn } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
@@ -16,6 +16,9 @@ import { useScrollSave } from "@/hooks/use-scroll-save";
 import { useMarketSession } from "@/store/session/market-session";
 import { MineSection } from "./MineSection";
 import { PlaylistGrid } from "./PlaylistGrid";
+import { usePodcastStore } from "@/store/podcast-store";
+import { PodcastCard } from "../Podcast/PodcastCard";
+import { PodcastAdd } from "../Podcast/PodcastAdd";
 
 const PAGE_SIZE = 30;
 const SUB_TAB_HEIGHT = "h-8";
@@ -29,8 +32,12 @@ export function PlaylistMarket() {
   const activeCategory = useMusicStore((s) => s.lastPlaylistCategory);
   const setActiveCategory = useMusicStore((s) => s.setLastPlaylistCategory);
   
+  const rssSources = usePodcastStore((s) => s.rssSources);
+
   const featuredTab = useMusicStore((s) => s.lastFeaturedTab || FEATURED_SUB_FILTERS[0].id);
   const setFeaturedTab = useMusicStore((s) => s.setLastFeaturedTab);
+
+  const [isAddPodcastOpen, setIsAddPodcastOpen] = useState(false);
 
   const [items, setItems] = useState<MarketPlaylist[]>([]);
   const [loading, setLoading] = useState(true);
@@ -46,7 +53,7 @@ export function PlaylistMarket() {
   const snapshotKey = useMemo(() => getSnapshotKey(activeCategory, featuredTab), [activeCategory, featuredTab]);
   
   // 绑定滚动 Hook：当 items 准备好或处于 mine 标签时触发恢复
-  const { scrollRef } = useScrollSave(`scroll-${snapshotKey}`, items.length > 0 || activeCategory === "mine");
+  const { scrollRef } = useScrollSave(`scroll-${snapshotKey}`, items.length > 0 || activeCategory === "mine" || activeCategory === "播客");
 
   const displayFilters = useMemo(() => {
     const baseFilters = [RECOMMEND_FILTERS[0], { id: "mine", name: "我的" }, ...RECOMMEND_FILTERS.slice(1)];
@@ -55,7 +62,7 @@ export function PlaylistMarket() {
   }, [activeCategory]);
 
   const fetchItems = useCallback(async (category: string, subTab: string, currentOffset: number) => {
-    if (category === "mine") return;
+    if (category === "mine" || category === "播客") return;
     const requestCategory = category === "featured" ? subTab : category;
     
     if (currentOffset === 0) {
@@ -110,7 +117,7 @@ export function PlaylistMarket() {
 
   // 初始挂载与分类切换监听
   useEffect(() => {
-    if (activeCategory === "mine") return;
+    if (activeCategory === "mine" || activeCategory === "播客") return;
 
     // 1. 尝试从 Store 快照极速恢复
     const snapshot = listSnapshots[snapshotKey];
@@ -131,7 +138,7 @@ export function PlaylistMarket() {
   // 无限下拉触发器
   useEffect(() => {
     const element = observerTarget.current;
-    if (!element || loading || isFetching || !hasMore || activeCategory === "mine") return;
+    if (!element || loading || isFetching || !hasMore || activeCategory === "mine" || activeCategory === "播客") return;
 
     const observer = new IntersectionObserver(
       (entries) => {
@@ -200,6 +207,30 @@ export function PlaylistMarket() {
       <main ref={scrollRef} className="flex-1 overflow-y-auto custom-scrollbar">
         {activeCategory === "mine" ? (
           <MineSection />
+        ) : activeCategory === "播客" ? (
+          <div className="p-4 pb-24">
+            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 gap-x-3 gap-y-4">
+              <div
+                className="group flex flex-col gap-2.5 transition-all hover:translate-y-[-4px] relative cursor-pointer"
+                onClick={() => setIsAddPodcastOpen(true)}
+              >
+                <div className="relative aspect-square rounded-md overflow-hidden border-2 border-dashed border-muted-foreground/20 hover:border-primary/50 hover:bg-muted/50 transition-colors flex items-center justify-center bg-muted/20">
+                  <Plus className="w-8 h-8 text-muted-foreground/50 group-hover:text-primary transition-colors" />
+                </div>
+                <div className="px-0.5 text-center">
+                  <h3 className="text-[13px] font-medium leading-snug text-muted-foreground group-hover:text-primary transition-colors">
+                    添加播客
+                  </h3>
+                </div>
+              </div>
+              {rssSources
+                .filter((s) => !s.is_deleted)
+                .map((rss) => (
+                  <PodcastCard key={rss.id} rssSource={rss} />
+                ))}
+            </div>
+            <PodcastAdd open={isAddPodcastOpen} onOpenChange={setIsAddPodcastOpen} />
+          </div>
         ) : (
           <div className="p-4 pb-24">
             {activeCategory === "featured" && (
