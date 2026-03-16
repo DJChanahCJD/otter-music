@@ -18,7 +18,6 @@ import { AddByUrlDialog } from "./AddByUrlDialog";
 interface FavoritesViewProps {
   tracks: MusicTrack[];
   onPlay: (track: MusicTrack | null, index?: number) => void;
-  onRemove: (track: MusicTrack) => void;
   currentTrackId?: string;
   isPlaying?: boolean;
   onReorder?: (tracks: MusicTrack[]) => void;
@@ -27,7 +26,6 @@ interface FavoritesViewProps {
 export function FavoritesView({
   tracks,
   onPlay,
-  onRemove,
   currentTrackId,
   isPlaying,
   onReorder,
@@ -128,8 +126,6 @@ export function FavoritesView({
           onPlay={(track) => onPlay(track, tracks.findIndex(t => t.id === track.id))}
           currentTrackId={currentTrackId}
           isPlaying={isPlaying}
-          onRemove={(track) => onRemove(track)}
-          removeLabel="取消喜欢"
           playlistId="favorites"
           onReorder={!searchQuery.trim() ? onReorder : undefined}
         />
