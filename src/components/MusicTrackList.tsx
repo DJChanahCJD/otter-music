@@ -56,6 +56,7 @@ interface MusicTrackListProps {
   removeLabel?: string;
   showSourceBadge?: boolean;
   onReorder?: (newOrder: MusicTrack[]) => void;
+  showItemRemove?: boolean;
 }
 
 const ROW_HEIGHT = 48; // 缩小默认估算行高
@@ -94,6 +95,7 @@ export function MusicTrackList({
   emptyMessage = "暂无歌曲", removeLabel = "删除",
   showSourceBadge = false,
   onReorder,
+  showItemRemove = true,
 }: MusicTrackListProps) {
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -349,7 +351,7 @@ export function MusicTrackList({
                   isCurrent={track.id === currentTrackId} isPlaying={isPlaying}
                   onPlay={() => onPlay(track)} showCheckbox={isSelectionMode}
                   isSelected={selectedIds.has(track.id)} onSelect={() => toggleSelect(track.id)}
-                  onRemove={!isSelectionMode && onRemove ? () => onRemove(track) : undefined}
+                  onRemove={!isSelectionMode && onRemove && showItemRemove ? () => onRemove(track) : undefined}
                   removeLabel={removeLabel} isDownloaded={downloadedStatusMap.get(track.id) ?? false}
                   quality={quality} showSourceBadge={showSourceBadge}
                 />

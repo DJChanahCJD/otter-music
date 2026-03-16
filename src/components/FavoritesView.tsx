@@ -77,6 +77,11 @@ export function FavoritesView({
     }
   };
 
+  const handleRemove = (track: MusicTrack, silent?: boolean) => {
+    useMusicStore.getState().removeFromFavorites(track.id);
+    if (!silent) toast.success("已取消喜欢");
+  };
+
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
@@ -128,6 +133,8 @@ export function FavoritesView({
           isPlaying={isPlaying}
           playlistId="favorites"
           onReorder={!searchQuery.trim() ? onReorder : undefined}
+          onRemove={handleRemove}
+          showItemRemove={false}
         />
       </div>
 
