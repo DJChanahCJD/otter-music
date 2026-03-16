@@ -100,7 +100,7 @@ export function MusicTrackMobileMenu({
   onToggleLike,
   isFavorite,
   onRemove,
-  removeLabel = "移除",
+  removeLabel = "删除",
   customActions,
   triggerClassName,
   onNavigate,

@@ -91,7 +91,7 @@ function SortableTrackItem({ track, children }: { track: MusicTrack, children: R
 export function MusicTrackList({
   tracks, onPlay, playlistId, currentTrackId, isPlaying,
   onRemove, onLoadMore, hasMore, loading,
-  emptyMessage = "暂无歌曲", removeLabel = "移除",
+  emptyMessage = "暂无歌曲", removeLabel = "删除",
   showSourceBadge = false,
   onReorder,
 }: MusicTrackListProps) {
