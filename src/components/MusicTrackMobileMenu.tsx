@@ -17,6 +17,7 @@ import {
   Disc,
   Zap,
   MessageSquareQuote,
+  Link2,
 } from "lucide-react";
 import { ReactNode, useState } from "react";
 import { MusicCover } from "./MusicCover";
@@ -190,7 +191,11 @@ export function MusicTrackMobileMenu({
     id?: string,
   ) => {
     // 如果支持详情查询，但没有 ID，尝试获取详情
-    if ((provider.getArtistDetail || provider.getAlbumDetail) && (!id || id === "0") && provider.getSongDetail) {
+    if (
+      (provider.getArtistDetail || provider.getAlbumDetail) &&
+      (!id || id === "0") &&
+      provider.getSongDetail
+    ) {
       try {
         const detail = await provider.getSongDetail(track.id);
         if (detail) {
@@ -205,7 +210,11 @@ export function MusicTrackMobileMenu({
       }
     }
 
-    if ((provider.getArtistDetail || provider.getAlbumDetail) && id && id !== "0") {
+    if (
+      (provider.getArtistDetail || provider.getAlbumDetail) &&
+      id &&
+      id !== "0"
+    ) {
       if (type === "artist" && provider.getArtistDetail) {
         navigate(`/netease-artist/${id}`);
         onOpenChange(false);
@@ -361,24 +370,26 @@ export function MusicTrackMobileMenu({
             )}
 
             {/* 如果支持专辑搜索或详情，显示专辑入口 */}
-            {(provider.searchAlbum || provider.getAlbumDetail) && track.album && (
-              <ActionButton
-                icon={Disc}
-                onClick={() => {
-                  handleSearch(
-                    track.album!,
-                    "album",
-                    track.artist[0],
-                    track.album_id,
-                  );
-                }}
-              >
-                专辑：{track.album}
-              </ActionButton>
-            )}
+            {(provider.searchAlbum || provider.getAlbumDetail) &&
+              track.album && (
+                <ActionButton
+                  icon={Disc}
+                  onClick={() => {
+                    handleSearch(
+                      track.album!,
+                      "album",
+                      track.artist[0],
+                      track.album_id,
+                    );
+                  }}
+                >
+                  专辑：{track.album}
+                </ActionButton>
+              )}
 
             {/* 解锁音源选项 */}
-            {provider.canUnlock && track.privilege &&
+            {provider.canUnlock &&
+              track.privilege &&
               [1, 4].includes(track.privilege.fee) &&
               track.privilege.pl <= 0 && (
                 <ActionButton
@@ -389,6 +400,13 @@ export function MusicTrackMobileMenu({
                   解锁完整音源
                 </ActionButton>
               )}
+            <Button
+              variant="ghost"
+              className="justify-start w-full cursor-default text-muted-foreground"
+            >
+              <Link2 className="mr-2 h-4 w-4" /> 来源：
+              {track.source}
+            </Button>
 
             {onRemove && (
               <ActionButton

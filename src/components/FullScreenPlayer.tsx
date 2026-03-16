@@ -20,7 +20,6 @@ import {
   Play,
   Pause,
   SquareArrowOutUpRight,
-  Link2,
 } from "lucide-react";
 import { Spinner } from "@/components/ui/spinner";
 import { useMounted } from "@/hooks/use-mounted";
@@ -338,15 +337,6 @@ export function FullScreenPlayer({
                   onNavigate={() => {
                     onClose();
                   }}
-                  customActions={
-                    <Button
-                      variant="ghost"
-                      className="justify-start w-full cursor-default text-muted-foreground"
-                    >
-                      <Link2 className="mr-2 h-4 w-4" /> 来源：
-                      {currentTrack.source}
-                    </Button>
-                  }
                 />
                 <AddToPlaylistDialog
                   open={isAddToPlaylistOpen}

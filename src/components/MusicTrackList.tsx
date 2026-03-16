@@ -92,7 +92,7 @@ export function MusicTrackList({
   tracks, onPlay, playlistId, currentTrackId, isPlaying,
   onRemove, onLoadMore, hasMore, loading,
   emptyMessage = "暂无歌曲", removeLabel = "移除",
-  showSourceBadge = true,
+  showSourceBadge = false,
   onReorder,
 }: MusicTrackListProps) {
   const [isSelectionMode, setIsSelectionMode] = useState(false);

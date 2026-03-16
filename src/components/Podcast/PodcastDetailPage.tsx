@@ -163,7 +163,6 @@ export function PodcastDetailPage({
             currentTrackId={currentTrackId}
             isPlaying={isPlaying}
             emptyMessage="列表为空"
-            showSourceBadge={false}
           />
         </div>
       </div>
