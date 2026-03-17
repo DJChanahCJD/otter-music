@@ -47,7 +47,7 @@ export function PlaylistMarket() {
   const observerTarget = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
-  const { listSnapshots, saveListSnapshot } = useMarketSession();
+  const saveListSnapshot = useMarketSession((s) => s.saveListSnapshot);
 
   // 动态生成对应的缓存 Key
   const snapshotKey = useMemo(() => getSnapshotKey(activeCategory, featuredTab), [activeCategory, featuredTab]);
@@ -92,13 +92,17 @@ export function PlaylistMarket() {
           
           // 更新并写入 Store 快照
           const hasMoreData = isToplist ? false : res.length >= PAGE_SIZE;
-          setHasMore(hasMoreData);
-          
-          const key = getSnapshotKey(category, subTab);
-          saveListSnapshot(key, {
-            items: nextItems,
-            offset: currentOffset,
-            hasMore: hasMoreData
+
+          // 使用 Promise.resolve() 将副作用推迟到渲染阶段之后
+          Promise.resolve().then(() => {
+            setHasMore(hasMoreData);
+
+            const key = getSnapshotKey(category, subTab);
+            saveListSnapshot(key, {
+              items: nextItems,
+              offset: currentOffset,
+              hasMore: hasMoreData
+            });
           });
 
           return nextItems;
@@ -120,7 +124,7 @@ export function PlaylistMarket() {
     if (activeCategory === "mine" || activeCategory === "播客") return;
 
     // 1. 尝试从 Store 快照极速恢复
-    const snapshot = listSnapshots[snapshotKey];
+    const snapshot = useMarketSession.getState().listSnapshots[snapshotKey];
     if (snapshot) {
       setItems(snapshot.items);
       setOffset(snapshot.offset);
@@ -133,7 +137,7 @@ export function PlaylistMarket() {
     setOffset(0);
     setHasMore(true);
     fetchItems(activeCategory, featuredTab, 0);
-  }, [activeCategory, featuredTab, snapshotKey, fetchItems, listSnapshots]);
+  }, [activeCategory, featuredTab, snapshotKey, fetchItems]);
 
   // 无限下拉触发器
   useEffect(() => {

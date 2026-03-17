@@ -25,7 +25,7 @@ export async function handleAutoMatch(track: MusicTrack): Promise<boolean> {
     const match = await musicApi.searchBestMatch(
       `${track.name} ${track.artist[0]}`,
       aggregatedSources,
-      (item) => {
+      (item: MusicTrack) => {
         // 1. 标准化名称匹配
         if (!isNameMatch(track.name, item.name)) return false;
 
@@ -41,16 +41,12 @@ export async function handleAutoMatch(track: MusicTrack): Promise<boolean> {
     }
 
     updateTrackInQueue(track.id, match);
-    const updatedPlaylistsCount = updateTrackInPlaylists(track.id, match);
+    updateTrackInPlaylists(track.id, match);
     if (isFavorite(track.id)) {
       setFavorites(favorites.map(t => t.id === track.id ? match : t));
     }
 
-    let msg = `已自动切换至: ${match.source}`;
-    if (updatedPlaylistsCount > 0) {
-      msg += `，并同步更新 ${updatedPlaylistsCount} 个歌单`;
-    }
-    toast.success(msg, { id: toastId });
+    toast.success(`已自动切换至: ${match.source}`, { id: toastId });
     return true;
   } catch (error) {
     console.error("Auto match failed:", error);

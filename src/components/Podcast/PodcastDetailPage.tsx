@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+﻿import { useEffect, useRef, useState } from "react";
 import { PageLayout } from "@/components/PageLayout";
 import { MusicTrackList } from "@/components/MusicTrackList";
 import { CommonDetailHeader } from "@/components/CommonDetailHeader";
@@ -10,6 +10,7 @@ import toast from "react-hot-toast";
 import { formatDateZN } from "@/lib/utils";
 import { parsePodcastRss } from "@/lib/api/podcast";
 import { usePodcastStore } from "@/store/podcast-store";
+import { forceHttps } from "@/lib/music-provider/utils";
 import { MusicTrack } from "@/types/music";
 
 interface PodcastDetailPageProps {
@@ -28,7 +29,6 @@ interface PodcastDetailData {
   trackCount: number;
   rssUrl: string;
 }
-
 
 export function PodcastDetailPage({
   id,
@@ -54,10 +54,9 @@ export function PodcastDetailPage({
 
   const handleShare = async () => {
     if (!detail) return;
+
     try {
-      await navigator.clipboard.writeText(
-        `【播客】${detail.name} \n${detail.rssUrl}`
-      );
+      await navigator.clipboard.writeText(`Podcast: ${detail.name}\n${detail.rssUrl}`);
       toast.success("链接已复制");
     } catch {
       toast.error("复制失败");
@@ -80,14 +79,16 @@ export function PodcastDetailPage({
         if (!source) throw new Error("Podcast not found");
 
         const feed = await parsePodcastRss(source.rssUrl);
+        const coverUrl = forceHttps(feed.coverUrl || source.coverUrl || "");
+
         const podcastTracks = feed.episodes.map((ep) => ({
           id: ep.audioUrl || ep.id,
           name: ep.title,
           artist: [feed.name],
           album: ep.pubDate ? formatDateZN(ep.pubDate) : "",
-          pic_id: feed.coverUrl || source.coverUrl || "",
-          url_id: ep.audioUrl || "",
-          lyric_id: "_podcast", //  仅占位
+          pic_id: coverUrl,
+          url_id: forceHttps(ep.audioUrl) || "",
+          lyric_id: "_podcast",
           source: "podcast" as const,
         }));
 
@@ -98,7 +99,7 @@ export function PodcastDetailPage({
           error: false,
           detail: {
             name: feed.name,
-            coverImgUrl: feed.coverUrl || source.coverUrl || "",
+            coverImgUrl: coverUrl,
             description: feed.description || source.description,
             trackCount: feed.episodes.length,
             creator: source.author,
@@ -113,7 +114,8 @@ export function PodcastDetailPage({
       }
     };
 
-    loadData();
+    void loadData();
+
     return () => {
       active = false;
     };
@@ -123,29 +125,23 @@ export function PodcastDetailPage({
 
   if (error) {
     return (
-      <PageLayout title="错误" onBack={onBack}>
-        <PageError 
-          onBack={onBack} 
-          onRetry={() => setRetryCount((c) => c + 1)}
-        />
+      <PageLayout title="Error" onBack={onBack}>
+        <PageError onBack={onBack} onRetry={() => setRetryCount((c) => c + 1)} />
       </PageLayout>
     );
   }
 
   return (
     <PageLayout
-      title={detail?.name || "播客详情"}
+      title={detail?.name || "Podcast"}
       onBack={onBack}
       action={
         <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground" onClick={handleShare}>
-           <SquareArrowOutUpRight className="w-4 h-4 mr-2" />
+          <SquareArrowOutUpRight className="w-4 h-4 mr-2" />
         </Button>
       }
     >
-      <div
-        ref={scrollRef}
-        className="flex flex-col flex-1 min-h-0 h-full overflow-y-auto"
-      >
+      <div ref={scrollRef} className="flex flex-col flex-1 min-h-0 h-full overflow-y-auto">
         {detail && (
           <CommonDetailHeader
             title={detail.name}
@@ -162,7 +158,7 @@ export function PodcastDetailPage({
             onPlay={(track) => onPlay(track, tracks)}
             currentTrackId={currentTrackId}
             isPlaying={isPlaying}
-            emptyMessage="列表为空"
+            emptyMessage="No episodes"
           />
         </div>
       </div>
