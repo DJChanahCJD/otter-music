@@ -7,6 +7,16 @@ import zhT2SMap from './zh-t2s-map.json';
 
 const tMap = new Map<string, string>(Object.entries(zhT2SMap));
 
+const customCharMap = new Map<string, string>([
+  ['妳', '你'],
+  ['祢', '你'],
+  ['妳', '你'],
+  ['牠', '它'],
+  ['祂', '他'],
+]);
+
+customCharMap.forEach((v, k) => tMap.set(k, v));
+
 export const normalizeText = (v: string): string => {
   if (!v) return '';
 
