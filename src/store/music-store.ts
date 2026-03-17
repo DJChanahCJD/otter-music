@@ -81,6 +81,7 @@ export interface MusicState {
   duration: number;
   currentAudioUrl: string | null;
   hasUserGesture: boolean;
+  playbackIntent: "play" | "pause";
   consecutiveFailures: number;
   maxConsecutiveFailures: number;
   setVolume: (volume: number) => void;
@@ -188,11 +189,15 @@ export const useMusicStore = create<MusicState>()(
       // --- UI & Playback Base ---
       isFullScreenPlayer: false, setIsFullScreenPlayer: (isFullScreenPlayer) => set({ isFullScreenPlayer }),
       volume: 1.0, isRepeat: false, isShuffle: false, currentAudioTime: 0, isPlaying: false, isLoading: false,
-      seekTimestamp: 0, seekTargetTime: -1, duration: 0, currentAudioUrl: null, hasUserGesture: false, consecutiveFailures: 0, maxConsecutiveFailures: 3,
+      seekTimestamp: 0, seekTargetTime: -1, duration: 0, currentAudioUrl: null, hasUserGesture: false, playbackIntent: "pause", consecutiveFailures: 0, maxConsecutiveFailures: 3,
       setVolume: (volume) => set({ volume }), toggleRepeat: () => set(s => ({ isRepeat: !s.isRepeat })),
       setAudioCurrentTime: (currentAudioTime) => set({ currentAudioTime }), setDuration: (duration) => set({ duration }),
-      setIsPlaying: (isPlaying) => set({ isPlaying }), togglePlay: () => set(s => ({ hasUserGesture: true, isPlaying: !s.isPlaying })),
-      setIsLoading: (isLoading) => set({ isLoading }), seek: (time) => set({ seekTargetTime: time, seekTimestamp: Date.now(), isPlaying: true, hasUserGesture: true }),
+      setIsPlaying: (isPlaying) => set({ isPlaying, playbackIntent: isPlaying ? "play" : "pause" }),
+      togglePlay: () => set(s => {
+        const isPlaying = !s.isPlaying;
+        return { hasUserGesture: true, isPlaying, playbackIntent: isPlaying ? "play" : "pause" };
+      }),
+      setIsLoading: (isLoading) => set({ isLoading }), seek: (time) => set({ seekTargetTime: time, seekTimestamp: Date.now(), isPlaying: true, hasUserGesture: true, playbackIntent: "play" }),
       clearSeekTargetTime: () => set({ seekTargetTime: -1 }), setCurrentAudioUrl: (currentAudioUrl) => set({ currentAudioUrl }),
       setUserGesture: () => set({ hasUserGesture: true }), resetFailures: () => set({ consecutiveFailures: 0 }),
       incrementFailures: () => { const f = get().consecutiveFailures + 1; set({ consecutiveFailures: f }); return f; },
@@ -213,7 +218,7 @@ export const useMusicStore = create<MusicState>()(
       }),
 
       playContext: (tracks, startIdx = 0, contextId) => set(s => {
-        if (!tracks.length) return { queue: [], originalQueue: [], currentIndex: 0, currentAudioTime: 0, isPlaying: false, contextId: null };
+        if (!tracks.length) return { queue: [], originalQueue: [], currentIndex: 0, currentAudioTime: 0, isPlaying: false, playbackIntent: "pause", contextId: null };
         const idx = clamp(startIdx, tracks.length - 1);
         if (s.isShuffle) {
           if (contextId && s.contextId === contextId && startIdx !== undefined) {
@@ -222,9 +227,9 @@ export const useMusicStore = create<MusicState>()(
           }
           const realIdx = startIdx !== undefined ? idx : Math.floor(Math.random() * tracks.length);
           const rest = shuffleArray(tracks.filter((_, i) => i !== realIdx));
-          return { queue: [tracks[realIdx], ...rest], originalQueue: tracks, currentIndex: 0, currentAudioTime: 0, hasUserGesture: true, contextId: contextId ?? null };
+          return { queue: [tracks[realIdx], ...rest], originalQueue: tracks, currentIndex: 0, currentAudioTime: 0, hasUserGesture: true, playbackIntent: "play", contextId: contextId ?? null };
         }
-        return { queue: tracks, originalQueue: tracks, currentIndex: idx, currentAudioTime: 0, hasUserGesture: true, contextId: contextId ?? null };
+        return { queue: tracks, originalQueue: tracks, currentIndex: idx, currentAudioTime: 0, hasUserGesture: true, playbackIntent: "play", contextId: contextId ?? null };
       }),
 
       addToNextPlay: (track) => set(s => insertNext(s, track, false)),
@@ -234,15 +239,15 @@ export const useMusicStore = create<MusicState>()(
         const idx = s.queue.findIndex(t => t.id === tid);
         if (idx === -1) return {};
         const q = s.queue.filter(t => t.id !== tid);
-        if (!q.length) return { queue: [], originalQueue: [], currentIndex: 0, currentAudioTime: 0, isPlaying: false };
+        if (!q.length) return { queue: [], originalQueue: [], currentIndex: 0, currentAudioTime: 0, isPlaying: false, playbackIntent: "pause" };
         return { queue: q, originalQueue: s.isShuffle ? (s.originalQueue || []).filter(t => t.id !== tid) : s.originalQueue, currentIndex: idx < s.currentIndex ? s.currentIndex - 1 : Math.min(s.currentIndex, q.length - 1) };
       }),
 
-      clearQueue: () => set({ queue: [], originalQueue: [], currentIndex: 0, currentAudioTime: 0, isPlaying: false, duration: 0, contextId: null }),
+      clearQueue: () => set({ queue: [], originalQueue: [], currentIndex: 0, currentAudioTime: 0, isPlaying: false, playbackIntent: "pause", duration: 0, contextId: null }),
       reshuffle: () => set(s => s.isShuffle && s.queue.length > 1 ? { queue: [s.queue[s.currentIndex], ...shuffleArray((s.originalQueue?.length ? s.originalQueue : s.queue).filter(t => t.id !== s.queue[s.currentIndex].id))], currentIndex: 0 } : {}),
 
       setCurrentIndex: (idx, resetTime = true) => set(s => ({ currentIndex: s.queue.length ? clamp(idx, s.queue.length - 1) : 0, currentAudioTime: resetTime ? 0 : s.currentAudioTime })),
-      setCurrentIndexAndPlay: (idx) => set(s => ({ currentIndex: s.queue.length ? clamp(idx, s.queue.length - 1) : 0, currentAudioTime: 0, hasUserGesture: true, isPlaying: true })),
+      setCurrentIndexAndPlay: (idx) => set(s => ({ currentIndex: s.queue.length ? clamp(idx, s.queue.length - 1) : 0, currentAudioTime: 0, hasUserGesture: true, isPlaying: true, playbackIntent: "play" })),
       skipToNext: () => set(s => s.queue.length ? { currentIndex: (s.currentIndex + 1) % s.queue.length, currentAudioTime: 0 } : {}),
 
       updateTrackInQueue: (tid, newTrack) => set(s => ({

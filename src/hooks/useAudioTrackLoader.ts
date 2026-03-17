@@ -190,7 +190,19 @@ export function useAudioTrackLoader(
         }
         await waitForAudioReady(audio);
         audio.currentTime = currentAudioTime;
-        await audio.play();
+        const latestState = useMusicStore.getState();
+        const latestTrack = latestState.queue[latestState.currentIndex];
+        const latestTrackKey = latestTrack ? `${latestTrack.source}:${latestTrack.id}:${latestTrack.url_id ?? ""}` : null;
+        if (
+          requestId !== requestIdRef.current ||
+          latestTrackKey !== trackKey ||
+          latestState.playbackIntent !== "play"
+        ) {
+          return;
+        }
+        if (audio.paused) {
+          await audio.play();
+        }
       };
 
       try {

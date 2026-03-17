@@ -92,6 +92,19 @@ export function useMediaSessionIntegration(
   }, [audioRef, isPlaying, currentTrack?.id]);
 
   useEffect(() => {
+    const setPausedState = (audio: HTMLAudioElement | null) => {
+      useMusicStore.getState().setIsPlaying(false);
+      MediaSession.setPlaybackState({
+        playbackState: "paused",
+      }).catch(e => console.error("MediaSession pause state error:", e));
+      if (!audio) return;
+      MediaSession.setPositionState({
+        duration: audio.duration || 0,
+        playbackRate: 0,
+        position: audio.currentTime,
+      }).catch(e => console.error("MediaSession pause position error:", e));
+    };
+
     const actionHandlers: [string, (details?: { seekTime?: number | null }) => void][] = [
       ["play", () => {
         useMusicStore.getState().setUserGesture();
@@ -102,16 +115,10 @@ export function useMediaSessionIntegration(
       }],
       ["pause", () => {
         const audio = audioRef.current;
-        audio?.pause();
-        MediaSession.setPlaybackState({
-          playbackState: "paused",
-        }).catch(e => console.error("MediaSession pause state error:", e));
+        setPausedState(audio);
         if (!audio) return;
-        MediaSession.setPositionState({
-          duration: audio.duration || 0,
-          playbackRate: 0,
-          position: audio.currentTime,
-        }).catch(e => console.error("MediaSession pause position error:", e));
+        audio.pause();
+        setPausedState(audio);
       }],
       ["previoustrack", () => {
         const { queue, currentIndex } = useMusicStore.getState();

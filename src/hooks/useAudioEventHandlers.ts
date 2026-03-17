@@ -91,7 +91,7 @@ export function useAudioEventHandlers(
     /** 暂停 */
     const onPause = () => {
       syncPositionState(0);
-      if (isSwitchingTrackRef.current || audio.ended || audio.error) return;
+      if (audio.ended || audio.error) return;
       useMusicStore.getState().setIsPlaying(false);
     };
 
