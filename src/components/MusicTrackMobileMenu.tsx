@@ -173,9 +173,7 @@ export function MusicTrackMobileMenu({
         }
       }
 
-      toastUtils.success(`已切换至完整版: ${match.name}（${match.source}）`, {
-        id: toastId,
-      });
+      toastUtils.success(`完整版音源：${match.source}`, { id: toastId })
     } catch (e) {
       console.error(e);
       toastUtils.error("匹配失败", { id: toastId });
@@ -264,13 +262,13 @@ export function MusicTrackMobileMenu({
             variant="ghost"
             className={cn("h-8 w-8", triggerClassName)}
             onClick={(e) => e.stopPropagation()}
-            title="更多操作"
+            title="更多"
           >
             <MoreVertical className="h-4 w-4" />
           </Button>
         </DrawerTrigger>
         <DrawerContent onClick={(e) => e.stopPropagation()}>
-          <DrawerTitle className="sr-only">歌曲操作菜单</DrawerTitle>
+          <DrawerTitle className="sr-only">歌曲菜单</DrawerTitle>
           <div className="flex items-center gap-4 px-6 py-4">
             <MusicCover
               src={coverUrl}
@@ -344,7 +342,7 @@ export function MusicTrackMobileMenu({
                   setShowComments(true);
                 }}
               >
-                查看评论
+                评论
               </ActionButton>
             )}
 
@@ -404,7 +402,7 @@ export function MusicTrackMobileMenu({
               variant="ghost"
               className="justify-start w-full cursor-default text-muted-foreground"
             >
-              <Link2 className="mr-2 h-4 w-4" /> 来源：
+              <Link2 className="mr-2 h-4 w-4" /> 音源：
               {track.source}
             </Button>
 
@@ -416,7 +414,7 @@ export function MusicTrackMobileMenu({
                   onOpenChange(false);
                   if (
                     window.confirm(
-                      `确定${removeLabel}歌曲「${track.name}」吗？`,
+                      `确定${removeLabel}《${track.name}》吗？`,
                     )
                   ) {
                     onRemove();
