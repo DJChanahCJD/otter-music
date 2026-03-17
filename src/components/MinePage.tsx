@@ -76,7 +76,7 @@ export function MinePage({ onSelectPlaylist }: MinePageProps) {
   };
 
   return (
-    <div className="p-5">
+    <div className="p-5 pb-24">
       <div className="flex gap-2 mb-6">
         <button
           onClick={() => navigate('/history')}
