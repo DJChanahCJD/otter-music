@@ -10,8 +10,8 @@ const pkg = JSON.parse(
 ) as { version: string }
 
 const sentryBuildPlugin = sentryVitePlugin({
-  org: process.env.SENTRY_ORG,
-  project: process.env.SENTRY_PROJECT,
+  org: process.env.SENTRY_ORG || '',
+  project: process.env.SENTRY_PROJECT || '',
   release: {
     name: `otter-music@${pkg.version}`,
   },
@@ -56,7 +56,7 @@ export default defineConfig({
         },
       },
     },
-    sourcemap: true
+    sourcemap: process.env.SENTRY_AUTH_TOKEN ? true : false,
   },
   test: {
     environment: 'jsdom',

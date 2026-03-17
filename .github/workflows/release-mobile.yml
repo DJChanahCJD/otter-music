@@ -48,6 +48,7 @@ jobs:
           npm ci
           npm run build
           npm run resources
+          npm run clean:maps
           npx cap sync android
 
       - name: Build release APK
@@ -92,7 +93,7 @@ jobs:
         shell: bash
         run: |
           TAG="${{ github.ref_name }}"
-          NOTES="public/release/${TAG}.md"
+          NOTES="assets/release/${TAG}.md"
           if [[ -f "$NOTES" ]]; then
             cp "$NOTES" release_body.md
           else

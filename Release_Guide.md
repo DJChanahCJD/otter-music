@@ -6,7 +6,7 @@
 
 ## 0️⃣ 添加 Release Note
 
-在 `public/release/` 目录下添加对应版本的 Markdown 文件，要求文件名与新 Tag 一致（例如 `v2.0.2.md`）。
+在 `assets/release/` 目录下添加对应版本的 Markdown 文件，要求文件名与新 Tag 一致（例如 `v2.0.2.md`）。
 *注：若未找到对应文件，GitHub Actions 将自动生成默认简易文案。*
 
 ## 1️⃣ 修改版本号并打 Tag
@@ -87,7 +87,7 @@ npm run build:android:release
 
 # 🚀 发布前检查清单
 
-* [ ] Release Note 文件已就绪 (`public/release/v*.md`)
+* [ ] Release Note 文件已就绪 (`assets/release/v*.md`)
 * [ ] Git 工作区干净，已使用 `npm version` 同步各项版本号
 * [ ] GitHub Secrets (`SIGNING_KEY` 等 4 项) 均已正确配置
 * [ ] 已执行 `git push --tags` 触发 CI
