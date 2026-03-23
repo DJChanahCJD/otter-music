@@ -261,7 +261,7 @@ export const getUserPlaylists = async (userId: string, cookie: string = ''): Pro
             if (r.code !== 200) throw new Error(`NetEase user playlists error: ${r.code}`);
             return r.playlist.map(toMarketPlaylistFromUserPlaylist);
         },
-        TTL_MEDIUM
+        TTL_SHORT
     );
     return res ?? [];
 };
@@ -290,7 +290,7 @@ export const getPlaylistDetail = (playlistId: string, cookie: string = '') =>
             const tracks = await getTracksDetail(res.data.playlist.trackIds.map((t: { id: number }) => t.id), cookie); 
             return { ...res.data.playlist, tracks } as PlaylistDetail; 
         }, 
-        TTL_MEDIUM // 歌单可能会被创建者更新，使用中缓存 
+        TTL_SHORT
     );
 
 export const getPlaylistDynamicDetail = async (id: string, cookie: string = '') => {
