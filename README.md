@@ -112,6 +112,8 @@ src/
 
 - [ ] 媒体状态同步一致性（Web 与 Native MediaSession）
 - [ ] 评估新增稳定音源接入方案 Meting API
+- [ ] 用 Tauri 开发桌面端？
+- [ ] 需要彻底解决闪退问题
 
 ## 参考资料
 
