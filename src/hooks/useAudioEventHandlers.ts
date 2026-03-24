@@ -7,12 +7,16 @@ import { MediaSession } from "@jofr/capacitor-media-session";
 import toast from "react-hot-toast";
 import { handleAutoMatch } from "@/lib/audio-match";
 
+const PAUSE_CONFIRM_DELAY_MS = 200;
+
 export function useAudioEventHandlers(
   audioRef: React.RefObject<HTMLAudioElement | null>,
   isSwitchingTrackRef: React.MutableRefObject<boolean>,
   hasRecordedRef: React.MutableRefObject<boolean>
 ) {
   const autoMatchedTrackIdRef = useRef<string | null>(null);
+  const pauseConfirmTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pauseConfirmTokenRef = useRef(0);
 
   useEffect(() => {
     const audio = audioRef.current;
@@ -20,14 +24,12 @@ export function useAudioEventHandlers(
 
     const loadingToastId = "audio-loading";
 
-    /** 结束 loading 状态 */
     const settleLoading = () => {
       const state = useMusicStore.getState();
       if (state.isLoading) state.setIsLoading(false);
       toast.dismiss(loadingToastId);
     };
 
-    /** 标记 loading */
     const markLoading = () => {
       const state = useMusicStore.getState();
       if (!state.isLoading) state.setIsLoading(true);
@@ -41,9 +43,17 @@ export function useAudioEventHandlers(
       }).catch(console.error);
     };
 
-    /** 播放进度更新（节流） */
+    const cancelPendingPauseConfirm = () => {
+      pauseConfirmTokenRef.current += 1;
+      if (pauseConfirmTimerRef.current) {
+        clearTimeout(pauseConfirmTimerRef.current);
+        pauseConfirmTimerRef.current = null;
+      }
+    };
+
     const onTimeUpdate = throttle(() => {
       if (isSwitchingTrackRef.current) return;
+      if (!audio.paused) cancelPendingPauseConfirm();
 
       const state = useMusicStore.getState();
       state.setAudioCurrentTime(audio.currentTime);
@@ -54,7 +64,6 @@ export function useAudioEventHandlers(
       syncPositionState(audio.paused ? 0 : audio.playbackRate);
     }, 1000);
 
-    /** 音频时长变化 */
     const onDurationChange = () => {
       const state = useMusicStore.getState();
       const track = state.queue[state.currentIndex];
@@ -62,7 +71,6 @@ export function useAudioEventHandlers(
 
       state.setDuration(duration);
 
-      // Netease 试听自动匹配
       if (
         track?.source === "_netease" &&
         duration >= 30 &&
@@ -75,7 +83,6 @@ export function useAudioEventHandlers(
       }
     };
 
-    /** 播放结束 */
     const onEnded = () => {
       const state = useMusicStore.getState();
       syncPositionState(0);
@@ -88,15 +95,25 @@ export function useAudioEventHandlers(
       }
     };
 
-    /** 暂停 */
     const onPause = () => {
       syncPositionState(0);
       if (isSwitchingTrackRef.current || audio.ended || audio.error) return;
-      useMusicStore.getState().setIsPlaying(false);
+
+      cancelPendingPauseConfirm();
+      const token = pauseConfirmTokenRef.current;
+      pauseConfirmTimerRef.current = setTimeout(() => {
+        if (token !== pauseConfirmTokenRef.current) return;
+        pauseConfirmTimerRef.current = null;
+
+        if (isSwitchingTrackRef.current || audio.ended || audio.error || !audio.paused) return;
+
+        const state = useMusicStore.getState();
+        if (state.isPlaying) state.setIsPlaying(false);
+      }, PAUSE_CONFIRM_DELAY_MS);
     };
 
-    /** 播放开始 */
     const onPlay = () => {
+      cancelPendingPauseConfirm();
       settleLoading();
       if (audio.paused) return;
 
@@ -115,7 +132,6 @@ export function useAudioEventHandlers(
       }
     };
 
-    /** 统一事件注册 */
     const events: Record<string, EventListener> = {
       timeupdate: onTimeUpdate,
       durationchange: onDurationChange,
@@ -123,18 +139,18 @@ export function useAudioEventHandlers(
       pause: onPause,
       play: onPlay,
       error: () => {
+        cancelPendingPauseConfirm();
         console.error("Audio error");
         useMusicStore.getState().setIsPlaying(false);
         syncPositionState(0);
       },
-
-      // loading 相关事件
       loadstart: markLoading,
       waiting: markLoading,
-
-      // ready 事件统一结束 loading
       canplay: settleLoading,
-      playing: settleLoading,
+      playing: () => {
+        cancelPendingPauseConfirm();
+        settleLoading();
+      },
       loadedmetadata: settleLoading,
     };
 
@@ -143,6 +159,7 @@ export function useAudioEventHandlers(
     );
 
     return () => {
+      cancelPendingPauseConfirm();
       Object.entries(events).forEach(([event, handler]) =>
         audio.removeEventListener(event, handler)
       );

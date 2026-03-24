@@ -85,21 +85,11 @@ export function useMediaSessionIntegration(
         useMusicStore.getState().setUserGesture();
         const audio = audioRef.current;
         if (!audio) return;
-        // 仅驱动 audio，store 交由 onPlay/onPause 事件同步
         audio.play().catch(e => console.error("MediaSession play error:", e));
       }],
       ["pause", () => {
         const audio = audioRef.current;
         audio?.pause();
-        MediaSession.setPlaybackState({
-          playbackState: "paused",
-        }).catch(e => console.error("MediaSession pause state error:", e));
-        if (!audio) return;
-        MediaSession.setPositionState({
-          duration: audio.duration || 0,
-          playbackRate: 0,
-          position: audio.currentTime,
-        }).catch(e => console.error("MediaSession pause position error:", e));
       }],
       ["previoustrack", () => {
         const { queue, currentIndex } = useMusicStore.getState();
