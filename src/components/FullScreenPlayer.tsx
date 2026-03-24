@@ -53,8 +53,8 @@ const BackgroundLayer = memo(
         "--bg-h": h,
         "--bg-s": `${s}%`,
         "--bg-l": `${l}%`,
-        background: `linear-gradient(to bottom, 
-        hsl(var(--bg-h), var(--bg-s), var(--bg-l)), 
+        background: `linear-gradient(to bottom,
+        hsl(var(--bg-h), var(--bg-s), var(--bg-l)),
         hsl(var(--bg-h), var(--bg-s), calc(var(--bg-l) - 8%)))`,
       } as React.CSSProperties;
     }, [hslColor]);
@@ -210,7 +210,7 @@ export function FullScreenPlayer({
   return createPortal(
     <div
       className={cn(
-        "fixed inset-0 z-50 transition-transform duration-500 ease-in-out flex flex-col dark",
+        "fixed inset-0 z-50 transition-transform duration-500 ease-in-out flex flex-col",
         isFullScreen ? "translate-y-0" : "translate-y-full",
       )}
     >
@@ -235,7 +235,7 @@ export function FullScreenPlayer({
           className="h-12 w-12 text-white/60 hover:bg-white/10 hover:text-white"
           onClick={() => {
             onClose();
-            
+
           }}
         >
           <ChevronDown className="h-6 w-6" />
@@ -257,7 +257,7 @@ export function FullScreenPlayer({
         className="flex-1 flex flex-col items-center justify-center px-2 relative z-10 overflow-hidden cursor-pointer"
         onClick={() => {
           setShowLyrics(!showLyrics);
-          
+
         }}
       >
         {showLyrics ? (
@@ -368,7 +368,7 @@ export function FullScreenPlayer({
           className="h-12 w-12 text-white/70 hover:bg-white/10 hover:text-white"
           onClick={() => {
             onPrev();
-            
+
           }}
         >
           <SkipBack className="h-6 w-6 fill-current" />
@@ -378,7 +378,7 @@ export function FullScreenPlayer({
           className="h-16 w-16 rounded-full bg-white text-black shadow-lg hover:scale-105 transition-all active:scale-95"
           onClick={() => {
             onTogglePlay();
-            
+
           }}
           disabled={isLoading}
         >
@@ -396,7 +396,7 @@ export function FullScreenPlayer({
           className="h-12 w-12 text-white/70 hover:bg-white/10 hover:text-white"
           onClick={() => {
             onNext();
-            
+
           }}
         >
           <SkipForward className="h-6 w-6 fill-current" />
