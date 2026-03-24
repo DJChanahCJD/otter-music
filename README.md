@@ -110,10 +110,15 @@ src/
 
 ## TODO
 
-- [ ] 媒体状态同步一致性（Web 与 Native MediaSession）
 - [ ] 评估新增稳定音源接入方案 Meting API
 - [ ] 用 Tauri 开发桌面端？
-- [ ] 需要彻底解决闪退问题
+
+### Low Priority
+
+- [ ] 媒体状态同步一致性（Web 与 Native MediaSession）
+- [ ] UI 重构（极简高效，打开即听）
+- [ ] 全屏模式支持左右滑动切歌（含防误触与过渡动效）
+- [ ] 随机歌单功能：从热门歌单池随机，耗尽后自动补充
 
 ## 参考资料
 
