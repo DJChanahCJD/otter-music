@@ -1,4 +1,3 @@
-import { sentryVitePlugin } from "@sentry/vite-plugin";
 /// <reference types="vitest" />
 import { defineConfig } from 'vitest/config'
 import react from '@vitejs/plugin-react-swc'
@@ -9,20 +8,12 @@ const pkg = JSON.parse(
   readFileSync(new URL('./package.json', import.meta.url), 'utf-8'),
 ) as { version: string }
 
-const sentryBuildPlugin = sentryVitePlugin({
-  org: process.env.SENTRY_ORG || '',
-  project: process.env.SENTRY_PROJECT || '',
-  release: {
-    name: `otter-music@${pkg.version}`,
-  },
-})
-
 // https://vite.dev/config/
 export default defineConfig({
   define: {
     __APP_VERSION__: JSON.stringify(pkg.version),
   },
-  plugins: [react(), sentryBuildPlugin],
+  plugins: [react()],
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),
@@ -56,7 +47,6 @@ export default defineConfig({
         },
       },
     },
-    sourcemap: process.env.SENTRY_AUTH_TOKEN ? true : false,
   },
   test: {
     environment: 'jsdom',

@@ -38,12 +38,7 @@ jobs:
           java-version: ${{ env.JAVA_VERSION }}
           cache: 'gradle'
 
-      - name: Build app and upload sourcemap metadata
-        env:
-          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
-          VITE_SENTRY_DSN: ${{ secrets.VITE_SENTRY_DSN || secrets.SENTRY_DSN }}
-          SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
-          SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
+      - name: Build app
         run: |
           npm ci
           npm run build

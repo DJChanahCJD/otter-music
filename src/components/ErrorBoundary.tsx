@@ -1,6 +1,5 @@
 import React, { Component, ReactNode } from "react";
 import { Button } from "@/components/ui/button";
-import { captureException } from "@/lib/sentry";
 
 interface ErrorBoundaryProps {
   children: ReactNode;
@@ -23,7 +22,6 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
     console.error("ErrorBoundary caught an error:", error, errorInfo);
-    captureException(error, { ...errorInfo });
   }
 
   render() {
