@@ -6,7 +6,6 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "clean:maps": "node scripts/clean-sourcemaps.js dist",
     "build:release": "npm run build && npm run clean:maps",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
