@@ -1,6 +1,27 @@
 import { useEffect } from "react";
 import { useMusicStore } from "@/store/music-store";
 import { MediaSession } from "@jofr/capacitor-media-session";
+import { forceHttps } from "@/lib/music-provider/utils";
+
+export function sanitizeMediaSessionArtworkUrl(
+  rawUrl: string | null | undefined
+): string | null {
+  if (!rawUrl) return null;
+
+  const trimmed = rawUrl.trim();
+  if (!trimmed) return null;
+
+  const normalized = forceHttps(trimmed);
+
+  try {
+    const parsed = new URL(normalized);
+    if (parsed.protocol !== "https:") return null;
+    if (!parsed.hostname || parsed.hostname === "localhost") return null;
+    return parsed.toString();
+  } catch {
+    return null;
+  }
+}
 
 export function useMediaSessionIntegration(
   audioRef: React.RefObject<HTMLAudioElement | null>,
@@ -15,10 +36,13 @@ export function useMediaSessionIntegration(
 
       try {
         const isOnline = navigator.onLine;
+        const safeArtworkUrl = sanitizeMediaSessionArtworkUrl(coverUrl);
 
+        // The Android plugin fetches artwork synchronously in native code, which
+        // can destabilize startup when restored playback state replays metadata updates.
         const safeArtwork =
-          isOnline && coverUrl
-            ? [{ src: coverUrl }]
+          isOnline && safeArtworkUrl
+            ? [{ src: safeArtworkUrl }]
             : [];
 
         await MediaSession.setMetadata({
