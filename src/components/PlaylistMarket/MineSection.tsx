@@ -14,6 +14,7 @@ import { useMusicStore, type MusicState } from "@/store/music-store";
 import { useMarketSession } from "@/store/session/market-session";
 import { PlaylistGrid } from "./PlaylistGrid";
 import { useNeteaseStore } from "@/store/netease-store";
+import { logger } from "@/lib/logger";
 
 const SUB_TAB_HEIGHT = "h-8";
 
@@ -49,7 +50,10 @@ function useMineData() {
         hasMoreAlbums: newAlbums.length >= limit,
       }));
     } catch (err) {
-      console.error("Load More Albums Error:", err);
+      logger.error("MineSection", "Load more subscribed albums failed", err, {
+        tab: mineTab,
+        loadedCount: mineData.albums?.length ?? 0,
+      });
     } finally {
       setLoadingMore(false);
     }
@@ -87,7 +91,11 @@ function useMineData() {
           }));
         }
       } catch (err) {
-        console.error("Mine Data Load Error:", err);
+        logger.error("MineSection", "Mine data load failed", err, {
+          tab: mineTab,
+          hasCookie: Boolean(cookie),
+          currentUserId,
+        });
       } finally {
         setLoading(false);
       }

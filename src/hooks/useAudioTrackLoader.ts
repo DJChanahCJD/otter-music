@@ -10,6 +10,7 @@ import { buildDownloadKey } from "@/lib/utils/download";
 import type { MusicSource } from "@/types/music";
 import toast from "react-hot-toast";
 import { handleAutoMatch } from "@/lib/audio-match";
+import { logger } from "@/lib/logger";
 
 const AUDIO_READY_TIMEOUT = 8000;
 
@@ -221,7 +222,10 @@ export function useAudioTrackLoader(
             useMusicStore.getState().setCurrentIndexAndPlay(nextPlayableIndex);
             return;
           } else {
-            console.error("网络不可用且无可播放曲目");
+            logger.error("useAudioTrackLoader", "Network unavailable, no playable tracks", {
+              trackId: currentTrackId,
+              source: currentTrackSource,
+            });
             setIsPlaying(false);
             return;
           }
@@ -255,14 +259,21 @@ export function useAudioTrackLoader(
       } catch (err: unknown) {
         if (requestId !== requestIdRef.current) return;
         const errorMessage = err instanceof Error ? err.message : String(err);
-        console.error("Audio load failed:", errorMessage);
+        logger.error("useAudioTrackLoader", `Audio load failed: ${errorMessage}`, err, {
+          trackId: currentTrackId,
+          source: currentTrackSource,
+          urlId: currentTrackUrlId,
+        });
 
         if (useMusicStore.getState().enableAutoMatch) {
           try {
             const success = await handleAutoMatch(currentTrack);
             if (success) return;
           } catch {
-            console.error("Auto match failed");
+            logger.warn("useAudioTrackLoader", "Auto match failed", {
+              trackId: currentTrackId,
+              source: currentTrackSource,
+            });
           }
         }
 
@@ -280,7 +291,7 @@ export function useAudioTrackLoader(
           if (audio.paused) {
             setIsPlaying(false);
           } else {
-            console.error("Skip setIsPlaying(false) because audio is still playing");
+            logger.warn("useAudioTrackLoader", "Skip setIsPlaying(false) because audio is still playing");
           }
         } else {
           skipToNext();

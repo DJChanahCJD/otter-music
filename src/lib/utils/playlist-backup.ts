@@ -3,6 +3,7 @@ import { Capacitor } from "@capacitor/core";
 import { Filesystem, Encoding } from "@capacitor/filesystem";
 import { AppPaths, STORAGE_CONFIG } from "@/lib/storage-manager";
 import { toastUtils } from "@/lib/utils/toast";
+import { logger } from "@/lib/logger";
 interface PlaylistBackup {
   name: string;
   tracks: MusicTrack[];
@@ -43,7 +44,11 @@ export async function exportPlaylist(name: string, tracks: MusicTrack[]) {
         duration: 4000,
       });
     } catch (error) {
-      console.error("Export failed:", error);
+      logger.error("playlist-backup", "Export playlist failed", error, {
+        name,
+        trackCount: tracks.length,
+        platform: "native",
+      });
       toastUtils.error("导出失败，请检查存储权限");
     }
   } else {
@@ -60,7 +65,11 @@ export async function exportPlaylist(name: string, tracks: MusicTrack[]) {
       URL.revokeObjectURL(url);
       toastUtils.success("导出成功");
     } catch (error) {
-      console.error("Web export failed:", error);
+      logger.error("playlist-backup", "Export playlist failed", error, {
+        name,
+        trackCount: tracks.length,
+        platform: "web",
+      });
       toastUtils.error("导出失败");
     }
   }
@@ -114,16 +123,20 @@ export async function importPlaylist(file: File): Promise<{ name: string, tracks
         };
         if (!tracks.every(isValidTrack)) {
            // 过滤掉无效数据
+           const originalCount = tracks.length;
            const validTracks = tracks.filter(isValidTrack);
            if (validTracks.length === 0) {
              throw new Error("歌曲数据格式不正确");
            }
            tracks = validTracks;
-           toastUtils.error(`已过滤 ${tracks.length - validTracks.length} 条无效数据`);
+           toastUtils.error(`已过滤 ${originalCount - validTracks.length} 条无效数据`);
         }
 
         resolve({ name, tracks: tracks as MusicTrack[] });
       } catch (error) {
+        logger.error("playlist-backup", "Import playlist failed", error, {
+          fileName: file.name,
+        });
         reject(error);
       }
     };

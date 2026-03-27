@@ -9,6 +9,7 @@ import { LocalMusicFile } from "@/plugins/local-music";
 import { useDownloadStore } from "@/store/download-store";
 import { toastUtils } from "./toast";
 import { getProxyUrl, isProxyUrl } from "@/lib/api/config";
+import { logger } from "@/lib/logger";
 
 /* ================= 主入口 ================= */
 
@@ -56,7 +57,11 @@ export async function downloadMusicTrack(track: MusicTrack, br = 192) {
     }
 
   } catch (err: unknown) {
-    console.error(err);
+    logger.error("downloadMusicTrack", "Download failed", err, {
+      trackId: track.id,
+      source: track.source,
+      bitrate: br,
+    });
     const message = err instanceof Error ? err.message : String(err);
     toast.error(`下载失败: ${message}`, { id: toastId });
   }
@@ -200,7 +205,7 @@ export async function saveDownloadRecordsToDisk(
     });
 
   } catch (e) {
-    console.error("保存下载记录失败:", e);
+    logger.error("download", "保存下载记录失败", e);
   }
 }
 

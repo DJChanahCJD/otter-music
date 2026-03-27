@@ -4,6 +4,7 @@ import { EXCLUDED_FOR_SEARCH, getAggregatedSourcesForMatch } from "@/hooks/use-a
 import { musicApi } from "@/lib/music-api";
 import type { MusicTrack } from "@/types/music";
 import { isNameMatch, isArtistMatch } from "./utils/music-key";
+import { logger } from "@/lib/logger";
 
 /**
  * 自动匹配免费源逻辑
@@ -49,7 +50,7 @@ export async function handleAutoMatch(track: MusicTrack): Promise<boolean> {
     toast.success(`已自动切换至: ${match.source}`, { id: toastId });
     return true;
   } catch (error) {
-    console.error("Auto match failed:", error);
+    logger.error("audio-match", "Auto match failed", error);
     toast.error("自动匹配失败", { id: toastId });
     return false;
   }

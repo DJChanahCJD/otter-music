@@ -6,6 +6,7 @@ import { getHotComments } from "@/lib/netease/netease-api";
 import { NeteaseComment } from "@/lib/netease/netease-raw-types";
 import { format } from "date-fns";
 import { MessageSquareQuote } from "lucide-react";
+import { logger } from "@/lib/logger";
 
 interface MusicCommentsDrawerProps {
   track: MusicTrack | null;
@@ -31,7 +32,10 @@ export function MusicCommentsDrawer({ track, open, onOpenChange }: MusicComments
           setComments(res?.hotComments || []);
         }
       } catch (err) {
-        console.error("Fetch comments error:", err);
+        logger.error("MusicCommentsDrawer", "Fetch comments failed", err, {
+          trackId: track.id,
+          source: track.source,
+        });
       } finally {
         if (isMounted) {
           setLoading(false);

@@ -1,6 +1,7 @@
 import { MusicSource, MusicTrack } from "@/types/music";
 import { getOrderedMusicApiUrls, markMusicApiUrlFailure, markMusicApiUrlSuccess } from "../api/config";
 import { RawApiTrack } from "./types";
+import { logger } from "@/lib/logger";
 
 const REQUEST_TIMEOUT_MS = 10000;
 
@@ -58,7 +59,7 @@ export async function requestJSON<T>(url: string, signal?: AbortSignal): Promise
     return await res.json();
   } catch (e) {
     if (isAbort(e)) throw e;
-    console.error('Request failed:', url, e);
+    logger.error("music-provider", `Request failed: ${url}`, e);
     throw e;
   } finally {
     window.clearTimeout(timer);

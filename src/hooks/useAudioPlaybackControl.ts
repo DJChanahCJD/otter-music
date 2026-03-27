@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { useMusicStore } from "@/store/music-store";
+import { logger } from "@/lib/logger";
 
 export function useAudioPlaybackControl(
   audioRef: React.RefObject<HTMLAudioElement | null>,
@@ -21,7 +22,7 @@ export function useAudioPlaybackControl(
     if (!audio.src) return;
     if (audio.paused) {
       audio.play().catch((e) => {
-        console.error("Resume play failed:", e);
+        logger.error("useAudioPlaybackControl", "Resume play failed", e);
         if (audio.paused) {
           setIsPlaying(false);
         }

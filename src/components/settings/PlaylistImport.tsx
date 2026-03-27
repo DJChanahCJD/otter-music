@@ -4,6 +4,7 @@ import { useMusicStore } from "@/store/music-store";
 import { importPlaylist } from "@/lib/utils/playlist-backup";
 import { toastUtils } from "@/lib/utils/toast";
 import { SettingItem } from "./SettingItem";
+import { logger } from "@/lib/logger";
 
 export function PlaylistImport() {
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -18,7 +19,7 @@ export function PlaylistImport() {
       useMusicStore.getState().setPlaylistTracks(playlistId, tracks);
       toastUtils.success(`成功导入歌单「${name}」\n共 ${tracks.length} 首歌曲`);
     } catch (error: unknown) {
-      console.error("Import failed:", error);
+      logger.error("PlaylistImport", "Import failed", error);
       const message = error instanceof Error ? error.message : "导入失败";
       toastUtils.error(message);
     } finally {

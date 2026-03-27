@@ -36,6 +36,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { logger } from "@/lib/logger";
 
 interface MusicTrackMobileMenuProps {
   track: MusicTrack;
@@ -175,7 +176,11 @@ export function MusicTrackMobileMenu({
 
       toastUtils.success(`完整版音源：${match.source}`, { id: toastId })
     } catch (e) {
-      console.error(e);
+      logger.error("MusicTrackMobileMenu", "Unlock full source failed", e, {
+        trackId: track.id,
+        source: track.source,
+        playlistId,
+      });
       toastUtils.error("匹配失败", { id: toastId });
     }
   };

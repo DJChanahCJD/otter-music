@@ -6,6 +6,7 @@ import { type UpdateInfo, checkUpdate as apiCheckUpdate } from "@/lib/api/update
 import { Capacitor } from "@capacitor/core";
 import { App } from "@capacitor/app";
 import { toast } from "react-hot-toast";
+import { logger } from "@/lib/logger";
 
 interface AppState {
   currentVersion: string;
@@ -102,7 +103,9 @@ export const useAppStore = create<AppState & AppActions>()(
           }
 
         } catch (error) {
-          console.error("Update check failed:", error);
+          logger.error("app-store", "Update check failed", error, {
+            silent,
+          });
           if (!silent) {
             toast.error("检查更新失败，请稍后重试");
           }

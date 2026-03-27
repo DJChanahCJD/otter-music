@@ -14,6 +14,7 @@ import { usePodcastStore } from "@/store/podcast-store";
 import type { PodcastRssSource } from "@/types/podcast";
 import toast from "react-hot-toast";
 import { Loader2 } from "lucide-react";
+import { logger } from "@/lib/logger";
 
 interface PodcastEditDrawerProps {
   open: boolean;
@@ -64,7 +65,10 @@ export function PodcastEditDrawer({ open, onOpenChange, source }: PodcastEditDra
       toast.success("更新成功");
       onOpenChange(false);
     } catch (error) {
-      console.error(error);
+      logger.error("PodcastEditDrawer", "Update podcast failed", error, {
+        sourceId: source.id,
+        rssUrl: normalizedUrl,
+      });
       toast.error("更新失败");
     } finally {
       setIsSubmitting(false);

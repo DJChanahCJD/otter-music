@@ -6,6 +6,7 @@ import { useHistoryStore } from "@/store/history-store";
 import { MediaSession } from "@jofr/capacitor-media-session";
 import toast from "react-hot-toast";
 import { handleAutoMatch } from "@/lib/audio-match";
+import { logger } from "@/lib/logger";
 
 const PAUSE_CONFIRM_DELAY_MS = 200;
 
@@ -140,7 +141,7 @@ export function useAudioEventHandlers(
       play: onPlay,
       error: () => {
         cancelPendingPauseConfirm();
-        console.error("Audio error");
+        logger.error("useAudioEventHandlers", "Audio error");
         useMusicStore.getState().setIsPlaying(false);
         syncPositionState(0);
       },

@@ -28,6 +28,7 @@ import { Label } from "@/components/ui/label";
 
 import { format } from "date-fns";
 import { AddByUrlDialog } from "./AddByUrlDialog";
+import { logger } from "@/lib/logger";
 
 interface MusicPlaylistViewProps {
   title: string;
@@ -148,7 +149,11 @@ export function MusicPlaylistView({
           toast.error("获取封面失败");
         }
       } catch (e) {
-        console.error("Get cover failed", e);
+        logger.error("MusicPlaylistView", "Get cover failed", e, {
+          playlistId,
+          trackId: firstTrack.id,
+          source: firstTrack.source,
+        });
         toast.error("获取封面出错");
       }
     } else {

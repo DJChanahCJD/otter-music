@@ -3,6 +3,7 @@ import { cachedFetch } from "@/lib/utils/cache";
 import { SOURCE_RANK } from "@/lib/utils/search-helper";
 import { searchSuggest } from "@/lib/netease/netease-api";
 import { MusicProviderFactory, isAbort } from "./music-provider";
+import { logger } from "@/lib/logger";
 
 const TTL_SHORT = 60 * 60 * 1000; // 60 minutes
 const TTL_LONG = 7 * 24 * 60 * 60 * 1000; // 7 days
@@ -64,7 +65,7 @@ export const musicApi = {
         if (match) return match;
       } catch (e) {
         if (isAbort(e)) throw e;
-        console.warn(`Search failed for source: ${source}`, e);
+        logger.warn("music-api", `Search failed for source: ${source}`, e);
       }
     }
     return null;
@@ -83,7 +84,7 @@ export const musicApi = {
             const track = { id: idOrUrl, url_id: idOrUrl, source } as MusicTrack;
             return await MusicProviderFactory.getProvider(source).getUrl(track, br);
         } catch (e) {
-            console.error('getUrl failed:', e);
+            logger.error("music-api", "getUrl failed", e);
             return null;
         }
       },
@@ -103,7 +104,7 @@ export const musicApi = {
           const track = { id: idOrUrl, pic_id: idOrUrl, source } as MusicTrack;
           return await MusicProviderFactory.getProvider(source).getPic(track, size);
         } catch (e) {
-          console.error('getPic failed:', e);
+          logger.error("music-api", "getPic failed", e);
           return null;
         }
       },
@@ -123,7 +124,7 @@ export const musicApi = {
             const track = { id, lyric_id: id, source } as MusicTrack;
             return await MusicProviderFactory.getProvider(source).getLyric(track);
         } catch (e) {
-            console.error('getLyric failed:', e);
+            logger.error("music-api", "getLyric failed", e);
             return null;
         }
       },
@@ -181,7 +182,7 @@ export const musicApi = {
 
       return suggestions;
     } catch (e) {
-      console.warn("Search suggest failed:", e);
+      logger.warn("music-api", "Search suggest failed", e);
       return [];
     }
   }

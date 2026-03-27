@@ -19,6 +19,7 @@ import { PlaylistGrid } from "./PlaylistGrid";
 import { usePodcastStore } from "@/store/podcast-store";
 import { PodcastCard } from "../Podcast/PodcastCard";
 import { PodcastAdd } from "../Podcast/PodcastAdd";
+import { logger } from "@/lib/logger";
 
 const PAGE_SIZE = 30;
 const SUB_TAB_HEIGHT = "h-8";
@@ -111,7 +112,11 @@ export function PlaylistMarket() {
         setHasMore(false);
       }
     } catch (err) {
-      console.error("Market Load Error:", err);
+      logger.error("PlaylistMarket", "Market load failed", err, {
+        category,
+        subTab,
+        currentOffset,
+      });
       setHasMore(false);
     } finally {
       setLoading(false);

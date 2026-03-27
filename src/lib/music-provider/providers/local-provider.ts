@@ -2,6 +2,7 @@ import { IMusicProvider } from "../interface";
 import { MusicTrack, SearchPageResult, SongLyric, SearchIntent } from "@/types/music";
 import { Capacitor } from "@capacitor/core";
 import { LocalMusicPlugin } from "@/plugins/local-music";
+import { logger } from "@/lib/logger";
 
 export class LocalProvider implements IMusicProvider {
   isLocal = true;
@@ -19,10 +20,10 @@ export class LocalProvider implements IMusicProvider {
         if (result.success && result.url) {
           return Capacitor.convertFileSrc(result.url);
         }
-        console.error('LocalMusicPlugin.getLocalFileUrl failed:', result.error);
+        logger.error("local-provider", "getLocalFileUrl failed", result.error);
         return null;
       } catch (e) {
-        console.error('LocalMusicPlugin.getLocalFileUrl error:', e);
+        logger.error("local-provider", "getLocalFileUrl error", e);
         return null;
       }
     }

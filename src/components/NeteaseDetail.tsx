@@ -20,6 +20,7 @@ import { CommonDetailHeader } from "@/components/CommonDetailHeader";
 import { SongDetail } from "@/lib/netease/netease-raw-types";
 import { ArtistAlbumSheet } from "@/components/ArtistAlbumSheet";
 import { useMarketSession } from "@/store/session/market-session";
+import { logger } from "@/lib/logger";
 
 interface NeteaseDetailProps {
   id: string | null;
@@ -142,7 +143,11 @@ export function NeteaseDetail({
       }
     } catch (err) {
       toast.error("操作失败");
-      console.error(err);
+      logger.error("NeteaseDetail", "Toggle album subscription failed", err, {
+        id,
+        type,
+        shouldSub,
+      });
     }
   };
 
@@ -163,7 +168,11 @@ export function NeteaseDetail({
       }
     } catch (err) {
       toast.error("加载更多失败");
-      console.error(err);
+      logger.error("NeteaseDetail", "Load more artist songs failed", err, {
+        id,
+        type,
+        offset,
+      });
     } finally {
       setLoadingMore(false);
     }
@@ -225,7 +234,11 @@ export function NeteaseDetail({
           tracks: rawTracks.map(convertSongToMusicTrack),
         });
       } catch (err) {
-        console.error(err);
+        logger.error("NeteaseDetail", "Load detail failed", err, {
+          id,
+          type,
+          retryCount,
+        });
         if (active) setState((s) => ({ ...s, loading: false, error: true }));
       }
     };
@@ -238,7 +251,7 @@ export function NeteaseDetail({
 
   if (error) {
     return (
-      <PageLayout title="错误" onBack={onBack}>
+      <PageLayout title="Error" onBack={onBack}>
         <PageError onBack={onBack} onRetry={() => setRetryCount((c) => c + 1)} />
       </PageLayout>
     );

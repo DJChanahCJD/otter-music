@@ -12,6 +12,7 @@ import { convertToMusicTrack } from "@/lib/utils/download";
 import { useMusicStore } from "@/store/music-store";
 import { useLocalMusicStore } from "@/store/local-music-store";
 import { LocalMusicPermissionDialog } from "./LocalMusicPermissionDialog";
+import { logger } from "@/lib/logger";
 
 interface LocalMusicPageProps {
   onBack?: () => void;
@@ -100,7 +101,7 @@ export function LocalMusicPage({
         await performScan("quick");
       } catch (err) {
         if (mounted) {
-          console.error("初始化扫描失败:", err);
+          logger.error("LocalMusicPage", "Initial local music scan failed", err);
         }
       }
     })();
@@ -144,19 +145,27 @@ export function LocalMusicPage({
     }
 
     const promise = (async () => {
-      const result = await LocalMusicPlugin.deleteLocalMusic({ localPath });
+      try {
+        const result = await LocalMusicPlugin.deleteLocalMusic({ localPath });
 
-      if (!result.success) {
-        throw new Error(result.error || "删除失败");
-      }
+        if (!result.success) {
+          throw new Error(result.error || "删除失败");
+        }
 
-      updateFiles((prev) =>
-        prev.filter((f) => f.localPath !== localPath)
-      );
+        updateFiles((prev) =>
+          prev.filter((f) => f.localPath !== localPath)
+        );
 
-      const currentTrack = queue[currentIndex];
-      if (currentTrack?.id === track.id) {
-        skipToNext();
+        const currentTrack = queue[currentIndex];
+        if (currentTrack?.id === track.id) {
+          skipToNext();
+        }
+      } catch (error) {
+        logger.error("LocalMusicPage", "Delete local track failed", error, {
+          trackId: track.id,
+          localPath,
+        });
+        throw error;
       }
     })();
 

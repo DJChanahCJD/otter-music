@@ -17,6 +17,7 @@ import { DetailSkeleton } from "@/components/skeletons/DetailSkeleton";
 import { cn } from "@/lib/utils";
 import { MusicCover } from "@/components/MusicCover";
 import { format } from "date-fns";
+import { logger } from "@/lib/logger";
 
 interface ArtistDetailViewProps {
   id: string;
@@ -70,7 +71,9 @@ export function ArtistDetailView({
         setHasMoreSongs(res.artist?.musicSize > (res?.hotSongs?.length || 0));
         
       } catch (err: any) {
-        console.error(err);
+        logger.error("ArtistDetailView", "Load artist detail failed", err, {
+          artistId: id,
+        });
         toast.error("加载歌手信息失败：" + err.message);
       } finally {
         if (active) setLoading(false);
