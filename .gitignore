@@ -48,3 +48,6 @@ android/app/src/main/res/drawable-night/splash.png
 android/app/src/main/res/mipmap-*/ic_launcher*.png
 android/app/src/main/res/mipmap-anydpi-v26/ic_launcher*.xml
 tsconfig.tsbuildinfo
+
+# trae
+.trae/
