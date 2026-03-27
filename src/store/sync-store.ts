@@ -8,7 +8,7 @@ interface SyncState {
   lastSyncTime: number;
 
   setSyncKey: (key: string) => void;
-  clearSyncKey: () => void;
+  clearSyncConfig: () => void;
   setLastSyncTime: (time: number) => void;
 }
 
@@ -19,7 +19,7 @@ export const useSyncStore = create<SyncState>()(
       lastSyncTime: 0,
 
       setSyncKey: (key) => set({ syncKey: key }),
-      clearSyncKey: () => set({ syncKey: null }),
+      clearSyncConfig: () => set({ syncKey: null, lastSyncTime: 0 }),
       setLastSyncTime: (time) => set({ lastSyncTime: time }),
     }),
     {

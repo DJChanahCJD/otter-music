@@ -10,12 +10,22 @@ export const MY_PROXY_MUSIC_API_URL = `${API_URL}/music-api`;
 const STORAGE_KEY_MUSIC_URLS = "otter_music_api_urls";
 const STORAGE_KEY_MUSIC_URL_FAILURES = "otter_music_api_url_failures";
 
+export class ApiError extends Error {
+  status: number;
+
+  constructor(message: string, status: number) {
+    super(message);
+    this.name = "ApiError";
+    this.status = status;
+  }
+}
+
 /**
  * 统一处理后端响应
  */
 export async function unwrap<T>(resOrPromise: Response | Promise<Response>): Promise<T> {
   const res = await resOrPromise;
-  if (!res.ok) throw new Error(await res.text());
+  if (!res.ok) throw new ApiError(await res.text(), res.status);
 
   const { success, message, data } = (await res.json()) as ApiResponse<T>;
   if (!success) throw new Error(message || '请求失败');

@@ -3,6 +3,7 @@ import {
   getOrderedMusicApiUrls,
   markMusicApiUrlFailure,
   markMusicApiUrlSuccess,
+  unwrap,
   setMusicApiUrls
 } from "./config";
 
@@ -34,5 +35,15 @@ describe("music api route policy", () => {
       "https://primary.test/api.php",
       "https://backup.test/api.php"
     ]);
+  });
+
+  it("preserves http status on non-ok responses", async () => {
+    const response = new Response("missing", { status: 404 });
+
+    await expect(unwrap(response)).rejects.toMatchObject({
+      name: "ApiError",
+      message: "missing",
+      status: 404,
+    });
   });
 });

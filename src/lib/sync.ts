@@ -1,4 +1,5 @@
 import toast from "react-hot-toast";
+import { ApiError } from "@/lib/api/config";
 import { useSyncStore } from "@/store/sync-store";
 import { useMusicStore } from "@/store";
 import { syncCheck, syncPull, syncPush } from "@/lib/api/sync";
@@ -28,12 +29,23 @@ const applySnapshot = (data: SyncSnapshot) => {
  * 极简逻辑：获取云端版本 -> 盲推本地快照(服务端合并) -> 拉取权威结果覆盖本地
  */
 export async function checkAndSync(force = false): Promise<SyncResult> {
-  const { syncKey, lastSyncTime, setLastSyncTime } = useSyncStore.getState();
+  const { syncKey, lastSyncTime, setLastSyncTime, clearSyncConfig } = useSyncStore.getState();
   if (!syncKey) return { success: false, error: "未配置同步密钥" };
 
   try {
     // 1. 获取云端最新版本号
-    const { lastSyncTime: serverTime } = await syncCheck(syncKey);
+    let serverTime: number;
+    try {
+      ({ lastSyncTime: serverTime } = await syncCheck(syncKey));
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 404) {
+        clearSyncConfig();
+        const msg = "同步密钥不存在或已失效";
+        toast.error(msg);
+        return { success: false, error: msg };
+      }
+      throw err;
+    }
 
     // 2. 节流：非强制同步，且云端没有新数据，且本地最近刚同步过，则跳过
     if (!force && serverTime === lastSyncTime && lastSyncTime > 0) {

@@ -16,7 +16,7 @@ import { useSyncStore } from "@/store/sync-store";
 import { SettingItem } from "./SettingItem";
 
 export function SyncConfig() {
-  const { syncKey, lastSyncTime, setSyncKey, clearSyncKey } = useSyncStore();
+  const { syncKey, lastSyncTime, setSyncKey, clearSyncConfig } = useSyncStore();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [inputKey, setInputKey] = useState("");
 
@@ -47,7 +47,7 @@ export function SyncConfig() {
 
   const handleClear = () => {
     if (!confirm("确认清除当前配置吗？")) return;
-    clearSyncKey();
+    clearSyncConfig();
     setDialogOpen(false);
   };
 

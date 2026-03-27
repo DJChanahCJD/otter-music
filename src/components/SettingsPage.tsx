@@ -14,6 +14,7 @@ import { Switch } from "./ui/switch";
 import { PlaylistImport } from "./settings/PlaylistImport";
 import { SettingItem } from "./settings/SettingItem";
 import { UpdateCheck } from "./settings/UpdateCheck";
+import { IssueLogs } from "./settings/IssueLogs";
 
 interface SettingsPageProps {
   onBack?: () => void;
@@ -90,6 +91,7 @@ export function SettingsPage({ onBack }: SettingsPageProps) {
 
         <Section title="关于系统">
           <UpdateCheck />
+          <IssueLogs />
         </Section>
       </div>
     </PageLayout>
