@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AlertTriangle, Copy, Trash2, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -25,6 +25,7 @@ async function copyToClipboard(text: string) {
 export function IssueLogs() {
   const [isOpen, setIsOpen] = useState(false);
   const [logs, setLogs] = useState({ count: 0, all: "", recent: "" });
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     setLogs((prev) => ({ ...prev, count: logger.getLogs().length }));
@@ -38,6 +39,12 @@ export function IssueLogs() {
         all: logger.exportText(),
         recent: logger.exportText({ recent: true }),
       });
+      // 打开后滚动到底部
+      setTimeout(() => {
+        if (textareaRef.current) {
+          textareaRef.current.scrollTop = textareaRef.current.scrollHeight;
+        }
+      }, 0);
     }
   };
 
@@ -84,6 +91,7 @@ export function IssueLogs() {
 
           <div className="px-4 pb-4 overflow-hidden">
             <Textarea
+              ref={textareaRef}
               readOnly
               value={logs.all || "暂无日志记录"}
               className="h-[45vh] w-full resize-none overflow-y-auto bg-muted/30 font-mono text-[11px] leading-relaxed"
