@@ -173,7 +173,7 @@ export const useMusicStore = create<MusicState>()(
 
       // --- Settings ---
       quality: "192", searchSource: "all", aggregatedSources: ['joox', 'netease'],
-      lastPlaylistCategory: "", lastMineTab: "recommend", lastFeaturedTab: "", enableAutoMatch: true,
+      lastPlaylistCategory: "全部", lastMineTab: "recommend", lastFeaturedTab: "", enableAutoMatch: true,
       setQuality: (quality) => set({ quality }), setSearchSource: (searchSource) => set({ searchSource }),
       setAggregatedSources: (aggregatedSources) => set({ aggregatedSources }), setLastPlaylistCategory: (lastPlaylistCategory) => set({ lastPlaylistCategory }),
       setLastMineTab: (lastMineTab) => set({ lastMineTab }), setLastFeaturedTab: (lastFeaturedTab) => set({ lastFeaturedTab }), setEnableAutoMatch: (enableAutoMatch) => set({ enableAutoMatch }),
