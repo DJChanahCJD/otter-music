@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { Button } from "@/components/ui/button";
-import { FEATURED_SUB_FILTERS, RECOMMEND_FILTERS } from "@/lib/netease/playlist-category";
+import { SPECIAL_CATS, RECOMMEND_CATS } from "@/lib/netease/netease-cats";
 import {
   getPlaylists,
   getToplist,
@@ -35,7 +35,7 @@ export function PlaylistMarket() {
   
   const rssSources = usePodcastStore((s) => s.rssSources);
 
-  const featuredTab = useMusicStore((s) => s.lastFeaturedTab || FEATURED_SUB_FILTERS[0].id);
+  const featuredTab = useMusicStore((s) => s.lastFeaturedTab || SPECIAL_CATS[0].id);
   const setFeaturedTab = useMusicStore((s) => s.setLastFeaturedTab);
 
   const [isAddPodcastOpen, setIsAddPodcastOpen] = useState(false);
@@ -57,7 +57,7 @@ export function PlaylistMarket() {
   const { scrollRef } = useScrollSave(`scroll-${snapshotKey}`, items.length > 0 || activeCategory === "mine" || activeCategory === "播客");
 
   const displayFilters = useMemo(() => {
-    const baseFilters = [RECOMMEND_FILTERS[0], { id: "mine", name: "我的" }, ...RECOMMEND_FILTERS.slice(1)];
+    const baseFilters = [RECOMMEND_CATS[0], { id: "mine", name: "我的" }, ...RECOMMEND_CATS.slice(1)];
     if (!activeCategory || baseFilters.some((f) => f.id === activeCategory)) return baseFilters;
     return [...baseFilters, { id: activeCategory, name: activeCategory }];
   }, [activeCategory]);
@@ -244,7 +244,7 @@ export function PlaylistMarket() {
           <div className="p-4 pb-24">
             {activeCategory === "featured" && (
               <div className={cn("flex items-center gap-6 mb-4 px-1", SUB_TAB_HEIGHT)}>
-                {FEATURED_SUB_FILTERS.map((tab) => (
+                {SPECIAL_CATS.map((tab) => (
                   <button
                     key={tab.id}
                     onClick={() => setFeaturedTab(tab.id)}
