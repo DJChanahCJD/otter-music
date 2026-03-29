@@ -1,12 +1,12 @@
-﻿import { StrictMode } from 'react'
+import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './assets/global.css'
 import RootLayout from './Layout'
 import App from './App'
 import { ErrorBoundary } from './components/ErrorBoundary'
-import { captureWindowErrors } from './lib/logger'
+import { initializeLogger } from './lib/logger'
 
-captureWindowErrors()
+initializeLogger()
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

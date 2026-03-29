@@ -6,3 +6,5 @@ export type ApiResponse<T> = {
   data?: T;              // 响应数据，成功时返回
   message?: string;      // 提示消息或错误消息
 };
+
+export const GithubUrl = "https://github.com/DJChanahCJD/otter-music";
