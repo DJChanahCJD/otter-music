@@ -43,7 +43,6 @@ jobs:
           npm ci
           npm run build
           npm run resources
-          npm run clean:maps
           npx cap sync android
 
       - name: Build release APK

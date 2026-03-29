@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "build:release": "npm run build && npm run clean:maps",
+    "build:release": "npm run build",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "test": "vitest",
@@ -14,7 +14,7 @@
     "resources": "capacitor-assets generate",
     "cap:add:android": "npx cap add android",
     "cap:sync:android": "npm run build && npx cap sync android",
-    "cap:sync:android:release": "npm run build && npm run clean:maps && npx cap sync android",
+    "cap:sync:android:release": "npm run build && npx cap sync android",
     "cap:open:android": "npx cap open android",
     "cap:update:android": "npx cap update android",
     "version": "node scripts/update-mobile-version.js && git add android/app/build.gradle",

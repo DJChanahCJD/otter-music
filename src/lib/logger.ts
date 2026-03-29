@@ -34,7 +34,10 @@ const persistLogs = () => {
   if (!IS_BROWSER) return;
   try {
     window.localStorage.setItem(LOG_STORAGE_KEY, JSON.stringify(logsCache));
-  } catch {} // 忽略配额超限等错误
+  } catch (e) {
+    console.error("Failed to persist logs to localStorage:", e);
+    return;
+  }
 };
 
 // 2. 优化调用栈解析逻辑
