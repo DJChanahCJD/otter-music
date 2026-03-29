@@ -8,7 +8,7 @@ import {
   DrawerTitle,
   DrawerTrigger,
 } from "@/components/ui/drawer";
-import { ALL_FILTERS } from "@/lib/netease/playlist-category";
+import { NETEASE_CATS } from "@/lib/netease/netease-cats";
 import { cn } from "@/lib/utils";
 import { LayoutGrid } from "lucide-react";
 
@@ -43,7 +43,7 @@ export function PlaylistCategorySelector({ activeCategory, onSelect, trigger }: 
 
         <ScrollArea className="px-6 pb-12 overflow-y-auto">
           <div className="space-y-6">
-            {ALL_FILTERS.map((group) => (
+            {NETEASE_CATS.map((group) => (
               <section key={group.category} className="space-y-3">
                 <h4 className="sticky top-0 z-10 py-1 text-[11px] font-bold uppercase tracking-widest text-muted-foreground/60 bg-background/95 backdrop-blur-sm">
                   {group.category}

@@ -1,15 +1,15 @@
-export type FilterItem = {
+export type CatItem = {
   id: string;
   name: string;
 };
 
-export type FilterCategory = {
+export type CatGroup = {
   category: string;
-  filters: FilterItem[];
+  filters: CatItem[];
 };
 
 /* 工具函数：避免重复写 { id, name } */
-const F = (name: string): FilterItem => ({
+const F = (name: string): CatItem => ({
   id: name,
   name,
 });
@@ -19,7 +19,7 @@ const F = (name: string): FilterItem => ({
  * 顺序：语种 → 风格 → 场景 → 情感 → 主题
  * ========================================================= */
 
-export const ALL_FILTERS: FilterCategory[] = [
+export const NETEASE_CATS: CatGroup[] = [
   {
     category: '语种',
     filters: [
@@ -136,13 +136,13 @@ export const ALL_FILTERS: FilterCategory[] = [
   },
 ];
 
-export const FEATURED_SUB_FILTERS: FilterItem[] = [
+export const SPECIAL_CATS: CatItem[] = [
   F("官方"),
   F("榜单"),
   { id: "toplist", name: "排行榜" },
 ];
 
-export const RECOMMEND_FILTERS: FilterItem[] = [
+export const RECOMMEND_CATS: CatItem[] = [
   F("全部"),
   { id: "featured", name: "精选" },
 
