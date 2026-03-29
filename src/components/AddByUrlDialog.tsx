@@ -4,8 +4,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Link, Music2, User } from "lucide-react";
 import toast from "react-hot-toast";
-import { Capacitor } from "@capacitor/core";
-import { Clipboard } from "@capacitor/clipboard";
 
 interface AddByUrlDialogProps {
   isOpen: boolean;
@@ -49,10 +47,6 @@ function parseInput(text: string) {
 }
 
 async function readClipboardText() {
-  if (Capacitor.isNativePlatform()) {
-    const { value } = await Clipboard.read();
-    return value || "";
-  }
   return navigator.clipboard?.readText?.() || "";
 }
 

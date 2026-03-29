@@ -2,8 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { AlertTriangle, Copy, Trash2, ExternalLink } from "lucide-react";
-import { Clipboard } from "@capacitor/clipboard";
-import { Capacitor } from "@capacitor/core";
 import { Button } from "@/components/ui/button";
 import {
   Drawer,
@@ -21,9 +19,7 @@ import { GithubUrl } from "@/types";
 
 async function copyToClipboard(text: string) {
   if (!text.trim()) throw new Error("EMPTY");
-  Capacitor.isNativePlatform()
-    ? await Clipboard.write({ string: text })
-    : await navigator.clipboard.writeText(text);
+  await navigator.clipboard.writeText(text);
 }
 
 export function IssueLogs() {
