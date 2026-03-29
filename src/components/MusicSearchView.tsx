@@ -184,7 +184,7 @@ export function MusicSearchView({
 
       if (version !== versionRef.current) return;
 
-      let items = source === "all" ? res.items : mergeAndSortTracks(res.items);
+      let items = source === "all" ? res.items : mergeAndSortTracks(res.items, query);
       items = applySearchIntentSort(items, searchIntent, query);
 
       const currentLength = reset ? 0 : searchResults.length;

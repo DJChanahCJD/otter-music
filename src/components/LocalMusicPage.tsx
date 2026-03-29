@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { RefreshCw, Music, HardDrive, HardDriveDownload } from "lucide-react";
 import { LocalMusicPlugin } from "@/plugins/local-music";
 import { MusicTrack } from "@/types/music";
@@ -90,9 +90,11 @@ export function LocalMusicPage({
   /* =========================
      初始化扫描（安全写法）
   ========================= */
-  useEffect(() => {
+  const initRef = useRef(false);
 
-    if (files.length > 0) return;
+  useEffect(() => {
+    if (initRef.current || files.length > 0) return;
+    initRef.current = true;
 
     let mounted = true;
 
@@ -109,7 +111,6 @@ export function LocalMusicPage({
     return () => {
       mounted = false;
     };
-
   }, [files.length, performScan]);
 
   /* =========================

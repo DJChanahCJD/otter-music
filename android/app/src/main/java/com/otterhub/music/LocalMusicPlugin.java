@@ -170,7 +170,10 @@ public class LocalMusicPlugin extends Plugin {
         if (depth > MAX_DEPTH || directory == null || !directory.canRead() || filesList.size() >= MAX_FILES) return;
 
         File[] children = directory.listFiles();
-        if (children == null) return;
+        if (children == null) {
+            android.util.Log.d("LocalMusicPlugin", "Cannot read directory (null): " + directory.getAbsolutePath());
+            return;
+        }
 
         for (File file : children) {
             if (filesList.size() >= MAX_FILES) return;
