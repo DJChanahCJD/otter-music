@@ -1,5 +1,5 @@
 import { cn } from "@/lib/utils";
-import { downloadMusicTrack } from "@/lib/utils/download";
+import { buildDownloadKey, downloadMusicTrack } from "@/lib/utils/download";
 import { useMusicStore } from "@/store/music-store";
 import {
   MusicTrack,
@@ -19,7 +19,6 @@ import { Badge } from "./ui/badge";
 import { DatabaseZap, DollarSign, Gem, GripVertical } from "lucide-react";
 import { NeteasePrivilege } from "@/lib/netease/netease-types";
 import { useDownloadStore } from "@/store/download-store";
-import { buildDownloadKey } from "@/lib/utils/download";
 
 // 预定义 Badge 样式，避免每次渲染都重新计算
 const PRIVILEGE_BADGES = {
