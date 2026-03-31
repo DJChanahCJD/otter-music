@@ -11,7 +11,7 @@ import { useState } from "react";
 import { toastUtils } from "@/lib/utils/toast";
 import toast from "react-hot-toast";
 import { useShallow } from "zustand/react/shallow";
-import { AddToPlaylistDialog } from "./AddToPlaylistDialog";
+import { AddToPlaylistDrawer } from "./AddToPlaylistDrawer";
 import { MusicTrackMobileMenu } from "./MusicTrackMobileMenu";
 import { MusicTrackVariants } from "./MusicTrackVariants";
 import { Checkbox } from "./ui/checkbox";
@@ -233,7 +233,7 @@ export function MusicTrackItem({
           removeLabel={removeLabel}
         />
 
-        <AddToPlaylistDialog
+        <AddToPlaylistDrawer
           open={isAddToPlaylistOpen}
           onOpenChange={setIsAddToPlaylistOpen}
           track={track}

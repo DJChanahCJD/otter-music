@@ -13,7 +13,7 @@ import toast from "react-hot-toast";
 import { createTrackFromUrl, deduplicateTracks } from "@/lib/utils/music";
 import { toastUtils } from "@/lib/utils/toast";
 import { exportPlaylist } from "@/lib/utils/playlist-backup";
-import { AddByUrlDialog } from "./AddByUrlDialog";
+import { AddByUrlDrawer } from "./AddByUrlDrawer";
 
 interface FavoritesViewProps {
   tracks: MusicTrack[];
@@ -143,7 +143,7 @@ export function FavoritesView({
         />
       </div>
 
-      <AddByUrlDialog
+      <AddByUrlDrawer
         isOpen={isAddByUrlOpen}
         onClose={() => setIsAddByUrlOpen(false)}
         onConfirm={handleAddByUrl}

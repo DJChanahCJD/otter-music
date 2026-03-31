@@ -27,7 +27,7 @@ import {
 import { Label } from "@/components/ui/label";
 
 import { format } from "date-fns";
-import { AddByUrlDialog } from "./AddByUrlDialog";
+import { AddByUrlDrawer } from "./AddByUrlDrawer";
 import { logger } from "@/lib/logger";
 
 interface MusicPlaylistViewProps {
@@ -309,7 +309,7 @@ export function MusicPlaylistView({
         </DrawerContent>
       </Drawer>
 
-      <AddByUrlDialog
+      <AddByUrlDrawer
         isOpen={isAddByUrlOpen}
         onClose={() => setIsAddByUrlOpen(false)}
         onConfirm={handleAddByUrl}

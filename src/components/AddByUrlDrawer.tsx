@@ -7,7 +7,7 @@ import toast from "react-hot-toast";
 import { Capacitor } from "@capacitor/core";
 import { Clipboard } from "@capacitor/clipboard";
 
-interface AddByUrlDialogProps {
+interface AddByUrlDrawerProps {
   isOpen: boolean;
   onClose: () => void;
   onConfirm: (title: string, url: string, artist?: string) => void;
@@ -56,7 +56,7 @@ async function readClipboardText() {
   return navigator.clipboard?.readText?.() || "";
 }
 
-export function AddByUrlDialog({ isOpen, onClose, onConfirm }: AddByUrlDialogProps) {
+export function AddByUrlDrawer({ isOpen, onClose, onConfirm }: AddByUrlDrawerProps) {
   const [formData, setFormData] = useState({ title: "", url: "", artist: "" });
 
   const updateField = (field: keyof typeof formData, value: string) => {

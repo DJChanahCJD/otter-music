@@ -27,15 +27,16 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import { Button } from "@/components/ui/button";
 import {
-  ListChecks, Plus, Heart, Download, Trash2, ListMusic,
+  ListChecks, Plus, Heart, Download, Trash2, 
   Loader2, Search, Check, MoreVertical,
+  ListPlus,
 } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { MusicTrackItem } from "./MusicTrackItem";
+import { AddToPlaylistDrawer } from "./AddToPlaylistDrawer";
 import { downloadMusicTrackBatch } from "@/lib/utils/download";
 import { useMusicStore } from "@/store/music-store";
-import { useActivePlaylists } from "@/hooks/use-active-playlists";
 import { MusicTrack } from "@/types/music";
 import toast from "react-hot-toast";
 import { processBatchCPU } from "@/lib/utils";
@@ -100,6 +101,7 @@ export function MusicTrackList({
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [activeId, setActiveId] = useState<string | null>(null);
+  const [isAddToPlaylistOpen, setIsAddToPlaylistOpen] = useState(false);
   const internalRef = useRef<HTMLDivElement | null>(null);
 
   const sensors = useSensors(
@@ -133,17 +135,13 @@ export function MusicTrackList({
     }
   };
 
-  const { createPlaylist, quality,
-          addBatchToFavorites, addBatchToPlaylist, addBatchToNextPlay } = useMusicStore(
+  const { quality, addBatchToFavorites, addBatchToNextPlay } = useMusicStore(
     useShallow((state) => ({
-      createPlaylist: state.createPlaylist,
       quality: state.quality,
       addBatchToFavorites: state.addBatchToFavorites,
-      addBatchToPlaylist: state.addBatchToPlaylist,
       addBatchToNextPlay: state.addBatchToNextPlay,
     }))
   );
-  const playlists = useActivePlaylists();
 
   const toggleSelect = useCallback((id: string) => {
     setSelectedIds((prev) => {
@@ -169,15 +167,6 @@ export function MusicTrackList({
     if (!selected.length) return;
     addBatchToFavorites(selected);
     toast.success(`已喜欢 ${selected.length} 首`);
-    resetSelection();
-  };
-
-  /** 批量添加到歌单（单次 setState，无迭代） */
-  const handleBatchAddToPlaylist = (playlistId: string, tip: string) => {
-    const selected = getSelectedTracks();
-    if (!selected.length) return;
-    addBatchToPlaylist(playlistId, selected);
-    toast.success(`${tip} ${selected.length} 首`);
     resetSelection();
   };
 
@@ -224,17 +213,6 @@ export function MusicTrackList({
         },
       },
     }),
-  };
-
-  const handleCreatePlaylist = () => {
-    const name = window.prompt("输入歌单名称");
-    if (!name) return;
-    const id = createPlaylist(name);
-    if (selectedIds.size > 0) {
-      handleBatchAddToPlaylist(id, `已添加到「${name}」`);
-    } else {
-      toast.success("已创建歌单");
-    }
   };
 
   const virtualizer = useVirtualizer({
@@ -310,14 +288,8 @@ export function MusicTrackList({
                   <div className="flex items-center px-2 py-1.5 text-xs rounded-sm hover:bg-accent cursor-pointer" onClick={handleBatchDownload}>
                     <Download className="mr-2 h-3.5 w-3.5" /> 下载
                   </div>
-                  <div className="border-t my-1" />
-                  {playlists.map((p) => (
-                    <div key={p.id} className="flex items-center px-2 py-1.5 text-xs rounded-sm hover:bg-accent cursor-pointer" onClick={() => handleBatchAddToPlaylist(p.id, `已添加到「${p.name}」`)}>
-                      <ListMusic className="mr-2 h-3.5 w-3.5 opacity-50" /> <span className="truncate">{p.name}</span>
-                    </div>
-                  ))}
-                  <div className="flex items-center px-2 py-1.5 text-xs rounded-sm hover:bg-accent cursor-pointer text-muted-foreground" onClick={handleCreatePlaylist}>
-                    <Plus className="mr-2 h-3.5 w-3.5" /> 新建歌单
+                  <div className="flex items-center px-2 py-1.5 text-xs rounded-sm hover:bg-accent cursor-pointer" onClick={() => setIsAddToPlaylistOpen(true)}>
+                    <ListPlus className="mr-2 h-3.5 w-3.5" /> 添加到歌单
                   </div>
                   {(onRemove || onBatchRemove) && (
                     <>
@@ -418,6 +390,13 @@ export function MusicTrackList({
           })() : null}
         </DragOverlay>
       </DndContext>
+
+      <AddToPlaylistDrawer
+        open={isAddToPlaylistOpen}
+        onOpenChange={setIsAddToPlaylistOpen}
+        tracks={getSelectedTracks()}
+        onDone={resetSelection}
+      />
     </div>
   );
 }
