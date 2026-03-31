@@ -4,6 +4,7 @@ import { useSyncStore } from "@/store/sync-store";
 import { useMusicStore } from "@/store";
 import { syncCheck, syncPull, syncPush } from "@/lib/api/sync";
 import { MusicTrack, Playlist } from "@/types/music";
+import { cleanTrack } from "@/lib/utils/music";
 
 /** --- 类型定义 --- */
 type SyncSnapshot = { favorites: MusicTrack[]; playlists: Playlist[]; };
@@ -14,7 +15,10 @@ const SYNC_INTERVAL = 60 * 60 * 1000; // 1小时节流
 /** --- 原子快照操作 --- */
 const getSnapshot = (): SyncSnapshot => {
   const { favorites, playlists } = useMusicStore.getState();
-  return { favorites, playlists };  
+  return {
+    favorites: favorites.map(cleanTrack),
+    playlists: playlists.map(p => ({ ...p, tracks: p.tracks.map(cleanTrack) })),
+  };
 };
 
 const applySnapshot = (data: SyncSnapshot) => {

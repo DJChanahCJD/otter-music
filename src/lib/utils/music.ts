@@ -11,11 +11,10 @@ export const formatMediaTime = (time: number) => {
 };
 
 /**
- * 清理 MusicTrack，移除 variants 字段
+ * 清理 MusicTrack，移除运行时专属字段（variants、privilege），仅保留需持久化的核心数据
  */
 export function cleanTrack(track: MusicTrack | MergedMusicTrack): MusicTrack {
-  // 使用解构剔除不需要的属性，_ 表示占位忽略
-  const { variants: _, ...rest } = track as MergedMusicTrack;
+  const { variants: _, privilege: __, ...rest } = track as MergedMusicTrack;
   return rest;
 }
 
