@@ -6,7 +6,7 @@ android {
 
     defaultConfig {
         applicationId "com.otterhub.music"
-        minSdk 33
+        minSdk 24
         targetSdk 36
         versionCode 28
         versionName "2.2.3"
@@ -18,7 +18,8 @@ android {
             minifyEnabled false
         }
         release {
-            minifyEnabled false
+            minifyEnabled true
+            shrinkResources true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }

@@ -45,7 +45,9 @@
 >
 > 数据同步功能依赖主项目 [Otter Music Web](https://github.com/DJChanahCJD/otter-music-web)
 >
-> 最低支持版本：minSdkVersion = 33 (Android 13)
+> 最低支持版本：minSdkVersion = 24 (Android 7.0)
+>
+> **注意**：在 Android 13（API 33）以下的设备上，部分 CSS 特性（如 `color-mix()`）可能不受支持，导致主题色失效或界面样式异常。建议升级至 Android 13 以上以获得最佳体验。
 
 ## 快速开始
 
