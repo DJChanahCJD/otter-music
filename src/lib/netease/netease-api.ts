@@ -36,6 +36,7 @@ import { cachedFetch } from "@/lib/utils/cache";
 import { API_URL } from "@/lib/api/config";
 import { Capacitor, CapacitorHttp } from '@capacitor/core';
 import { useNeteaseStore } from '@/store/netease-store';
+import { logger } from '@/lib/logger';
 
 const TTL_SHORT = 60 * 60 * 1000;           // 1 hour
 const TTL_MEDIUM = 24 * 60 * 60 * 1000;     // 1 day
@@ -210,22 +211,31 @@ async function fetchLocalApi<T>(endpoint: string, body?: Record<string, unknown>
 
 export async function getSongUrl(id: string, br: number = 999000, cookie: string = '') {
     const realId = id.replace(/^(netrack_|ne_track_)/, '');
+    
+    // 1. 将 br 映射为新版接口的 level 参数
+    let level = 'standard';
+    if (br >= 999000) level = 'lossless'; // 无损
+    else if (br >= 320000) level = 'exhigh'; // 极高 (320k)
+    else if (br >= 192000) level = 'higher'; // 较高 (192k)
+
     try {
+        // 2. 升级 EAPI 为 v1 接口，使用 level 和 encodeType
         const eapiRes = await requestEapi<{ data: { url: string, br: number, size: number, freeTrialInfo?: unknown }[] }>(
-            `${EAPI_BASE_URL}/eapi/song/enhance/player/url`,
-            '/api/song/enhance/player/url',
-            { ids: `[${realId}]`, br, header: { os: 'pc', appver: '2.9.7' } },
+            `${EAPI_BASE_URL}/eapi/song/enhance/player/url/v1`,
+            '/api/song/enhance/player/url/v1',
+            { ids: `[${realId}]`, level, encodeType: 'flac', header: { os: 'pc', appver: '2.9.7' } },
             cookie
         );
         const trackData = eapiRes.data?.data?.[0];
         if (trackData?.url && !trackData.freeTrialInfo) return eapiRes;
     } catch {
-        console.warn(`[NetEase] EAPI failed for ${realId}, falling back to WEAPI...`);
+        logger.warn(`[NetEase] EAPI failed for ${realId}, falling back to WEAPI...`);
     }
 
+    // 3. WEAPI 同样使用 v1 和 level
     return requestWeapi<{ data: { url: string, br: number, size: number }[] }>(
         `${BASE_URL}/weapi/song/enhance/player/url/v1`,
-        { ids: `[${realId}]`, level: br >= 320000 ? 'exhigh' : 'standard', encodeType: 'mp3', csrf_token: '' },
+        { ids: `[${realId}]`, level, encodeType: 'flac', csrf_token: '' },
         cookie
     );
 }
@@ -302,7 +312,7 @@ export const getPlaylistDynamicDetail = async (id: string, cookie: string = '') 
         );
         return res.data;
     } catch (e) {
-        console.warn('[API] getPlaylistDynamicDetail failed', e);
+        logger.warn('NetEase', 'getPlaylistDynamicDetail failed', e instanceof Error ? e : undefined);
         return null;
     }
 };
@@ -383,7 +393,7 @@ export const getAlbumDynamicDetail = async (id: string, cookie: string = '') => 
         );
         return res.data;
     } catch (e) {
-        console.warn('[API] getAlbumDynamicDetail failed', e);
+        logger.warn('NetEase', 'getAlbumDynamicDetail failed', e instanceof Error ? e : undefined);
         return null;
     }
 }; 
@@ -407,7 +417,7 @@ export const getArtistDynamicDetail = async (id: string, cookie: string = '') =>
         );
         return res.data;
     } catch (e) {
-        console.warn('[API] getArtistDynamicDetail failed', e);
+        logger.warn('NetEase', 'getArtistDynamicDetail failed', e instanceof Error ? e : undefined);
         return null;
     }
 };
@@ -454,7 +464,7 @@ export const getSubscribedAlbums = async (
 
     return r.data.data ?? [];
   } catch (e) {
-    console.warn('[API] getSubscribedAlbums failed', e);
+    logger.warn('NetEase', 'getSubscribedAlbums failed', e instanceof Error ? e : undefined);
     return [];
   }
 };
@@ -473,7 +483,7 @@ export const getSubscribedArtists = async (
 
     return r.data.data ?? [];
   } catch (e) {
-    console.warn('[API] getSubscribedArtists failed', e);
+    logger.warn('NetEase', 'getSubscribedArtists failed', e instanceof Error ? e : undefined);
     return [];
   }
 };
