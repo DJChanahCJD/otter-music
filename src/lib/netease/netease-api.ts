@@ -51,7 +51,6 @@ const PC_USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537
 const MOBILE_USER_AGENT = 'Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 MicroMessenger/8.0.27';
 const NETWORK_TIMEOUT_MS = 12000;
 
-
 /* =========================================================
 * 核心伪装工具集 (Cookie & IP)
 * ========================================================= */
@@ -113,7 +112,6 @@ function buildHeaders(cookie: string, ua: string, forceIp?: string): Record<stri
  * 底层跨端请求函数 (核心逻辑)
  * ========================================================= */
 
-// ✅ 修复 3: 将底层 fetch 抽离，智能判断运行平台
 async function crossFetch(url: string, options: { method: string; headers: Record<string, string>; body: string }) {
     const withTimeout = <T>(promise: Promise<T>, timeout = NETWORK_TIMEOUT_MS) =>
         new Promise<T>((resolve, reject) => {
@@ -209,21 +207,23 @@ async function fetchLocalApi<T>(endpoint: string, body?: Record<string, unknown>
  * 业务 API
  * ========================================================= */
 
+const LEVEL_MAP: Record<number, string> = {
+    128000: 'standard',
+    192000: 'higher',
+    320000: 'exhigh',
+    999000: 'lossless'
+};
+
 export async function getSongUrl(id: string, br: number = 999000, cookie: string = '') {
     const realId = id.replace(/^(netrack_|ne_track_)/, '');
     
-    // 1. 将 br 映射为新版接口的 level 参数
-    let level = 'standard';
-    if (br >= 999000) level = 'lossless'; // 无损
-    else if (br >= 320000) level = 'exhigh'; // 极高 (320k)
-    else if (br >= 192000) level = 'higher'; // 较高 (192k)
+    const level = LEVEL_MAP[br] || 'standard';
 
     try {
-        // 2. 升级 EAPI 为 v1 接口，使用 level 和 encodeType
         const eapiRes = await requestEapi<{ data: { url: string, br: number, size: number, freeTrialInfo?: unknown }[] }>(
             `${EAPI_BASE_URL}/eapi/song/enhance/player/url/v1`,
             '/api/song/enhance/player/url/v1',
-            { ids: `[${realId}]`, level, encodeType: 'flac', header: { os: 'pc', appver: '2.9.7' } },
+            { ids: `[${realId}]`, level, encodeType: 'flac', header: { os: 'ios', appver: '8.9.70' } },
             cookie
         );
         const trackData = eapiRes.data?.data?.[0];
@@ -232,7 +232,6 @@ export async function getSongUrl(id: string, br: number = 999000, cookie: string
         logger.warn(`[NetEase] EAPI failed for ${realId}, falling back to WEAPI...`);
     }
 
-    // 3. WEAPI 同样使用 v1 和 level
     return requestWeapi<{ data: { url: string, br: number, size: number }[] }>(
         `${BASE_URL}/weapi/song/enhance/player/url/v1`,
         { ids: `[${realId}]`, level, encodeType: 'flac', csrf_token: '' },
@@ -249,10 +248,6 @@ export const checkQrStatus = async (key: string): Promise<QrStatusResult> => {
     const res = await fetchLocalApi<RawQrCheckResponse>(`/music-api/netease/login/qr/check?key=${key}&timestamp=${Date.now()}`);
     return normalizeQrStatus(res);
 };
-/* 3. 游客登录
-说明 : 直接调用此接口, 可获取游客cookie,如果遇到其他接口未登录状态报400状态码需要验证的错误,可使用此接口获取游客cookie避免报错
-
-接口地址 : /register/anonimous */
 
 export const getMyInfo = async (cookie: string = ''): Promise<UserProfile | null> => {
     const res = await cachedFetch<UserProfile | null>(
