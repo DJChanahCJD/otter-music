@@ -18,6 +18,8 @@ import { Checkbox } from "./ui/checkbox";
 import { Badge } from "./ui/badge";
 import { DatabaseZap, DollarSign, Gem, GripVertical } from "lucide-react";
 import { NeteasePrivilege } from "@/lib/netease/netease-types";
+import { useDownloadStore } from "@/store/download-store";
+import { buildDownloadKey } from "@/lib/utils/download";
 
 // 预定义 Badge 样式，避免每次渲染都重新计算
 const PRIVILEGE_BADGES = {
@@ -46,7 +48,7 @@ interface MusicTrackItemProps {
   onPlay: () => void;
   onRemove?: () => void;
   removeLabel?: string;
-  isDownloaded?: boolean;
+  isDownloaded?: boolean; // 可选，未传则从 store 按需读取
   quality?: string;
   showSourceBadge?: boolean;
   className?: string;
@@ -84,6 +86,11 @@ export function MusicTrackItem({
         addToNextPlay: state.addToNextPlay,
       }))
     );
+
+  // 按需读取下载状态（虚拟列表保证活跃 Item 极少，按需 selector 远比父组件全量 map 高效）
+  const downloadKey = buildDownloadKey(track.source, track.id);
+  const isDownloadedFromStore = useDownloadStore(s => !!s.records[downloadKey]);
+  const isDownloadedFinal = isDownloaded ?? isDownloadedFromStore;
 
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isAddToPlaylistOpen, setIsAddToPlaylistOpen] = useState(false);
@@ -169,7 +176,7 @@ export function MusicTrackItem({
               </Badge>
             )}
 
-            {isDownloaded && (
+            {isDownloadedFinal && (
               <DatabaseZap className="h-3.5 w-3.5 text-muted-foreground/60" />
             )}
             <MusicTrackVariants variants={variants} />

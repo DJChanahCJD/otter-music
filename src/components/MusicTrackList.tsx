@@ -33,13 +33,12 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { MusicTrackItem } from "./MusicTrackItem";
-import { downloadMusicTrack, buildDownloadKey } from "@/lib/utils/download";
+import { downloadMusicTrackBatch } from "@/lib/utils/download";
 import { useMusicStore } from "@/store/music-store";
 import { useActivePlaylists } from "@/hooks/use-active-playlists";
-import { useDownloadStore } from "@/store/download-store";
 import { MusicTrack } from "@/types/music";
 import toast from "react-hot-toast";
-import { processBatchCPU, processBatchIO } from "@/lib/utils";
+import { processBatchCPU } from "@/lib/utils";
 import { useShallow } from "zustand/react/shallow";
 
 interface MusicTrackListProps {
@@ -146,15 +145,6 @@ export function MusicTrackList({
   );
   const playlists = useActivePlaylists();
 
-  const records = useDownloadStore((state) => state.records);
-
-  const downloadedStatusMap = useMemo(() => {
-    return new Map(tracks.map(track => [
-      track.id,
-      !!records[buildDownloadKey(track.source, track.id || "")]
-    ]));
-  }, [records, tracks]);
-
   const toggleSelect = useCallback((id: string) => {
     setSelectedIds((prev) => {
       const next = new Set(prev);
@@ -221,16 +211,9 @@ export function MusicTrackList({
 
   const handleBatchDownload = async () => {
     const selected = getSelectedTracks();
-    const toastId = toast.loading(`准备下载 0/${selected.length}`);
-    await processBatchIO(
-      selected,
-      async (track) => {
-        await downloadMusicTrack(track, parseInt(quality));
-      },
-      (c, t) => toast.loading(`下载中 ${c}/${t}`, { id: toastId }),
-      3
-    );
+    if (!selected.length) return;
     resetSelection();
+    await downloadMusicTrackBatch(selected, parseInt(quality));
   };
 
   const dropAnimation: DropAnimation = {
@@ -382,7 +365,7 @@ export function MusicTrackList({
                   onPlay={() => onPlay(track)} showCheckbox={isSelectionMode}
                   isSelected={selectedIds.has(track.id)} onSelect={() => toggleSelect(track.id)}
                   onRemove={!isSelectionMode && onRemove && showItemRemove ? () => onRemove(track) : undefined}
-                  removeLabel={removeLabel} isDownloaded={downloadedStatusMap.get(track.id) ?? false}
+                  removeLabel={removeLabel}
                   quality={quality} showSourceBadge={showSourceBadge}
                 />
               ) : (
@@ -426,7 +409,6 @@ export function MusicTrackList({
                 isCurrent={track.id === currentTrackId} isPlaying={isPlaying}
                 onPlay={() => {}} showCheckbox={isSelectionMode}
                 isSelected={selectedIds.has(track.id)} 
-                isDownloaded={downloadedStatusMap.get(track.id) ?? false}
                 quality={quality} showSourceBadge={showSourceBadge}
                 dragHandleProps={{ style: { cursor: 'grabbing' } }}
                 isSortable={true}

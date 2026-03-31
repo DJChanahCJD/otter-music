@@ -10,11 +10,46 @@ import { useDownloadStore } from "@/store/download-store";
 import { toastUtils } from "./toast";
 import { getProxyUrl, isProxyUrl } from "@/lib/api/config";
 import { logger } from "@/lib/logger";
+import { processBatchIO } from "@/lib/utils";
 
 /* ================= 主入口 ================= */
 
 export function buildDownloadKey(source: MusicSource, id: string) {
   return `${source}:${id}`;
+}
+
+/**
+ * 单首曲目下载核心逻辑
+ * @param toastId 传入则展示详细进度（单曲模式）；不传则彻底静默（批量模式）
+ */
+async function performDownloadOne(track: MusicTrack, br: number, toastId?: string): Promise<void> {
+  const fileName = buildFileName(track);
+  const isNative = Capacitor.isNativePlatform();
+
+  if (isNative) {
+    const key = buildDownloadKey(track.source, track.id);
+    if (useDownloadStore.getState().hasRecord(key)) return; // 已存在，直接跳过
+  }
+
+  const url = await musicApi.getUrl(track.url_id || track.id, track.source, br);
+  if (!url) throw new Error("无法获取下载链接");
+
+  const doDownload = async (downloadUrl: string) => {
+    await (isNative
+      ? downloadNative(downloadUrl, fileName, track, toastId)
+      : downloadWeb(downloadUrl, fileName, toastId));
+  };
+
+  try {
+    await doDownload(url);
+  } catch (err) {
+    if (isProxyUrl(url)) throw err;
+    logger.warn("Direct download failed, retrying with proxy...", err);
+    if (toastId) {
+      toast.loading("已切换备用下载线路", { id: toastId, icon: "🌐" });
+    }
+    await doDownload(getProxyUrl(url));
+  }
 }
 
 export async function downloadMusicTrack(track: MusicTrack, br = 192) {
@@ -25,46 +60,66 @@ export async function downloadMusicTrack(track: MusicTrack, br = 192) {
   const toastId = toast.loading(`准备下载: ${track.name}`);
 
   try {
-    const fileName = buildFileName(track);
-    const isNative = Capacitor.isNativePlatform();
-
-    if (isNative) {
-      const key = buildDownloadKey(track.source, track.id);
-      if (useDownloadStore.getState().hasRecord(key)) {
-        return toastUtils.info("文件已存在", { id: toastId });
-      }
-    }
-
-    const url = await musicApi.getUrl(track.url_id || track.id, track.source, br);
-    if (!url) throw new Error("无法获取下载链接");
-
-    const performDownload = async (downloadUrl: string) => {
-      await (isNative
-        ? downloadNative(downloadUrl, fileName, track, toastId)
-        : downloadWeb(downloadUrl, fileName, toastId));
-    };
-
-    try {
-      await performDownload(url);
-    } catch (err) {
-      if (isProxyUrl(url)) throw err;
-
-      console.warn("Direct download failed, retrying with proxy...", err);
-      toast.loading("已切换备用下载线路", { id: toastId, icon: "🌐" });
-      
-      const proxyUrl = getProxyUrl(url);
-      await performDownload(proxyUrl);
-    }
-
+    await performDownloadOne(track, br, toastId);
   } catch (err: unknown) {
-    logger.error("downloadMusicTrack", "Download failed", err, {
-      trackId: track.id,
-      source: track.source,
-      bitrate: br,
-    });
+    logger.error("downloadMusicTrack", "Download failed", err, { trackId: track.id, source: track.source });
     const message = err instanceof Error ? err.message : String(err);
     toast.error(`下载失败: ${message}`, { id: toastId });
   }
+}
+
+/**
+ * 批量下载
+ */
+export async function downloadMusicTrackBatch(tracks: MusicTrack[], br = 192) {
+  const validTracks = tracks.filter(t => t.source !== "local");
+  const total = validTracks.length;
+
+  if (!total) {
+    return toastUtils.info("所选曲目无需下载");
+  }
+
+  let done = 0;
+  let failCount = 0;
+  const toastId = toast.loading(`准备下载 0/${total}`);
+  
+  // 节流 UI 更新，保证高并发下主线程顺畅，且最后一次必定刷新
+  let lastProgressUpdate = 0;
+  const updateProgress = (current: number, isLast = false) => {
+    const now = Date.now();
+    if (isLast || now - lastProgressUpdate >= 150) {
+      lastProgressUpdate = now;
+      toast.loading(`下载中 ${current}/${total}`, { id: toastId });
+    }
+  };
+
+  await processBatchIO(
+    validTracks,
+    async (track) => {
+      try {
+        // 批量模式：刻意不传 toastId，底层函数将静默执行，由外部的 updateProgress 统一接管 UI
+        await performDownloadOne(track, br);
+      } catch (err) {
+        failCount++;
+        logger.error("downloadMusicTrackBatch", `Failed: ${track.name || track.id}`, err);
+      } finally {
+        done++;
+        updateProgress(done, done === total);
+      }
+    },
+    undefined,
+    3 // 保持并发数为 3
+  );
+
+  // 下载结果提示
+  const successCount = total - failCount;
+
+  const failMsg = `下载完成（成功 ${successCount} / 失败 ${failCount}）`;
+  const successMsg = `已成功下载全部 ${successCount} 首`;
+
+  failCount > 0 
+    ? toastUtils.warning(failMsg, { id: toastId , duration: 5000 })
+    : toast.success(successMsg, { id: toastId , duration: 3000 });
 }
 
 /* ================= Native 下载 ================= */
@@ -73,7 +128,7 @@ async function downloadNative(
   url: string,
   fileName: string,
   track: MusicTrack,
-  toastId: string
+  toastId?: string
 ) {
   await ensurePermission();
   await ensureDir(AppPaths.Music);
@@ -84,7 +139,7 @@ async function downloadNative(
   });
 
   const listener = await FileTransfer.addListener("progress", ({ bytes, contentLength }) => {
-    if (!contentLength) return;
+    if (!contentLength || !toastId) return;
     const percent = Math.round((bytes / contentLength) * 100);
     toast.loading(`下载 ${percent}%`, { id: toastId });
   });
@@ -98,7 +153,7 @@ async function downloadNative(
     const key = buildDownloadKey(track.source, track.id);
     await useDownloadStore.getState().addRecord(key, fileUri.uri);
 
-    toast.success("下载完成", { id: toastId });
+    if (toastId) toast.success("下载完成", { id: toastId });  // 判断静默执行
 
   } finally {
     await listener.remove();
@@ -110,7 +165,7 @@ async function downloadNative(
 async function downloadWeb(
   url: string,
   fileName: string,
-  toastId: string
+  toastId?: string
 ) {
   const res = await fetch(url);
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -132,7 +187,7 @@ async function downloadWeb(
     chunks.push(value);
     received += value.length;
 
-    if (total) {
+    if (total && toastId) {
       const percent = Math.round((received / total) * 100);
       toast.loading(`下载 ${percent}%`, { id: toastId });
     }
@@ -184,7 +239,7 @@ function triggerBlobDownload(blob: Blob, filename: string, toastId?: string) {
 
   URL.revokeObjectURL(url);
 
-  toast.success("下载完成", { id: toastId });
+  if (toastId) toast.success("下载完成", { id: toastId });
 }
 
 /* ================= 下载记录持久化 ================= */
