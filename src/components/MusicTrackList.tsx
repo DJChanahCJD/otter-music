@@ -168,7 +168,7 @@ export function MusicTrackList({
     const selected = getSelectedTracks();
     if (!selected.length) return;
     addBatchToFavorites(selected);
-    toast.success(`已添加到喜欢 ${selected.length} 首`);
+    toast.success(`已喜欢 ${selected.length} 首`);
     resetSelection();
   };
 

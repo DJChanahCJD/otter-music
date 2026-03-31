@@ -89,10 +89,13 @@ export function RootLayout() {
     if (!currentTrack) return;
     if (isFavorite(currentTrack.id)) {
       removeFromFavorites(currentTrack.id);
+      toast.success("已取消喜欢");
     } else {
       const error = addToFavorites(currentTrack);
       if (error) {
         toastUtils.info(error);
+      } else {
+        toast.success("已喜欢");
       }
     }
   };
