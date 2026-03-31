@@ -44,6 +44,8 @@
 > API 来自GD音乐台(<https://music.gdstudio.xyz>)
 >
 > 数据同步功能依赖主项目 [Otter Music Web](https://github.com/DJChanahCJD/otter-music-web)
+>
+> 最低支持版本：minSdkVersion = 33 (Android 13)
 
 ## 快速开始
 

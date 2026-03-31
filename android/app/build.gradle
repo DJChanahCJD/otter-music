@@ -6,7 +6,7 @@ android {
 
     defaultConfig {
         applicationId "com.otterhub.music"
-        minSdk 24
+        minSdk 33
         targetSdk 36
         versionCode 27
         versionName "2.2.2"
