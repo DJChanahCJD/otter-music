@@ -2,9 +2,10 @@ import toast from "react-hot-toast";
 import { ApiError } from "@/lib/api/config";
 import { useSyncStore } from "@/store/sync-store";
 import { useMusicStore } from "@/store";
-import { syncCheck, syncPull, syncPush } from "@/lib/api/sync";
+import { syncCheck, syncPull, syncPushAndPull } from "@/lib/api/sync";
 import { MusicTrack, Playlist } from "@/types/music";
 import { cleanTrack } from "@/lib/utils/music";
+import { logger } from "./logger";
 
 /** --- 类型定义 --- */
 type SyncSnapshot = { favorites: MusicTrack[]; playlists: Playlist[]; };
@@ -29,8 +30,8 @@ const applySnapshot = (data: SyncSnapshot) => {
 };
 
 /**
- * 数据同步 (Thin Client 模式)
- * 极简逻辑：获取云端版本 -> 盲推本地快照(服务端合并) -> 拉取权威结果覆盖本地
+ * 数据同步 (V2: 一趟式同步)
+ * 逻辑：syncCheck 检查版本 -> syncSync (Push & Pull) -> 失败则 syncPull 兜底
  */
 export async function checkAndSync(force = false): Promise<SyncResult> {
   const { syncKey, lastSyncTime, setLastSyncTime, clearSyncConfig } = useSyncStore.getState();
@@ -44,9 +45,8 @@ export async function checkAndSync(force = false): Promise<SyncResult> {
     } catch (err) {
       if (err instanceof ApiError && err.status === 404) {
         clearSyncConfig();
-        const msg = "同步密钥不存在或已失效";
-        toast.error(msg);
-        return { success: false, error: msg };
+        toast.error("同步密钥不存在或已失效");
+        return { success: false, error: "密钥失效" };
       }
       throw err;
     }
@@ -56,25 +56,35 @@ export async function checkAndSync(force = false): Promise<SyncResult> {
       if (Date.now() - serverTime < SYNC_INTERVAL) return { success: true, skipped: true };
     }
 
-    // 3. 盲推：把本地数据发给服务端，服务端会基于 update_time 进行 LWW 智能合并
-    // (由于后端不再做版本拦截，这里传过去的版本号仅作记录或可省略)
-    await syncPush(syncKey, getSnapshot(), lastSyncTime);
-
-    // 4. 拉取：获取服务端完美合并及 GC 清理后的权威数据
-    const { data, lastSyncTime: newTime } = await syncPull<SyncSnapshot>(syncKey);
+    // 3. 执行核心同步 (一次请求搞定全量 Push + Pull)
+    // 无论云端是否有更新，直接发送本地快照进行 LWW 合并
+    const response = await syncPushAndPull<SyncSnapshot>(syncKey, getSnapshot());
     
-    // 5. 覆盖：无条件信任服务端
-    if (data) {
-      applySnapshot(data);
-      setLastSyncTime(newTime);
+    // 4. 覆盖本地：无条件信任服务端合并后的权威结果
+    if (response.data) {
+      applySnapshot(response.data);
+      setLastSyncTime(response.lastSyncTime);
     }
 
     toast.success(serverTime > lastSyncTime ? "已同步云端新数据" : "同步成功");
     return { success: true };
 
   } catch (err) {
-    const msg = err instanceof Error ? err.message : "同步失败";
-    toast.error(msg);
-    return { success: false, error: msg };
+    // 5. 兜底逻辑：如果 POST 失败，尝试全量拉取一次
+    logger.error("Sync", "Sync failed", err);
+    try {
+      const pullRes = await syncPull<SyncSnapshot>(syncKey);
+      if (pullRes.data) {
+        applySnapshot(pullRes.data);
+        setLastSyncTime(pullRes.lastSyncTime);
+        toast("已从云端恢复数据");
+        return { success: true };
+      }
+    } catch (fallbackErr) {
+      const msg = err instanceof Error ? err.message : "同步失败";
+      toast.error(msg);
+      return { success: false, error: msg };
+    }
+    return { success: false, error: "未知同步错误" };
   }
 }
