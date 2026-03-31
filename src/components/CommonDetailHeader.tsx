@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useState, memo } from "react";
 import { MusicCover } from "@/components/MusicCover";
 import { format } from "date-fns";
+import { cn } from "@/lib/utils"; // 假设你有 cn 工具函数
 
 export interface CommonDetailHeaderProps {
   title: string;
@@ -12,7 +13,7 @@ export interface CommonDetailHeaderProps {
   fallbackIcon?: React.ReactNode;
 }
 
-export function CommonDetailHeader({
+export const CommonDetailHeader = memo(function CommonDetailHeader({
   title,
   coverUrl,
   description,
@@ -22,58 +23,40 @@ export function CommonDetailHeader({
   fallbackIcon,
 }: CommonDetailHeaderProps) {
   const [isExpanded, setIsExpanded] = useState(false);
-  
-  const publishDateStr = publishTime
-    ? new Date(publishTime).toLocaleDateString()
-    : null;
 
   return (
-    <div className="w-full shrink-0">
-      <div className="p-5 flex gap-4 items-start">
-        <MusicCover
-          src={coverUrl}
-          alt={title}
-          // 封面图固定大小，防止被压缩
-          className="shrink-0 w-24 h-24 rounded-xl object-cover shadow-md ring-1 ring-white/10"
-          fallbackIcon={fallbackIcon}
-        />
+    <div className="w-full shrink-0 p-5 flex gap-4 items-start">
+      <MusicCover
+        src={coverUrl}
+        alt={title}
+        className="shrink-0 size-24 rounded-xl shadow-md ring-1 ring-white/10 object-cover"
+        fallbackIcon={fallbackIcon}
+      />
 
-        <div className="flex-1 min-w-0 flex flex-col gap-1.5 py-0.5">
-          <h2
-            className="text-base font-bold leading-tight text-foreground/90 line-clamp-2"
-            title={title}
-          >
-            {title}
-          </h2>
+      <div className="flex-1 min-w-0 flex flex-col gap-1 py-0.5">
+        <h2 className="text-base font-bold text-foreground/90 line-clamp-2" title={title}>
+          {title}
+        </h2>
 
-          <div className="flex items-center flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground/80">
-            {creator && (
-              <span className="truncate max-w-[120px]">{creator}</span>
-            )}
-            <span className="shrink-0">
-              {countDesc}
-            </span>
-            {publishDateStr && (
-              <span className="shrink-0">
-                {format(publishDateStr, "yyyy-MM-dd")}
-              </span>
-            )}
-          </div>
-
-          {description && (
-            <div className="mt-1 group">
-              <p
-                className={`text-[11px] text-muted-foreground/70 leading-relaxed cursor-pointer hover:text-muted-foreground/90 transition-colors ${
-                  isExpanded ? "" : "line-clamp-2"
-                }`}
-                onClick={() => setIsExpanded(!isExpanded)}
-              >
-                {description}
-              </p>
-            </div>
-          )}
+        <div className="flex items-center flex-wrap gap-x-3 text-xs text-muted-foreground/80">
+          {creator && <span className="truncate max-w-[140px]">{creator}</span>}
+          {countDesc && <span>{countDesc}</span>}
+          {publishTime && <span>{format(publishTime, "yyyy-MM-dd")}</span>}
         </div>
+
+        {description && (
+          <p
+            onClick={() => setIsExpanded(!isExpanded)}
+            className={cn(
+              "mt-1 text-[11px] leading-relaxed transition-colors cursor-pointer",
+              "text-muted-foreground/60 hover:text-muted-foreground/90",
+              isExpanded ? "whitespace-pre-line" : "line-clamp-2"
+            )}
+          >
+            {description}
+          </p>
+        )}
       </div>
     </div>
   );
-}
+});
