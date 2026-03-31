@@ -50,15 +50,15 @@ export const useDownloadStore = create<DownloadStoreState>((set, get) => ({
    * 2. 同步写入磁盘
    */
   addRecord: async (key, uri) => {
-    const records = {
-      ...get().records,
-      [key]: uri,
-    }
-
-    set({ records })
+    // 使用函数式更新，避免并发写入时的读-改-写竞态
+    let latestRecords: Record<string, string> = {};
+    set(s => {
+      latestRecords = { ...s.records, [key]: uri };
+      return { records: latestRecords };
+    });
 
     try {
-      await saveDownloadRecordsToDisk(records)
+      await saveDownloadRecordsToDisk(latestRecords)
     } catch (error) {
       console.error('保存下载记录失败:', error)
     }

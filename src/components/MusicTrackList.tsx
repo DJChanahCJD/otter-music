@@ -49,6 +49,7 @@ interface MusicTrackListProps {
   currentTrackId?: string;
   isPlaying?: boolean;
   onRemove?: (track: MusicTrack, silent?: boolean) => void | Promise<void>;
+  onBatchRemove?: (tracks: MusicTrack[]) => void;
   onLoadMore?: () => void;
   hasMore?: boolean;
   loading?: boolean;
@@ -91,7 +92,7 @@ function SortableTrackItem({ track, children }: { track: MusicTrack, children: R
 
 export function MusicTrackList({
   tracks, onPlay, playlistId, currentTrackId, isPlaying,
-  onRemove, onLoadMore, hasMore, loading,
+  onRemove, onBatchRemove, onLoadMore, hasMore, loading,
   emptyMessage = "暂无歌曲", removeLabel = "删除",
   showSourceBadge = false,
   onReorder,
@@ -133,13 +134,14 @@ export function MusicTrackList({
     }
   };
 
-  const { addToFavorites, addToPlaylist, createPlaylist, addToNextPlay, quality } = useMusicStore(
+  const { createPlaylist, quality,
+          addBatchToFavorites, addBatchToPlaylist, addBatchToNextPlay } = useMusicStore(
     useShallow((state) => ({
-      addToFavorites: state.addToFavorites,
-      addToPlaylist: state.addToPlaylist,
       createPlaylist: state.createPlaylist,
-      addToNextPlay: state.addToNextPlay,
       quality: state.quality,
+      addBatchToFavorites: state.addBatchToFavorites,
+      addBatchToPlaylist: state.addBatchToPlaylist,
+      addBatchToNextPlay: state.addBatchToNextPlay,
     }))
   );
   const playlists = useActivePlaylists();
@@ -172,21 +174,47 @@ export function MusicTrackList({
 
   const getSelectedTracks = useCallback(() => tracks.filter((t) => selectedIds.has(t.id)), [tracks, selectedIds]);
 
-  const handleBatch = async (fn: (t: MusicTrack) => void, tip?: string) => {
+  const handleBatchFavorites = () => {
     const selected = getSelectedTracks();
-    const toastId = toast.loading(`处理中 0/${selected.length}`);
-    await processBatchCPU(selected, fn, (current, total) => toast.loading(`处理中 ${current}/${total}`, { id: toastId }));
-    tip ? toast.success(`${tip} ${selected.length} 首`, { id: toastId }) : toast.dismiss(toastId);
+    if (!selected.length) return;
+    addBatchToFavorites(selected);
+    toast.success(`已添加到喜欢 ${selected.length} 首`);
+    resetSelection();
+  };
+
+  /** 批量添加到歌单（单次 setState，无迭代） */
+  const handleBatchAddToPlaylist = (playlistId: string, tip: string) => {
+    const selected = getSelectedTracks();
+    if (!selected.length) return;
+    addBatchToPlaylist(playlistId, selected);
+    toast.success(`${tip} ${selected.length} 首`);
+    resetSelection();
+  };
+
+  /** 批量添加到下一首（单次 setState，无迭代） */
+  const handleBatchNextPlay = () => {
+    const selected = getSelectedTracks();
+    if (!selected.length) return;
+    addBatchToNextPlay(selected);
+    toast.success(`已添加 ${selected.length} 首`);
     resetSelection();
   };
 
   const handleBatchRemove = async () => {
-    if (!onRemove) return;
+    if (!onRemove && !onBatchRemove) return;
     const count = selectedIds.size;
     if (!confirm(`确定${removeLabel}选中的 ${count} 首歌曲吗？`)) return;
-    
+
+    const selected = getSelectedTracks();
+    if (onBatchRemove) {
+      onBatchRemove(selected);
+      toast.success(`已${removeLabel} ${count} 首`);
+      resetSelection();
+      return;
+    }
+
     const toastId = toast.loading(`${removeLabel}中 0/${count}`);
-    await processBatchCPU(getSelectedTracks(), (t) => onRemove(t, true), (c, t) => toast.loading(`${removeLabel}中 ${c}/${t}`, { id: toastId }));
+    await processBatchCPU(selected, (t) => onRemove!(t, true), (c, t) => toast.loading(`${removeLabel}中 ${c}/${t}`, { id: toastId }));
     toast.success(`已${removeLabel} ${count} 首`, { id: toastId });
     resetSelection();
   };
@@ -219,9 +247,11 @@ export function MusicTrackList({
     const name = window.prompt("输入歌单名称");
     if (!name) return;
     const id = createPlaylist(name);
-    selectedIds.size > 0 
-      ? handleBatch((t) => addToPlaylist(id, t), `已添加到「${name}」`)
-      : toast.success("已创建歌单");
+    if (selectedIds.size > 0) {
+      handleBatchAddToPlaylist(id, `已添加到「${name}」`);
+    } else {
+      toast.success("已创建歌单");
+    }
   };
 
   const virtualizer = useVirtualizer({
@@ -270,7 +300,7 @@ export function MusicTrackList({
                 size="sm" 
                 variant="secondary" 
                 className="h-7 px-2 text-[11px]" 
-                onClick={() => handleBatch(addToNextPlay, "已添加")} 
+                onClick={handleBatchNextPlay} 
                 disabled={selectedIds.size === 0}
               >
                 <Plus className="w-3 h-3" /> 下一首
@@ -291,7 +321,7 @@ export function MusicTrackList({
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent side="bottom" align="end" className="w-40 p-1">
-                  <div className="flex items-center px-2 py-1.5 text-xs rounded-sm hover:bg-accent cursor-pointer" onClick={() => handleBatch(addToFavorites, "已添加到喜欢")}>
+                  <div className="flex items-center px-2 py-1.5 text-xs rounded-sm hover:bg-accent cursor-pointer" onClick={handleBatchFavorites}>
                     <Heart className="mr-2 h-3.5 w-3.5" /> 喜欢
                   </div>
                   <div className="flex items-center px-2 py-1.5 text-xs rounded-sm hover:bg-accent cursor-pointer" onClick={handleBatchDownload}>
@@ -299,14 +329,14 @@ export function MusicTrackList({
                   </div>
                   <div className="border-t my-1" />
                   {playlists.map((p) => (
-                    <div key={p.id} className="flex items-center px-2 py-1.5 text-xs rounded-sm hover:bg-accent cursor-pointer" onClick={() => handleBatch((t) => addToPlaylist(p.id, t), `已添加到「${p.name}」`)}>
+                    <div key={p.id} className="flex items-center px-2 py-1.5 text-xs rounded-sm hover:bg-accent cursor-pointer" onClick={() => handleBatchAddToPlaylist(p.id, `已添加到「${p.name}」`)}>
                       <ListMusic className="mr-2 h-3.5 w-3.5 opacity-50" /> <span className="truncate">{p.name}</span>
                     </div>
                   ))}
                   <div className="flex items-center px-2 py-1.5 text-xs rounded-sm hover:bg-accent cursor-pointer text-muted-foreground" onClick={handleCreatePlaylist}>
                     <Plus className="mr-2 h-3.5 w-3.5" /> 新建歌单
                   </div>
-                  {onRemove && (
+                  {(onRemove || onBatchRemove) && (
                     <>
                       <div className="border-t my-1" />
                       <div className="flex items-center px-2 py-1.5 text-xs rounded-sm hover:bg-accent cursor-pointer text-destructive" onClick={handleBatchRemove}>

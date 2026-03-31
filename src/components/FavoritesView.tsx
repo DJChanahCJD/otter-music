@@ -82,6 +82,10 @@ export function FavoritesView({
     if (!silent) toast.success("已取消喜欢");
   };
 
+  const handleBatchRemove = (tracks: MusicTrack[]) => {
+    useMusicStore.getState().removeBatchFromFavorites(tracks.map(t => t.id));
+  };
+
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
@@ -134,6 +138,7 @@ export function FavoritesView({
           playlistId="favorites"
           onReorder={!searchQuery.trim() ? onReorder : undefined}
           onRemove={handleRemove}
+          onBatchRemove={handleBatchRemove}
           showItemRemove={false}
         />
       </div>

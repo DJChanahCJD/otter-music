@@ -41,6 +41,7 @@ interface MusicPlaylistViewProps {
    */
   onPlay: (track: MusicTrack | null, index?: number) => void;
   onRemove?: (track: MusicTrack, silent?: boolean) => void | Promise<void>;
+  onBatchRemove?: (tracks: MusicTrack[]) => void;
   onRename?: (playlistId: string, newName: string) => void;
   onDelete?: (playlistId: string) => void;
   description?: string;
@@ -60,6 +61,7 @@ export function MusicPlaylistView({
   playlistId,
   onPlay,
   onRemove,
+  onBatchRemove,
   onRename,
   onDelete,
   description,
@@ -276,6 +278,7 @@ export function MusicPlaylistView({
           currentTrackId={currentTrackId}
           isPlaying={isPlaying}
           onRemove={onRemove}
+          onBatchRemove={onBatchRemove}
           removeLabel={removeLabel}
           onReorder={isPersonalPlaylist && !searchQuery ? handleReorder : undefined}
         />

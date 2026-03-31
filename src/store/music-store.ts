@@ -34,6 +34,11 @@ export interface MusicState {
   renamePlaylist: (id: string, name: string) => void;
   updatePlaylist: (id: string, data: Partial<Playlist>) => void;
   addToPlaylist: (playlistId: string, track: MusicTrack) => void;
+  addBatchToFavorites: (tracks: MusicTrack[]) => void;
+  addBatchToPlaylist: (playlistId: string, tracks: MusicTrack[]) => void;
+  addBatchToNextPlay: (tracks: MusicTrack[]) => void;
+  removeBatchFromFavorites: (trackIds: string[]) => void;
+  removeBatchFromPlaylist: (playlistId: string, trackIds: string[]) => void;
   removeFromPlaylist: (playlistId: string, trackId: string) => void;
   setPlaylistTracks: (playlistId: string, tracks: MusicTrack[]) => void;
   updateTrackInPlaylists: (trackId: string, newTrack: MusicTrack) => number;
@@ -158,6 +163,18 @@ export const useMusicStore = create<MusicState>()(
         };
       }),
       removeFromPlaylist: (pid, tid) => set(s => ({ playlists: updateList(s.playlists, pid, p => ({ tracks: updateList(p.tracks, tid, { is_deleted: true }) })) })),
+      removeBatchFromFavorites: (ids) => set(s => {
+        const idSet = new Set(ids);
+        return { favorites: s.favorites.map(t => idSet.has(t.id) ? { ...t, is_deleted: true, update_time: Date.now() } : t) };
+      }),
+      removeBatchFromPlaylist: (pid, ids) => set(s => {
+        const idSet = new Set(ids);
+        return {
+          playlists: updateList(s.playlists, pid, p => ({
+            tracks: p.tracks.map(t => idSet.has(t.id) ? { ...t, is_deleted: true, update_time: Date.now() } : t)
+          }))
+        };
+      }),
       setPlaylistTracks: (pid, tracks) => set(s => ({ playlists: updateList(s.playlists, pid, { tracks: tracks.map(withMeta), is_deleted: false }) })),
       updateTrackInPlaylists: (tid, newTrack) => {
         let count = 0;
@@ -225,6 +242,53 @@ export const useMusicStore = create<MusicState>()(
           return { queue: [tracks[realIdx], ...rest], originalQueue: tracks, currentIndex: 0, currentAudioTime: 0, hasUserGesture: true, contextId: contextId ?? null };
         }
         return { queue: tracks, originalQueue: tracks, currentIndex: idx, currentAudioTime: 0, hasUserGesture: true, contextId: contextId ?? null };
+      }),
+
+      addBatchToFavorites: (tracks) => set(s => {
+        const eligible = tracks.filter(t => t.source !== 'local');
+        if (!eligible.length) return s;
+        const deletedIds = new Set(s.favorites.filter(t => t.is_deleted).map(t => t.id));
+        const activeIds = new Set(s.favorites.filter(t => !t.is_deleted).map(t => t.id));
+        // 过滤掉已在收藏中（且未删除）的条目，同时清理已在回收站的旧记录
+        const toAdd = eligible
+          .filter(t => !activeIds.has(t.id))
+          .map(t => ({ ...withMeta(t), is_deleted: false }));
+        if (!toAdd.length) return s;
+        const idsToAdd = new Set(toAdd.map(t => t.id));
+        const base = s.favorites.filter(t => !deletedIds.has(t.id) || !idsToAdd.has(t.id));
+        return { favorites: [...toAdd, ...base] };
+      }),
+
+      addBatchToPlaylist: (pid, tracks) => set(s => {
+        const eligible = tracks.filter(t => t.source !== 'local');
+        if (!eligible.length) return s;
+        return {
+          playlists: updateList(s.playlists, pid, p => {
+            const existingIds = new Set(p.tracks.map(t => t.id));
+            const toAdd = eligible
+              .filter(t => !existingIds.has(t.id))
+              .map(t => ({ ...withMeta(t), is_deleted: false }));
+            // 对已存在的条目执行 upsert（更新元数据、取消删除标记）
+            const updatedTracks = p.tracks.map(t => {
+              const incoming = eligible.find(e => e.id === t.id);
+              return incoming ? { ...withMeta(incoming), is_deleted: false } : t;
+            });
+            return { tracks: [...toAdd, ...updatedTracks], is_deleted: false };
+          })
+        };
+      }),
+
+      addBatchToNextPlay: (tracks) => set(s => {
+        if (!tracks.length) return s;
+        if (!s.queue.length) {
+          return { queue: [...tracks], originalQueue: s.isShuffle ? [...tracks] : [], currentIndex: 0 };
+        }
+        // 倒序插入，保证最终顺序与 tracks 数组一致（第一首紧跟当前曲目）
+        let state = s as MusicState;
+        for (const track of [...tracks].reverse()) {
+          state = { ...state, ...insertNext(state, track, false) } as MusicState;
+        }
+        return { queue: state.queue, originalQueue: state.originalQueue, currentIndex: state.currentIndex };
       }),
 
       addToNextPlay: (track) => set(s => insertNext(s, track, false)),

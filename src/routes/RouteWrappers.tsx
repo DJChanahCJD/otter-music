@@ -117,6 +117,7 @@ export const PlaylistDetailRoute = withSuspense(() => {
           store.playContext(activeTracks, Math.max(0, idx), `playlist-${id}`);
         }}
         onRemove={(t) => useMusicStore.getState().removeFromPlaylist(id!, t.id)}
+        onBatchRemove={(tracks) => useMusicStore.getState().removeBatchFromPlaylist(id!, tracks.map(t => t.id))}
         onRename={(pid, newName) => useMusicStore.getState().renamePlaylist(pid, newName)}
         onDelete={(pid) => {
           useMusicStore.getState().deletePlaylist(pid);
