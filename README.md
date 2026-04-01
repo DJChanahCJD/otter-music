@@ -43,7 +43,7 @@
 
 > API 来自GD音乐台(<https://music.gdstudio.xyz>)
 >
-> 数据同步由 [Otter Music Web](https://github.com/DJChanahCJD/otter-music-web) 驱动，通过管理员手动分配的 `SYNC_KEY` 接入。存储基于 Cloudflare KV（上限 25 MB），单用户理论可稳定同步 4 万首歌曲
+> 数据同步由 [Otter Music Web](https://github.com/DJChanahCJD/otter-music-web) 驱动，通过管理员手动分配的 `SYNC_KEY` 接入。存储基于 Cloudflare KV（上限 25 MB），单用户理论可稳定同步 5 万首歌曲
 >
 > 最低支持版本：minSdkVersion = 24 (Android 7.0)
 >
