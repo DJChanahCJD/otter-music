@@ -43,7 +43,7 @@
 
 > API 来自GD音乐台(<https://music.gdstudio.xyz>)
 >
-> 数据同步功能依赖主项目 [Otter Music Web](https://github.com/DJChanahCJD/otter-music-web)
+> 数据同步由 [Otter Music Web](https://github.com/DJChanahCJD/otter-music-web) 驱动，通过管理员手动分配的 `SYNC_KEY` 接入。存储基于 Cloudflare KV（上限 25 MB），单用户理论可稳定同步 4 万首歌曲
 >
 > 最低支持版本：minSdkVersion = 24 (Android 7.0)
 >
@@ -114,14 +114,12 @@ src/
 
 ## TODO
 
-- [ ] 评估新增稳定音源接入方案 Meting API
 - [ ] 用 Tauri 开发桌面端？
 
 ### Low Priority
 
 - [ ] 媒体状态同步一致性（Web 与 Native MediaSession）
 - [ ] UI 重构（极简高效，打开即听）
-- [ ] 全屏模式支持左右滑动切歌（含防误触与过渡动效）
 - [ ] 随机歌单功能：从热门歌单池随机，耗尽后自动补充
 
 ## 参考资料
