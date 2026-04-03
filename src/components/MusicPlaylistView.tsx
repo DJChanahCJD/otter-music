@@ -87,7 +87,7 @@ export function MusicPlaylistView({
 
   const handleReorder = (newOrder: MusicTrack[]) => {
     if (playlistId && isPersonalPlaylist) {
-      useMusicStore.getState().setPlaylistTracks(playlistId, newOrder);
+      useMusicStore.getState().replaceActivePlaylistTracks(playlistId, newOrder);
     }
   };
 
@@ -131,7 +131,7 @@ export function MusicPlaylistView({
     }
 
     // 2. Update Playlist
-    musicStore.setPlaylistTracks(playlistId, result.tracks);
+    musicStore.removeBatchFromPlaylist(playlistId, result.trackIdsToDelete);
     toast.success(`已移除 ${result.removedCount} 首重复歌曲`);
   };
 

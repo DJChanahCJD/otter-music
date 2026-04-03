@@ -8,7 +8,13 @@ vi.mock("@/lib/storage-adapter", () => ({
   },
 }));
 
+vi.mock("@/lib/crypto-storage", () => ({
+  encryptString: vi.fn(async (str: string) => `mock_encrypted:${str}`),
+  decryptString: vi.fn(async (str: string) => str.replace("mock_encrypted:", "")),
+}));
+
 import { useSyncStore } from "./sync-store";
+
 
 describe("sync store", () => {
   it("clears sync key and last sync time together", () => {

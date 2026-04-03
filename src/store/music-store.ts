@@ -16,6 +16,10 @@ const withMeta = (track: MusicTrack): MusicTrack => ({
   update_time: Date.now(),
   is_deleted: track.is_deleted === true,
 });
+const replaceActiveWithTombstones = (current: MusicTrack[], active: MusicTrack[]): MusicTrack[] => [
+  ...active.map(track => ({ ...withMeta(track), is_deleted: false })),
+  ...current.filter(track => track.is_deleted),
+];
 const updateList = <T extends { id: string }>(list: T[], id: string, updater: Partial<T> | ((item: T) => Partial<T>)) =>
   list.map(item => item.id === id ? { ...item, update_time: Date.now(), ...(typeof updater === 'function' ? updater(item) : updater) } : item);
 
@@ -26,6 +30,7 @@ export interface MusicState {
   removeFromFavorites: (trackId: string) => void;
   restoreFromFavorites: (trackId: string) => void;
   setFavorites: (tracks: MusicTrack[]) => void;
+  replaceActiveFavorites: (tracks: MusicTrack[]) => void;
   reorderFavorites: (tracks: MusicTrack[]) => void;
   isFavorite: (trackId: string) => boolean;
   createPlaylist: (name: string, coverUrl?: string) => string;
@@ -41,6 +46,7 @@ export interface MusicState {
   removeBatchFromPlaylist: (playlistId: string, trackIds: string[]) => void;
   removeFromPlaylist: (playlistId: string, trackId: string) => void;
   setPlaylistTracks: (playlistId: string, tracks: MusicTrack[]) => void;
+  replaceActivePlaylistTracks: (playlistId: string, tracks: MusicTrack[]) => void;
   updateTrackInPlaylists: (trackId: string, newTrack: MusicTrack) => number;
 
   quality: string;
@@ -137,6 +143,9 @@ export const useMusicStore = create<MusicState>()(
       removeFromFavorites: (id) => set(s => ({ favorites: updateList(s.favorites, id, { is_deleted: true }) })),
       restoreFromFavorites: (id) => set(s => ({ favorites: updateList(s.favorites, id, { is_deleted: false }) })),
       setFavorites: (favorites) => set({ favorites: favorites.map(withMeta) }),
+      replaceActiveFavorites: (favorites) => set(s => ({
+        favorites: replaceActiveWithTombstones(s.favorites, favorites),
+      })),
       reorderFavorites: (favorites) => set(s => ({ 
         favorites: [...favorites, ...s.favorites.filter(t => t.is_deleted)] 
       })),
@@ -176,6 +185,12 @@ export const useMusicStore = create<MusicState>()(
         };
       }),
       setPlaylistTracks: (pid, tracks) => set(s => ({ playlists: updateList(s.playlists, pid, { tracks: tracks.map(withMeta), is_deleted: false }) })),
+      replaceActivePlaylistTracks: (pid, tracks) => set(s => ({
+        playlists: updateList(s.playlists, pid, p => ({
+          tracks: replaceActiveWithTombstones(p.tracks, tracks),
+          is_deleted: false,
+        })),
+      })),
       updateTrackInPlaylists: (tid, newTrack) => {
         let count = 0;
         set(s => ({

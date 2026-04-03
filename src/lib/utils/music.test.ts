@@ -81,9 +81,8 @@ describe('music utils', () => {
       
       const result = deduplicateTracks(tracks, isFavorite, isDownloaded);
       
-      expect(result.tracks).toHaveLength(2);
       expect(result.removedCount).toBe(1);
-      expect(result.tracks.map(t => t.id)).toEqual(['1', '2']);
+      expect(result.trackIdsToDelete).toEqual(['1']);
     });
 
     it('should group tracks by normalized name and artist', () => {
@@ -98,11 +97,9 @@ describe('music utils', () => {
       
       const result = deduplicateTracks(tracks, isFavorite, isDownloaded);
       
-      expect(result.tracks).toHaveLength(2);
       expect(result.removedCount).toBe(1);
       // Logic prefers later index if everything else equal, so '2' (Song A Live) should win over '1'
-      expect(result.tracks.map(t => t.id)).toContain('2');
-      expect(result.tracks.map(t => t.id)).toContain('3');
+      expect(result.trackIdsToDelete).toEqual(['1']);
     });
 
     it('should prioritize downloaded tracks', () => {
@@ -116,8 +113,7 @@ describe('music utils', () => {
       
       const result = deduplicateTracks(tracks, isFavorite, isDownloaded);
       
-      expect(result.tracks).toHaveLength(1);
-      expect(result.tracks[0].id).toBe('2'); // Should keep the downloaded one
+      expect(result.trackIdsToDelete).toEqual(['1']); // Should keep the downloaded one
     });
 
     it('should prioritize favorite tracks', () => {
@@ -131,8 +127,7 @@ describe('music utils', () => {
       
       const result = deduplicateTracks(tracks, isFavorite, isDownloaded);
       
-      expect(result.tracks).toHaveLength(1);
-      expect(result.tracks[0].id).toBe('2');
+      expect(result.trackIdsToDelete).toEqual(['1']);
     });
 
     it('should mark winner to like if loser was liked', () => {
@@ -148,8 +143,7 @@ describe('music utils', () => {
       
       const result = deduplicateTracks(tracks, isFavorite, isDownloaded);
       
-      expect(result.tracks).toHaveLength(1);
-      expect(result.tracks[0].id).toBe('2'); // t2 wins
+      expect(result.trackIdsToDelete).toEqual(['1']); // t2 wins
       expect(result.tracksToLike).toHaveLength(1);
       expect(result.tracksToLike[0].id).toBe('2'); // t2 should be liked
     });

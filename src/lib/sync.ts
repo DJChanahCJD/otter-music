@@ -32,7 +32,6 @@ const applySnapshot = (data: SyncSnapshot) => {
 /**
  * 数据同步 (V2: 一趟式同步)
  * - 本地节流：非强制同步且 1 小时内已同步，直接跳过
- * - 携带 clientVersion 供后端两级短路判断，减少不必要的反序列化与 KV 写入
  * - POST 失败时 syncPull 兜底
  */
 export async function checkAndSync(force = false): Promise<SyncResult> {
@@ -45,14 +44,8 @@ export async function checkAndSync(force = false): Promise<SyncResult> {
   }
 
   try {
-    // 一趟式 Push & Pull，携带 clientVersion 供后端短路判断
-    const response = await syncPushAndPull<SyncSnapshot>(syncKey, getSnapshot(), lastSyncTime);
-
-    if (response.data === null) {
-      // Level 1 短路：服务端确认版本一致，本地数据无需更新
-      setLastSyncTime(response.lastSyncTime);
-      return { success: true, skipped: true };
-    }
+    // 一趟式 Push & Pull，后端执行 LWW 合并后返回权威全量数据
+    const response = await syncPushAndPull<SyncSnapshot>(syncKey, getSnapshot());
 
     // 无条件信任服务端合并后的权威结果
     applySnapshot(response.data);

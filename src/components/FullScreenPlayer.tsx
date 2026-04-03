@@ -281,7 +281,7 @@ export function FullScreenPlayer({
             <MusicCover
               src={coverUrl}
               alt={currentTrack?.name}
-              className="h-full w-full object-cover"
+              className="h-full w-full object-cover dark"
               iconClassName="h-16 w-16 text-white/30"
             />
           </div>

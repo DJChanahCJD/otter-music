@@ -62,8 +62,7 @@ export function FavoritesView({
       return;
     }
 
-    // Update Favorites
-    musicStore.setFavorites(result.tracks);
+    musicStore.removeBatchFromFavorites(result.trackIdsToDelete);
     toast.success(`已移除 ${result.removedCount} 首重复歌曲`);
   };
 
