@@ -105,10 +105,6 @@ export function getProxyUrl(url: string) {
   return `${API_URL}/proxy?url=${encodeURIComponent(url)}`;
 }
 
-export function getProxyStreamUrl(url: string) {
-  return `${API_URL}/proxy/stream?url=${encodeURIComponent(url)}`;
-}
-
 /**
  * 判断当前 URL 是否已经是代理 URL，防止死循环
  */

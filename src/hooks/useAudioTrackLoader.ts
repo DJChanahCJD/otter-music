@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 import { retry } from "@/lib/utils";
 import { musicApi } from "@/lib/music-api";
-import { getProxyStreamUrl } from "@/lib/api";
+import { getProxyUrl } from "@/lib/api";
 import { useMusicStore } from "@/store/music-store";
 import { useSourceQualityStore } from "@/store/source-quality-store";
 import { useDownloadStore } from "@/store/download-store";
@@ -247,7 +247,7 @@ export function useAudioTrackLoader(
 
           if (currentTrackSource !== "local" && fallbackStageRef.current.stage === "none" && remoteUrlRef.current) {
             const remoteUrl = remoteUrlRef.current;
-            const proxyUrl = getProxyStreamUrl(remoteUrl);
+            const proxyUrl = getProxyUrl(remoteUrl);
             fallbackStageRef.current.stage = "proxy";
             toast("已切换备用线路", { icon: "🌐", id: "proxy-notice" });
             await setSourceAndPlay(proxyUrl);
