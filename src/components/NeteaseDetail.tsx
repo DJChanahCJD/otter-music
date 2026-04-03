@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { PageLayout } from "@/components/PageLayout";
 import { MusicTrackList } from "@/components/MusicTrackList";
 import { 
@@ -19,6 +20,12 @@ import { DetailSkeleton } from "@/components/skeletons/DetailSkeleton";
 import { CommonDetailHeader } from "@/components/CommonDetailHeader";
 import { SongDetail } from "@/lib/netease/netease-raw-types";
 import { ArtistAlbumSheet } from "@/components/ArtistAlbumSheet";
+import {
+  ArtistAlbumSheetNavigationState,
+  createArtistAlbumSheetState,
+  getArtistAlbumSheetBackTarget,
+  shouldRestoreArtistAlbumSheet,
+} from "@/lib/navigation/netease-detail-navigation";
 import { useMarketSession } from "@/store/session/market-session";
 import { logger } from "@/lib/logger";
 
@@ -65,6 +72,8 @@ export function NeteaseDetail({
   currentTrackId,
   isPlaying,
 }: NeteaseDetailProps) {
+  const navigate = useNavigate();
+  const location = useLocation();
   const scrollRef = useRef<HTMLDivElement>(null);
   const [retryCount, setRetryCount] = useState(0);
   const [isAlbumSheetOpen, setIsAlbumSheetOpen] = useState(false);
@@ -82,6 +91,31 @@ export function NeteaseDetail({
   const { createPlaylist, setPlaylistTracks } = useMusicStore();
   const { cookie } = useNeteaseStore();
   const { toggleAlbumInSession } = useMarketSession();
+  const navigationState =
+    (location.state as ArtistAlbumSheetNavigationState | null | undefined) ?? null;
+
+  useEffect(() => {
+    if (!shouldRestoreArtistAlbumSheet(type, id, navigationState)) return;
+    setIsAlbumSheetOpen(true);
+
+    navigate(location.pathname, { replace: true, state: null });
+  }, [id, location.pathname, navigate, navigationState, type]);
+
+  const handleBack = () => {
+    const backTarget = getArtistAlbumSheetBackTarget(type, navigationState);
+    if (backTarget) {
+      navigate(`/netease-artist/${backTarget.artistId}`, {
+        replace: true,
+        state: createArtistAlbumSheetState(
+          backTarget.artistId,
+          backTarget.artistName,
+        ),
+      });
+      return;
+    }
+
+    onBack();
+  };
 
   const handleShare = async () => {
     if (!detail || !id) return;
@@ -247,12 +281,12 @@ export function NeteaseDetail({
     return () => { active = false; };
   }, [id, type, retryCount, cookie]);
 
-  if (loading) return <DetailSkeleton onBack={onBack} />;
+  if (loading) return <DetailSkeleton onBack={handleBack} />;
 
   if (error) {
     return (
-      <PageLayout title="Error" onBack={onBack}>
-        <PageError onBack={onBack} onRetry={() => setRetryCount((c) => c + 1)} />
+      <PageLayout title="Error" onBack={handleBack}>
+        <PageError onBack={handleBack} onRetry={() => setRetryCount((c) => c + 1)} />
       </PageLayout>
     );
   }
@@ -260,7 +294,7 @@ export function NeteaseDetail({
   return (
     <PageLayout
       title={detail?.name || "详情"}
-      onBack={onBack}
+      onBack={handleBack}
       action={
         <div className="flex items-center">
           {type === "artist" && (
@@ -311,7 +345,7 @@ export function NeteaseDetail({
         )}
         <div className="flex-1 min-h-0">
           <MusicTrackList
-            tracks={tracks} onPlay={(track) => onPlay(track, tracks)} currentTrackId={currentTrackId}
+            tracks={tracks} scrollContainerRef={scrollRef} onPlay={(track) => onPlay(track, tracks)} currentTrackId={currentTrackId}
             isPlaying={isPlaying} emptyMessage="列表为空"
             onLoadMore={type === 'artist' ? handleLoadMore : undefined}
             hasMore={hasMore} loading={loading || loadingMore}

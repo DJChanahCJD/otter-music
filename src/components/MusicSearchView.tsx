@@ -43,6 +43,7 @@ export function MusicSearchView({
   currentTrackId,
   isPlaying,
 }: MusicSearchViewProps) {
+  const resultsScrollRef = useRef<HTMLDivElement>(null);
   const {
     source,
     setSource,
@@ -300,17 +301,20 @@ export function MusicSearchView({
         {!searchQuery.trim() ? (
           <PlaylistMarket />
         ) : (
-          <MusicTrackList
-            tracks={searchResults}
-            onPlay={(track) => onPlay(track, searchResults, "search")}
-            currentTrackId={currentTrackId}
-            isPlaying={isPlaying}
-            loading={searchLoading}
-            hasMore={searchHasMore}
-            onLoadMore={() => fetchPage(searchPage + 1)}
-            emptyMessage={searchLoading ? "搜索中..." : "未找到相关结果"}
-            showSourceBadge={true}
-          />
+          <div ref={resultsScrollRef} className="flex h-full min-h-0 flex-col overflow-y-auto">
+            <MusicTrackList
+              tracks={searchResults}
+              scrollContainerRef={resultsScrollRef}
+              onPlay={(track) => onPlay(track, searchResults, "search")}
+              currentTrackId={currentTrackId}
+              isPlaying={isPlaying}
+              loading={searchLoading}
+              hasMore={searchHasMore}
+              onLoadMore={() => fetchPage(searchPage + 1)}
+              emptyMessage={searchLoading ? "搜索中..." : "未找到相关结果"}
+              showSourceBadge={true}
+            />
+          </div>
         )}
       </div>
     </div>

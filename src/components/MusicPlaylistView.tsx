@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Play, Search } from "lucide-react";
 import { MusicTrackList } from "./MusicTrackList";
 import { Input } from "@/components/ui/input";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
 import { MusicCover } from "./MusicCover";
 import { PlaylistCover } from "./PlaylistCover";
 import { cn } from "@/lib/utils";
@@ -78,6 +78,7 @@ export function MusicPlaylistView({
   const [isCoverDialogOpen, setIsCoverDialogOpen] = useState(false);
   const [isAddByUrlOpen, setIsAddByUrlOpen] = useState(false);
   const [coverUrlInput, setCoverUrlInput] = useState("");
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   const playlists = useMusicStore(useShallow(state => state.playlists));
   const playlist = playlists.find(p => p.id === playlistId);
@@ -186,7 +187,7 @@ export function MusicPlaylistView({
   };
 
   return (
-    <div className="flex flex-col h-full">
+    <div ref={scrollContainerRef} className="flex flex-1 min-h-0 flex-col overflow-y-auto">
       {/* Header */}
       <div className={cn(
         "p-4 border-b flex gap-4 bg-muted/10 relative",
@@ -273,6 +274,7 @@ export function MusicPlaylistView({
       <div className="flex-1 min-h-0 bg-background/50">
         <MusicTrackList
           tracks={filteredTracks}
+          scrollContainerRef={scrollContainerRef}
           onPlay={(track) => onPlay(track, tracks.findIndex(t => t.id === track.id))}
           playlistId={playlistId}
           currentTrackId={currentTrackId}

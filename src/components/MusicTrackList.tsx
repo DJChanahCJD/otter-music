@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState, useCallback } from "react";
+import React, { RefObject, useMemo, useRef, useState, useCallback } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import {
   DndContext, 
@@ -45,6 +45,7 @@ import { useShallow } from "zustand/react/shallow";
 interface MusicTrackListProps {
   tracks: MusicTrack[];
   onPlay: (track: MusicTrack) => void;
+  scrollContainerRef?: RefObject<HTMLDivElement | null>;
   playlistId?: string;
   currentTrackId?: string;
   isPlaying?: boolean;
@@ -91,7 +92,7 @@ function SortableTrackItem({ track, children }: { track: MusicTrack, children: R
 }
 
 export function MusicTrackList({
-  tracks, onPlay, playlistId, currentTrackId, isPlaying,
+  tracks, onPlay, scrollContainerRef, playlistId, currentTrackId, isPlaying,
   onRemove, onBatchRemove, onLoadMore, hasMore, loading,
   emptyMessage = "暂无歌曲", removeLabel = "删除",
   showSourceBadge = false,
@@ -217,7 +218,7 @@ export function MusicTrackList({
 
   const virtualizer = useVirtualizer({
     count: tracks.length + 1,
-    getScrollElement: () => internalRef.current,
+    getScrollElement: () => scrollContainerRef?.current ?? internalRef.current,
     estimateSize: () => ROW_HEIGHT,
     overscan: 8,
   });
