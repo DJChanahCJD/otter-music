@@ -8,8 +8,8 @@ android {
         applicationId "com.otterhub.music"
         minSdk 24
         targetSdk 36
-        versionCode 30
-        versionName "2.2.5"
+        versionCode 31
+        versionName "2.2.6"
     }
 
     buildTypes {
