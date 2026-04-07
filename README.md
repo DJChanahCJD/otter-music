@@ -49,6 +49,13 @@
 >
 > **注意**：在 Android 13（API 33）以下的设备上，部分 CSS 特性（如 `color-mix()`）可能不受支持，导致主题色失效或界面样式异常。建议升级至 Android 13 以上以获得最佳体验。
 
+>  [!IMPORTANT]
+> APP 网页版：[Otter Music](https://otter-music.pages.dev/)
+> 
+> 项目已完整支持 PWA 功能。iOS 用户可使用 Safari 浏览器打开并「添加到主屏幕」，即可实现独立应用体验与后台播放。
+> 
+> 注：网易云歌单等部分功能暂未支持。
+
 ## 快速开始
 
 ```bash
