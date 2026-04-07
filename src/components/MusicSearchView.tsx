@@ -25,6 +25,7 @@ import {
 import { SearchSuggestions } from "./SearchSuggestions";
 import { MusicTrackList } from "./MusicTrackList";
 import { PlaylistMarket } from "./PlaylistMarket/PlaylistMarket";
+import { shouldShowNeteaseEntryPointsOnCurrentPlatform } from "@/lib/netease/feature-gates";
 import {
   type MusicTrack,
   type MusicSource,
@@ -298,7 +299,7 @@ export function MusicSearchView({
 
       {/* 列表区域 */}
       <div className="flex-1 min-h-0">
-        {!searchQuery.trim() ? (
+        { shouldShowNeteaseEntryPointsOnCurrentPlatform &&!searchQuery.trim() ? (
           <PlaylistMarket />
         ) : (
           <div ref={resultsScrollRef} className="flex h-full min-h-0 flex-col overflow-y-auto">
