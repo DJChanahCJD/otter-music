@@ -15,7 +15,6 @@ import { PlaylistImport } from "./settings/PlaylistImport";
 import { SettingItem } from "./settings/SettingItem";
 import { UpdateCheck } from "./settings/UpdateCheck";
 import { IssueLogs } from "./settings/IssueLogs";
-import { shouldShowNeteaseEntryPointsOnCurrentPlatform } from "@/lib/netease/feature-gates";
 
 interface SettingsPageProps {
   onBack?: () => void;
@@ -78,7 +77,7 @@ export function SettingsPage({ onBack }: SettingsPageProps) {
         </Section>
 
         <Section title="账号数据">
-          {shouldShowNeteaseEntryPointsOnCurrentPlatform ? <NeteaseLogin /> : null}
+          <NeteaseLogin />
           <SyncConfig />
           <PlaylistImport />
           <SettingItem

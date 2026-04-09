@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import type { Env } from '../../types/hono';
 import {
+  getSongUrl,
   getUserPlaylists,
   getPlaylistDetail,
   getPlaylistDynamicDetail,
@@ -9,6 +10,8 @@ import {
   getMyInfo,
   getRecommendPlaylists,
   search,
+  getLyric,
+  getSongDetail,
   getToplist,
   getAlbum,
   getAlbumDynamicDetail,
@@ -28,7 +31,6 @@ import {
   toggleSubAlbum,
   toggleSubPlaylist,
 } from '../../utils/music/netease-api';
-import { SongDetail } from '@utils/music/netease-types';
 
 export const neteaseRoutes = new Hono<{ Bindings: Env }>();
 
@@ -113,6 +115,42 @@ neteaseRoutes.post('/playlist', async (c) => {
   const { playlistId, cookie } = await c.req.json<{ playlistId: string, cookie: string }>();
   try {
     const res = await getPlaylistDetail(playlistId, cookie);
+    return c.json(res);
+  } catch (e: any) {
+    return c.json({ error: e.message }, 500);
+  }
+});
+
+neteaseRoutes.post('/song-url', async (c) => {
+  const { id, br, cookie } = await c.req.json<{ id: string, br?: number, cookie?: string }>();
+  if (!id) return c.json({ error: 'ID required' }, 400);
+
+  try {
+    const res = await getSongUrl(id, br ?? 999000, cookie || '');
+    return c.json(res);
+  } catch (e: any) {
+    return c.json({ error: e.message }, 500);
+  }
+});
+
+neteaseRoutes.post('/song-detail', async (c) => {
+  const { id, cookie } = await c.req.json<{ id: string, cookie?: string }>();
+  if (!id) return c.json({ error: 'ID required' }, 400);
+
+  try {
+    const res = await getSongDetail(id, cookie || '');
+    return c.json(res);
+  } catch (e: any) {
+    return c.json({ error: e.message }, 500);
+  }
+});
+
+neteaseRoutes.post('/lyric', async (c) => {
+  const { id, cookie } = await c.req.json<{ id: string, cookie?: string }>();
+  if (!id) return c.json({ error: 'ID required' }, 400);
+
+  try {
+    const res = await getLyric(id, cookie || '');
     return c.json(res);
   } catch (e: any) {
     return c.json({ error: e.message }, 500);
@@ -329,23 +367,7 @@ neteaseRoutes.post('/search', async (c) => {
 
   try {
     const res = await search(name, 1, currentPage, currentLimit, cookie || '');
-
-    const songs = res.data?.result?.songs || [];
-    const songCount = res.data?.result?.songCount || 0;
-
-    const items = songs.map((s: SongDetail) => ({
-      id: `ne_track_${s.id}`,
-      name: s.name,
-      artist: (s.artists || s.ar || []).map((a: any) => a.name),
-      album: s.album?.name || s.al?.name || '',
-      pic_id: s.album?.picUrl || s.al?.picUrl || '',
-      url_id: String(s.id),
-      lyric_id: String(s.id),
-      source: '_netease',
-    }));
-
-    const hasMore = currentPage * currentLimit < songCount;
-    return c.json({ items, hasMore });
+    return c.json(res);
   } catch (e: any) {
     return c.json({ error: e.message }, 500);
   }
