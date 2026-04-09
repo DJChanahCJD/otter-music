@@ -81,9 +81,18 @@ function cleanCookie(cookieStr: string | null): string {
         .join('; ');
 }
 
+/**
+ * 获取游客 cookie（MUSIC_A），优先级：真实游客 cookie > 本地伪造 cookie
+ */
+const getAnonymousFallback = () => {
+    const { anonymousCookie } = useNeteaseStore.getState();
+    return anonymousCookie || buildVisitorCookie();
+};
+
 function buildCookie(rawCookie: string = ''): string {
     let finalCookie = (rawCookie || getStoredCookie()).trim();
-    if (!finalCookie) finalCookie = buildVisitorCookie();
+    // 优先级：用户登录 cookie > 真实游客 cookie > 本地伪造 cookie
+    if (!finalCookie) finalCookie = getAnonymousFallback();
     else if (!finalCookie.includes('=')) finalCookie = `MUSIC_U=${finalCookie}`;
     else finalCookie = cleanCookie(finalCookie);
     
@@ -767,6 +776,30 @@ export function resolveUrl(urlStr: string): ResolveUrlResult | null {
         if (url.pathname.includes('/song')) return { type: 'song', id: `netrack_${id}` };
     } catch { /* ignore parsing errors */ }
     return null;
+}
+
+/** 游客 cookie 有效期（28 天），留 2 天余量防止 MUSIC_A 到期前失效 */
+const ANONYMOUS_COOKIE_TTL_MS = 28 * 24 * 60 * 60 * 1000;
+
+/**
+ * 获取真实游客 cookie（MUSIC_A），统一走后端 Worker，所有环境一致。
+ * 获取成功后会自动写入 netease-store（含时间戳）。
+ */
+export async function getAnonymousCookie(): Promise<string> {
+    const res = await fetchNeteaseProxy<{ cookie: string }>('/login/anonymous');
+    const cookie = res.cookie || '';
+    if (cookie) useNeteaseStore.getState().setAnonymousCookie(cookie);
+    return cookie;
+}
+
+/**
+ * 检查游客 cookie 是否需要刷新（不存在或已超过 28 天）
+ */
+export function isAnonymousCookieStale(): boolean {
+    const { cookie, anonymousCookie, anonymousCookieSetAt } = useNeteaseStore.getState();
+    if (cookie) return false;
+    if (!anonymousCookie) return true;
+    return Date.now() - anonymousCookieSetAt > ANONYMOUS_COOKIE_TTL_MS;
 }
 
 export const convertSongToMusicTrack = (song: NeteaseSong): MusicTrack => {
