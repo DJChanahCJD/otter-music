@@ -1,6 +1,6 @@
 import type { ApiResponse } from "@otter-music/shared";
 
-export const API_URL = "https://otter-music-web.pages.dev";
+export const API_URL = "https://otter-music.pages.dev";
 export const API_TIMEOUT_MS = 10000;
 export const MUSIC_API_FAILURE_COOLDOWN_MS = 5 * 60 * 1000;
 
