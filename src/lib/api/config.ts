@@ -1,4 +1,4 @@
-import { type ApiResponse } from "@/types/index";
+import type { ApiResponse } from "@otter-music/shared";
 
 export const API_URL = "https://otter-music-web.pages.dev";
 export const API_TIMEOUT_MS = 10000;

@@ -1,0 +1,32 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ES2022",
+    "moduleResolution": "node",
+    "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true,
+    "lib": [
+      "dom",
+      "ES2022"
+    ],
+    "skipLibCheck": true,
+    "baseUrl": ".",
+    "paths": {
+      "@otter-music/shared": [
+        "../shared/src/index.ts"
+      ],
+      "@shared/*": [
+        "../shared/src/*"
+      ],
+      "middleware/*": [
+        "middleware/*"
+      ],
+      "types/*": [
+        "types/*"
+      ],
+      "@utils/*": [
+        "utils/*"
+      ]
+    }
+  },
+}

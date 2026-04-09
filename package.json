@@ -3,6 +3,10 @@
   "private": true,
   "version": "2.2.6",
   "type": "module",
+  "workspaces": [
+    "shared",
+    "functions"
+  ],
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
@@ -36,6 +40,7 @@
     "@dnd-kit/sortable": "^10.0.0",
     "@dnd-kit/utilities": "^3.2.2",
     "@jofr/capacitor-media-session": "^4.0.0",
+    "@otter-music/shared": "*",
     "@tanstack/react-virtual": "^3.13.21",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
