@@ -25,7 +25,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { useMounted } from "@/hooks/use-mounted";
 import { PlayerQueuePopover } from "./PlayerQueuePopover";
 import { MusicTrackMobileMenu } from "./MusicTrackMobileMenu";
-import { AddToPlaylistDialog } from "./AddToPlaylistDialog";
+import { AddToPlaylistDrawer } from "./AddToPlaylistDrawer";
 import { downloadMusicTrack } from "@/lib/utils/download";
 import { useMusicStore } from "@/store/music-store";
 import { useShallow } from "zustand/react/shallow";
@@ -281,7 +281,7 @@ export function FullScreenPlayer({
             <MusicCover
               src={coverUrl}
               alt={currentTrack?.name}
-              className="h-full w-full object-cover"
+              className="h-full w-full object-cover dark"
               iconClassName="h-16 w-16 text-white/30"
             />
           </div>
@@ -338,7 +338,7 @@ export function FullScreenPlayer({
                     onClose();
                   }}
                 />
-                <AddToPlaylistDialog
+                <AddToPlaylistDrawer
                   open={isAddToPlaylistOpen}
                   onOpenChange={setIsAddToPlaylistOpen}
                   track={currentTrack}

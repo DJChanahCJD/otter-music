@@ -22,6 +22,9 @@
       "@/*": [
         "src/*"
       ],
+      "@otter-music/shared": [
+        "shared/src/index.ts"
+      ],
     },
     "types": ["vitest/globals"]
   },
@@ -30,6 +33,7 @@
     "**/*.tsx",
   ],
   "exclude": [
-    "node_modules"
+    "node_modules",
+    "functions"
   ]
 }

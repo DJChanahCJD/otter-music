@@ -1,10 +1,9 @@
 import { API_URL, fetchWithTimeout, unwrap } from "./config";
 
-const SYNC_API_URL = `${API_URL}/sync`;
+const SYNC_API_URL = `${API_URL}/sync/v2`;
 
 export type SyncCheckResponse = { lastSyncTime: number };
-export type SyncPullResponse<T> = { data: T; lastSyncTime: number };
-export type SyncPushResponse = { lastSyncTime: number };
+export type SyncDataResponse<T> = { data: T; lastSyncTime: number };
 
 const getHeaders = (syncKey: string): HeadersInit => ({
   "Content-Type": "application/json",
@@ -14,15 +13,22 @@ const getHeaders = (syncKey: string): HeadersInit => ({
 export const syncCheck = (syncKey: string) =>
   unwrap<SyncCheckResponse>(fetchWithTimeout(`${SYNC_API_URL}/check`, { headers: getHeaders(syncKey) }));
 
-// 引入泛型 <T>，调用时可传入具体类型
+/**
+ * 拉取同步数据 (GET /sync/pull)
+ */
 export const syncPull = <T = unknown>(syncKey: string) =>
-  unwrap<SyncPullResponse<T>>(fetchWithTimeout(SYNC_API_URL, { headers: getHeaders(syncKey) }));
+  unwrap<SyncDataResponse<T>>(fetchWithTimeout(`${SYNC_API_URL}/pull`, { headers: getHeaders(syncKey) }));
 
-export const syncPush = <T = unknown>(syncKey: string, data: T, lastSyncTime: number) =>
-  unwrap<SyncPushResponse>(
-    fetchWithTimeout(SYNC_API_URL, {
+/**
+ * 核心同步接口 (POST /sync)
+ * 推送本地数据并直接获取服务端合并后的权威全量数据
+ * clientVersion 为本地 lastSyncTime，服务端用于两级短路判断
+ */
+export const syncPushAndPull = <T = unknown>(syncKey: string, data: T) =>
+  unwrap<SyncDataResponse<T>>(
+    fetchWithTimeout(`${SYNC_API_URL}`, {
       method: "POST",
       headers: getHeaders(syncKey),
-      body: JSON.stringify({ data, lastSyncTime }),
+      body: JSON.stringify({ data }),
     })
   );

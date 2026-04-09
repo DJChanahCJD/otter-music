@@ -43,7 +43,18 @@
 
 > API 来自GD音乐台(<https://music.gdstudio.xyz>)
 >
-> 数据同步功能依赖主项目 [Otter Music Web](https://github.com/DJChanahCJD/otter-music-web)
+> 数据同步由 [Otter Music Web](https://github.com/DJChanahCJD/otter-music-web) 驱动，通过管理员手动分配的 `SYNC_KEY` 接入。存储基于 Cloudflare KV（上限 25 MB），单用户理论可稳定同步 5 万首歌曲
+>
+> 最低支持版本：minSdkVersion = 24 (Android 7.0)
+>
+> **注意**：在 Android 13（API 33）以下的设备上，部分 CSS 特性（如 `color-mix()`）可能不受支持，导致主题色失效或界面样式异常。建议升级至 Android 13 以上以获得最佳体验。
+
+>  [!IMPORTANT]
+> APP 网页版：[Otter Music](https://otter-music.pages.dev/)
+> 
+> 项目已完整支持 PWA 功能。iOS 用户可使用 Safari 浏览器打开并「添加到主屏幕」，即可实现独立应用体验与后台播放。
+> 
+> 注：网易云歌单等部分功能暂未支持。
 
 ## 快速开始
 
@@ -110,15 +121,19 @@ src/
 
 ## TODO
 
-- [ ] 评估新增稳定音源接入方案 Meting API
-- [ ] 用 Tauri 开发桌面端？
-
 ### Low Priority
 
 - [ ] 媒体状态同步一致性（Web 与 Native MediaSession）
+- [ ] 做好网易云官方 API 回退逻辑，本地因为跨域无法请求则走后端端口。同时将后端转移到当前项目。
+- [ ] 播放时断网后有时无法正常切换到有本地下载的歌曲
+- [ ] 评估是否引入 howler.js 作为音频播放库
 - [ ] UI 重构（极简高效，打开即听）
-- [ ] 全屏模式支持左右滑动切歌（含防误触与过渡动效）
 - [ ] 随机歌单功能：从热门歌单池随机，耗尽后自动补充
+
+### Not TODO
+
+- 不做 Tauri 桌面端：维护成本太高，只做网页端即可，通过pwa实现桌面端功能
+- 不接入 JOOX、KUWO 等官方接口：当前网易云官方接口够用，无需增加复杂度；接入 JOOX 还需要做代理
 
 ## 参考资料
 

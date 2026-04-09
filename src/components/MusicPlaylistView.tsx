@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Play, Search } from "lucide-react";
 import { MusicTrackList } from "./MusicTrackList";
 import { Input } from "@/components/ui/input";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
 import { MusicCover } from "./MusicCover";
 import { PlaylistCover } from "./PlaylistCover";
 import { cn } from "@/lib/utils";
@@ -27,7 +27,7 @@ import {
 import { Label } from "@/components/ui/label";
 
 import { format } from "date-fns";
-import { AddByUrlDialog } from "./AddByUrlDialog";
+import { AddByUrlDrawer } from "./AddByUrlDrawer";
 import { logger } from "@/lib/logger";
 
 interface MusicPlaylistViewProps {
@@ -41,6 +41,7 @@ interface MusicPlaylistViewProps {
    */
   onPlay: (track: MusicTrack | null, index?: number) => void;
   onRemove?: (track: MusicTrack, silent?: boolean) => void | Promise<void>;
+  onBatchRemove?: (tracks: MusicTrack[]) => void;
   onRename?: (playlistId: string, newName: string) => void;
   onDelete?: (playlistId: string) => void;
   description?: string;
@@ -60,6 +61,7 @@ export function MusicPlaylistView({
   playlistId,
   onPlay,
   onRemove,
+  onBatchRemove,
   onRename,
   onDelete,
   description,
@@ -76,6 +78,7 @@ export function MusicPlaylistView({
   const [isCoverDialogOpen, setIsCoverDialogOpen] = useState(false);
   const [isAddByUrlOpen, setIsAddByUrlOpen] = useState(false);
   const [coverUrlInput, setCoverUrlInput] = useState("");
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   const playlists = useMusicStore(useShallow(state => state.playlists));
   const playlist = playlists.find(p => p.id === playlistId);
@@ -85,7 +88,7 @@ export function MusicPlaylistView({
 
   const handleReorder = (newOrder: MusicTrack[]) => {
     if (playlistId && isPersonalPlaylist) {
-      useMusicStore.getState().setPlaylistTracks(playlistId, newOrder);
+      useMusicStore.getState().replaceActivePlaylistTracks(playlistId, newOrder);
     }
   };
 
@@ -129,7 +132,7 @@ export function MusicPlaylistView({
     }
 
     // 2. Update Playlist
-    musicStore.setPlaylistTracks(playlistId, result.tracks);
+    musicStore.removeBatchFromPlaylist(playlistId, result.trackIdsToDelete);
     toast.success(`已移除 ${result.removedCount} 首重复歌曲`);
   };
 
@@ -184,7 +187,7 @@ export function MusicPlaylistView({
   };
 
   return (
-    <div className="flex flex-col h-full">
+    <div ref={scrollContainerRef} className="flex flex-1 min-h-0 flex-col overflow-y-auto">
       {/* Header */}
       <div className={cn(
         "p-4 border-b flex gap-4 bg-muted/10 relative",
@@ -271,11 +274,13 @@ export function MusicPlaylistView({
       <div className="flex-1 min-h-0 bg-background/50">
         <MusicTrackList
           tracks={filteredTracks}
+          scrollContainerRef={scrollContainerRef}
           onPlay={(track) => onPlay(track, tracks.findIndex(t => t.id === track.id))}
           playlistId={playlistId}
           currentTrackId={currentTrackId}
           isPlaying={isPlaying}
           onRemove={onRemove}
+          onBatchRemove={onBatchRemove}
           removeLabel={removeLabel}
           onReorder={isPersonalPlaylist && !searchQuery ? handleReorder : undefined}
         />
@@ -306,7 +311,7 @@ export function MusicPlaylistView({
         </DrawerContent>
       </Drawer>
 
-      <AddByUrlDialog
+      <AddByUrlDrawer
         isOpen={isAddByUrlOpen}
         onClose={() => setIsAddByUrlOpen(false)}
         onConfirm={handleAddByUrl}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { AlertTriangle, Copy, Trash2, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -26,10 +26,6 @@ export function IssueLogs() {
   const [isOpen, setIsOpen] = useState(false);
   const [logs, setLogs] = useState({ count: 0, all: "", recent: "" });
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-
-  useEffect(() => {
-    setLogs((prev) => ({ ...prev, count: logger.getLogs().length }));
-  }, []);
 
   const handleOpen = (open: boolean) => {
     setIsOpen(open);
@@ -73,7 +69,7 @@ export function IssueLogs() {
         subtitle="用于排查运行异常或提交反馈"
         action={
           <span className="text-xs text-muted-foreground">
-            {logs.count ? `${logs.count} 条` : "无"}
+            {logs.count ? `${logs.count} 条` : "暂无"}
           </span>
         }
         onClick={() => handleOpen(true)}

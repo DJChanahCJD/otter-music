@@ -73,11 +73,11 @@ export function TrashPage() {
             <TabsTrigger value="playlists" className="rounded-md">我的歌单 ({deletedPlaylists.length})</TabsTrigger>
           </TabsList>
           
-          <TabsContent value="tracks" className="flex-1 overflow-y-auto mt-0 outline-none">
+          <TabsContent value="tracks" className="flex-1 overflow-y-auto mt-0 pb-24 outline-none">
             {deletedTracks.length === 0 ? (
               <EmptyState icon={Music} text="暂无删除的歌曲" />
             ) : (
-              <div className="space-y-0.5 pb-4">
+              <div className="space-y-0.5">
                 {deletedTracks.map((track) => (
                   <DeletedItem 
                     key={track.id}
@@ -95,11 +95,11 @@ export function TrashPage() {
             )}
           </TabsContent>
           
-          <TabsContent value="playlists" className="flex-1 overflow-y-auto mt-0 outline-none">
+          <TabsContent value="playlists" className="flex-1 overflow-y-auto mt-0 pb-24 outline-none">
             {deletedPlaylists.length === 0 ? (
               <EmptyState icon={ListMusic} text="暂无删除的歌单" />
             ) : (
-              <div className="space-y-0.5 pb-4">
+              <div className="space-y-0.5">
                 {deletedPlaylists.map((playlist) => (
                   <DeletedItem 
                     key={playlist.id}

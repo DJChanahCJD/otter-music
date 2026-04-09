@@ -88,6 +88,144 @@ describe('MusicStore', () => {
     });
   });
 
+  describe('addBatchToFavorites', () => {
+    it('should add multiple tracks in a single set call', () => {
+      const tracks = [createTrack('1', 'Song 1'), createTrack('2', 'Song 2'), createTrack('3', 'Song 3')];
+      useMusicStore.getState().addBatchToFavorites(tracks);
+
+      const favorites = useMusicStore.getState().favorites;
+      expect(favorites).toHaveLength(3);
+      expect(favorites.map(t => t.id)).toEqual(expect.arrayContaining(['1', '2', '3']));
+    });
+
+    it('should skip local tracks', () => {
+      const tracks = [
+        createTrack('1', 'Song 1'),
+        { ...createTrack('local1', 'Local Song'), source: 'local' as const },
+      ];
+      useMusicStore.getState().addBatchToFavorites(tracks);
+
+      const favorites = useMusicStore.getState().favorites;
+      expect(favorites).toHaveLength(1);
+      expect(favorites[0].id).toBe('1');
+    });
+
+    it('should not add duplicates already in favorites', () => {
+      useMusicStore.getState().addToFavorites(createTrack('1', 'Song 1'));
+      useMusicStore.getState().addBatchToFavorites([
+        createTrack('1', 'Song 1'),
+        createTrack('2', 'Song 2'),
+      ]);
+
+      const favorites = useMusicStore.getState().favorites;
+      const ids = favorites.filter(t => !t.is_deleted).map(t => t.id);
+      expect(ids.filter(id => id === '1')).toHaveLength(1);
+      expect(ids).toContain('2');
+    });
+
+    it('should re-add tracks that were soft-deleted (restore semantics)', () => {
+      useMusicStore.getState().addToFavorites(createTrack('1', 'Song 1'));
+      useMusicStore.getState().removeFromFavorites('1');
+      expect(useMusicStore.getState().isFavorite('1')).toBe(false);
+
+      useMusicStore.getState().addBatchToFavorites([createTrack('1', 'Song 1')]);
+      expect(useMusicStore.getState().isFavorite('1')).toBe(true);
+    });
+
+    it('should do nothing if all tracks are local', () => {
+      useMusicStore.getState().addBatchToFavorites([
+        { ...createTrack('l1', 'L1'), source: 'local' as const },
+      ]);
+      expect(useMusicStore.getState().favorites).toHaveLength(0);
+    });
+
+    it('should preserve deleted favorites when replacing active favorites', () => {
+      useMusicStore.getState().addToFavorites(createTrack('1', 'Song 1'));
+      useMusicStore.getState().addToFavorites(createTrack('2', 'Song 2'));
+      useMusicStore.getState().removeFromFavorites('1');
+
+      useMusicStore.getState().replaceActiveFavorites([createTrack('2', 'Song 2 updated')]);
+
+      const favorites = useMusicStore.getState().favorites;
+      expect(favorites).toHaveLength(2);
+      expect(favorites[0]).toMatchObject({ id: '2', name: 'Song 2 updated', is_deleted: false });
+      expect(favorites[1]).toMatchObject({ id: '1', is_deleted: true });
+    });
+  });
+
+  describe('addBatchToPlaylist', () => {
+    it('should add multiple tracks to a playlist in one set call', () => {
+      const pid = useMusicStore.getState().createPlaylist('Test');
+      const tracks = [createTrack('1', 'Song 1'), createTrack('2', 'Song 2')];
+      useMusicStore.getState().addBatchToPlaylist(pid, tracks);
+
+      const playlist = useMusicStore.getState().playlists.find(p => p.id === pid);
+      expect(playlist?.tracks).toHaveLength(2);
+    });
+
+    it('should skip local tracks', () => {
+      const pid = useMusicStore.getState().createPlaylist('Test');
+      useMusicStore.getState().addBatchToPlaylist(pid, [
+        createTrack('1', 'Song 1'),
+        { ...createTrack('l1', 'Local'), source: 'local' as const },
+      ]);
+
+      const playlist = useMusicStore.getState().playlists.find(p => p.id === pid);
+      expect(playlist?.tracks).toHaveLength(1);
+      expect(playlist?.tracks[0].id).toBe('1');
+    });
+
+    it('should not create duplicates in playlist', () => {
+      const pid = useMusicStore.getState().createPlaylist('Test');
+      useMusicStore.getState().addToPlaylist(pid, createTrack('1', 'Song 1'));
+      useMusicStore.getState().addBatchToPlaylist(pid, [
+        createTrack('1', 'Song 1'),
+        createTrack('2', 'Song 2'),
+      ]);
+
+      const playlist = useMusicStore.getState().playlists.find(p => p.id === pid);
+      const ids = playlist?.tracks.filter(t => !t.is_deleted).map(t => t.id) ?? [];
+      expect(ids.filter(id => id === '1')).toHaveLength(1);
+      expect(ids).toContain('2');
+    });
+  });
+
+  describe('addBatchToNextPlay', () => {
+    it('should insert all tracks after current in an empty queue', () => {
+      const tracks = [createTrack('1', 'Song 1'), createTrack('2', 'Song 2')];
+      useMusicStore.getState().addBatchToNextPlay(tracks);
+
+      const state = useMusicStore.getState();
+      expect(state.queue).toHaveLength(2);
+      expect(state.queue[0].id).toBe('1');
+    });
+
+    it('should insert tracks after current index when queue exists', () => {
+      const initialTracks = [createTrack('A', 'A'), createTrack('B', 'B')];
+      useMusicStore.setState({ queue: initialTracks, originalQueue: initialTracks, currentIndex: 0 });
+
+      useMusicStore.getState().addBatchToNextPlay([createTrack('X', 'X'), createTrack('Y', 'Y')]);
+
+      const { queue } = useMusicStore.getState();
+      expect(queue[0].id).toBe('A');
+      expect(queue[1].id).toBe('X');
+      expect(queue[2].id).toBe('Y');
+      expect(queue[3].id).toBe('B');
+    });
+
+    it('should handle shuffle mode: also update originalQueue', () => {
+      const initialTracks = [createTrack('A', 'A'), createTrack('B', 'B')];
+      useMusicStore.setState({ queue: initialTracks, originalQueue: initialTracks, currentIndex: 0, isShuffle: true });
+
+      useMusicStore.getState().addBatchToNextPlay([createTrack('X', 'X')]);
+
+      const { queue, originalQueue } = useMusicStore.getState();
+      expect(queue[1].id).toBe('X');
+      // originalQueue should also contain the new track
+      expect(originalQueue.some(t => t.id === 'X')).toBe(true);
+    });
+  });
+
   describe('Playlists', () => {
     it('should create a playlist', () => {
       const id = useMusicStore.getState().createPlaylist('My Playlist');
@@ -118,6 +256,20 @@ describe('MusicStore', () => {
       const playlist = useMusicStore.getState().playlists.find(p => p.id === pid);
       expect(playlist?.tracks).toHaveLength(1);
       expect(playlist?.tracks[0].id).toBe('1');
+    });
+
+    it('should preserve deleted playlist tracks when replacing active tracks', () => {
+      const pid = useMusicStore.getState().createPlaylist('My Playlist');
+      useMusicStore.getState().addToPlaylist(pid, createTrack('1', 'Song 1'));
+      useMusicStore.getState().addToPlaylist(pid, createTrack('2', 'Song 2'));
+      useMusicStore.getState().removeFromPlaylist(pid, '1');
+
+      useMusicStore.getState().replaceActivePlaylistTracks(pid, [createTrack('2', 'Song 2 updated')]);
+
+      const playlist = useMusicStore.getState().playlists.find(p => p.id === pid);
+      expect(playlist?.tracks).toHaveLength(2);
+      expect(playlist?.tracks[0]).toMatchObject({ id: '2', name: 'Song 2 updated', is_deleted: false });
+      expect(playlist?.tracks[1]).toMatchObject({ id: '1', is_deleted: true });
     });
   });
 

@@ -248,6 +248,7 @@ export function ArtistDetailView({
             <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
               <MusicTrackList
                 tracks={tracks}
+                scrollContainerRef={scrollRef}
                 onPlay={(track) => onPlay(track, tracks)}
                 currentTrackId={currentTrackId}
                 isPlaying={isPlaying}

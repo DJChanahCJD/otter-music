@@ -36,6 +36,7 @@ import { cachedFetch } from "@/lib/utils/cache";
 import { API_URL } from "@/lib/api/config";
 import { Capacitor, CapacitorHttp } from '@capacitor/core';
 import { useNeteaseStore } from '@/store/netease-store';
+import { logger } from '@/lib/logger';
 
 const TTL_SHORT = 60 * 60 * 1000;           // 1 hour
 const TTL_MEDIUM = 24 * 60 * 60 * 1000;     // 1 day
@@ -43,13 +44,19 @@ const TTL_LONG = 7 * 24 * 60 * 60 * 1000;   // 7 days
 
 // 确保移动端（即便是开发环境连着手机测）也能指向绝对路径，避免报错
 const IS_NATIVE = Capacitor.isNativePlatform();
+const USE_PROXY = import.meta.env.PROD && !IS_NATIVE;    //  Web端，且生产环境，网易云API 因为跨域问题，需要代理
 const BASE_URL = (import.meta.env.DEV && !IS_NATIVE) ? '/api/netease' : 'https://music.163.com';
 const EAPI_BASE_URL = (import.meta.env.DEV && !IS_NATIVE) ? '/api/netease' : 'https://interface3.music.163.com';
+const NETEASE_PROXY_PREFIX = '/music-api/netease';
 
 const PC_USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
 const MOBILE_USER_AGENT = 'Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 MicroMessenger/8.0.27';
 const NETWORK_TIMEOUT_MS = 12000;
 
+type WrappedNeteaseResponse<T> = {
+    data: T;
+    cookie?: string;
+};
 
 /* =========================================================
 * 核心伪装工具集 (Cookie & IP)
@@ -112,7 +119,6 @@ function buildHeaders(cookie: string, ua: string, forceIp?: string): Record<stri
  * 底层跨端请求函数 (核心逻辑)
  * ========================================================= */
 
-// ✅ 修复 3: 将底层 fetch 抽离，智能判断运行平台
 async function crossFetch(url: string, options: { method: string; headers: Record<string, string>; body: string }) {
     const withTimeout = <T>(promise: Promise<T>, timeout = NETWORK_TIMEOUT_MS) =>
         new Promise<T>((resolve, reject) => {
@@ -187,7 +193,8 @@ async function requestEapi<T = unknown>(url: string, path: string, data: Record<
 }
 
 async function fetchLocalApi<T>(endpoint: string, body?: Record<string, unknown>): Promise<T> {
-    const url = endpoint.startsWith('http') ? endpoint : `${API_URL}${endpoint}`;
+    const localApiBase = USE_PROXY ? '' : API_URL;
+    const url = endpoint.startsWith('http') ? endpoint : `${localApiBase}${endpoint}`;
     const controller = new AbortController();
     const timer = window.setTimeout(() => controller.abort(), NETWORK_TIMEOUT_MS);
     const res = await fetch(url, {
@@ -204,28 +211,48 @@ async function fetchLocalApi<T>(endpoint: string, body?: Record<string, unknown>
     return res.json();
 }
 
+async function fetchNeteaseProxy<T>(path: string, body?: Record<string, unknown>): Promise<T> {
+    return fetchLocalApi<T>(`${NETEASE_PROXY_PREFIX}${path}`, body);
+}
+
 /* =========================================================
  * 业务 API
  * ========================================================= */
 
-export async function getSongUrl(id: string, br: number = 999000, cookie: string = '') {
+const LEVEL_MAP: Record<number, string> = {
+    128000: 'standard',
+    192000: 'higher',
+    320000: 'exhigh',
+    999000: 'lossless'
+};
+
+export async function getSongUrl(id: string, br: number = 999000, cookie: string = ''): Promise<WrappedNeteaseResponse<{ data: { url: string, br: number, size: number, freeTrialInfo?: unknown }[] }>> {
     const realId = id.replace(/^(netrack_|ne_track_)/, '');
+    if (USE_PROXY) {
+        return fetchNeteaseProxy<WrappedNeteaseResponse<{ data: { url: string, br: number, size: number, freeTrialInfo?: unknown }[] }>>(
+            '/song-url',
+            { id: realId, br, cookie }
+        );
+    }
+
+    const level = LEVEL_MAP[br] || 'standard';
+
     try {
         const eapiRes = await requestEapi<{ data: { url: string, br: number, size: number, freeTrialInfo?: unknown }[] }>(
-            `${EAPI_BASE_URL}/eapi/song/enhance/player/url`,
-            '/api/song/enhance/player/url',
-            { ids: `[${realId}]`, br, header: { os: 'pc', appver: '2.9.7' } },
+            `${EAPI_BASE_URL}/eapi/song/enhance/player/url/v1`,
+            '/api/song/enhance/player/url/v1',
+            { ids: `[${realId}]`, level, encodeType: 'flac', header: { os: 'ios', appver: '8.9.70' } },
             cookie
         );
         const trackData = eapiRes.data?.data?.[0];
         if (trackData?.url && !trackData.freeTrialInfo) return eapiRes;
     } catch {
-        console.warn(`[NetEase] EAPI failed for ${realId}, falling back to WEAPI...`);
+        logger.warn(`[NetEase] EAPI failed for ${realId}, falling back to WEAPI...`);
     }
 
     return requestWeapi<{ data: { url: string, br: number, size: number }[] }>(
         `${BASE_URL}/weapi/song/enhance/player/url/v1`,
-        { ids: `[${realId}]`, level: br >= 320000 ? 'exhigh' : 'standard', encodeType: 'mp3', csrf_token: '' },
+        { ids: `[${realId}]`, level, encodeType: 'flac', csrf_token: '' },
         cookie
     );
 }
@@ -239,10 +266,6 @@ export const checkQrStatus = async (key: string): Promise<QrStatusResult> => {
     const res = await fetchLocalApi<RawQrCheckResponse>(`/music-api/netease/login/qr/check?key=${key}&timestamp=${Date.now()}`);
     return normalizeQrStatus(res);
 };
-/* 3. 游客登录
-说明 : 直接调用此接口, 可获取游客cookie,如果遇到其他接口未登录状态报400状态码需要验证的错误,可使用此接口获取游客cookie避免报错
-
-接口地址 : /register/anonimous */
 
 export const getMyInfo = async (cookie: string = ''): Promise<UserProfile | null> => {
     const res = await cachedFetch<UserProfile | null>(
@@ -281,7 +304,11 @@ export const getRecommendPlaylists = async (cookie: string = ''): Promise<Market
 export const getPlaylistDetail = (playlistId: string, cookie: string = '') => 
     cachedFetch<PlaylistDetail>( 
         `netease:playlist:${playlistId}:${cookie.slice(-16)}`, 
-        async () => { 
+        async () => {
+            if (USE_PROXY) {
+                return fetchNeteaseProxy<PlaylistDetail>('/playlist', { playlistId, cookie });
+            }
+
             const res = await requestWeapi<{ playlist: PlaylistDetail & { trackIds: { id: number }[] } }>( 
                 `${BASE_URL}/weapi/v3/playlist/detail`, 
                 { id: playlistId, offset: 0, total: true, limit: 1000, n: 1000, csrf_token: '' }, 
@@ -293,8 +320,13 @@ export const getPlaylistDetail = (playlistId: string, cookie: string = '') =>
         TTL_SHORT
     );
 
-export const getPlaylistDynamicDetail = async (id: string, cookie: string = '') => {
+export const getPlaylistDynamicDetail = async (id: string, cookie: string = ''): Promise<PlaylistDynamicDetail | null> => {
     try {
+        if (USE_PROXY) {
+            const res = await fetchNeteaseProxy<WrappedNeteaseResponse<PlaylistDynamicDetail>>('/playlist/dynamic', { id, cookie });
+            return res.data ?? null;
+        }
+
         const res = await requestWeapi<PlaylistDynamicDetail>(
             `${BASE_URL}/weapi/playlist/detail/dynamic`,
             { id: id.replace(/^(neplaylist_|ne_playlist_)/, '') },
@@ -302,7 +334,7 @@ export const getPlaylistDynamicDetail = async (id: string, cookie: string = '') 
         );
         return res.data;
     } catch (e) {
-        console.warn('[API] getPlaylistDynamicDetail failed', e);
+        logger.warn('NetEase', 'getPlaylistDynamicDetail failed', e instanceof Error ? e : undefined);
         return null;
     }
 };
@@ -326,6 +358,13 @@ async function getTracksDetail(trackIds: number[], cookie: string = '') {
 }
 
 export async function search(keyword: string, type: number = 1, page: number = 1, limit: number = 20, cookie: string = '') {
+    if (USE_PROXY) {
+        return fetchNeteaseProxy<{ data: { result: { songs?: NeteaseSong[]; songCount?: number; hasMore?: boolean }, code: number } }>(
+            '/search',
+            { keyword, type, page, limit, cookie }
+        );
+    }
+
     const finalCookie = cookie || getStoredCookie();
     const headers = buildHeaders(finalCookie, PC_USER_AGENT, getRandomDomesticIp());
     const params = new URLSearchParams({ s: keyword, type: String(type), offset: String((page - 1) * limit), limit: String(limit) });
@@ -337,18 +376,26 @@ export async function search(keyword: string, type: number = 1, page: number = 1
 export const getLyric = (id: string, cookie: string = '') => 
     cachedFetch( 
         `netease:lyric:${id.replace(/^(netrack_|ne_track_)/, '')}`, 
-        () => requestWeapi<{ lrc: { lyric: string }, tlyric: { lyric: string } }>( 
-            `${BASE_URL}/weapi/song/lyric`, 
-            { id: id.replace(/^(netrack_|ne_track_)/, ''), lv: -1, tv: -1 }, 
-            cookie 
-        ), 
+        (): Promise<WrappedNeteaseResponse<{ lrc: { lyric: string }, tlyric: { lyric: string } }>> => USE_PROXY
+            ? fetchNeteaseProxy<WrappedNeteaseResponse<{ lrc: { lyric: string }, tlyric: { lyric: string } }>>('/lyric', { id, cookie })
+            : requestWeapi<{ lrc: { lyric: string }, tlyric: { lyric: string } }>( 
+                `${BASE_URL}/weapi/song/lyric`, 
+                { id: id.replace(/^(netrack_|ne_track_)/, ''), lv: -1, tv: -1 }, 
+                cookie 
+            ), 
         TTL_LONG // 歌词极少变动，使用长缓存 
     ); 
 
 export const getSongDetail = (id: string, cookie: string = '') => 
     cachedFetch( 
         `netease:song:${id.replace(/^(netrack_|ne_track_)/, '')}:${cookie.slice(-16)}`, 
-        async () => (await getTracksDetail([parseInt(id.replace(/^(netrack_|ne_track_)/, ''))], cookie))[0], 
+        async () => {
+            if (USE_PROXY) {
+                return fetchNeteaseProxy<SongDetail>('/song-detail', { id, cookie });
+            }
+
+            return (await getTracksDetail([parseInt(id.replace(/^(netrack_|ne_track_)/, ''))], cookie))[0];
+        }, 
         TTL_LONG // 歌曲基础信息固定，但携带 VIP 鉴权，因此 key 加上 cookie 尾缀 
     ); 
 
@@ -356,6 +403,11 @@ export const getToplist = async (cookie: string = ''): Promise<MarketPlaylist[]>
     const res = await cachedFetch<MarketPlaylist[]>(
         `netease:v2:toplist`,
         async () => {
+            if (USE_PROXY) {
+                const r = await fetchNeteaseProxy<{ data: { list: Toplist[] } }>('/toplist', { cookie });
+                return (r.data?.list || []).map(toMarketPlaylistFromToplist);
+            }
+
             const r = await requestWeapi<{ list: Toplist[] }>(`${BASE_URL}/weapi/toplist/detail`, {}, cookie);
             return r.data.list.map(toMarketPlaylistFromToplist);
         },
@@ -367,15 +419,24 @@ export const getToplist = async (cookie: string = ''): Promise<MarketPlaylist[]>
 export const getAlbum = (id: string, cookie: string = '') => 
     cachedFetch( 
         `netease:album:${id.replace(/^(nealbum_|ne_album_)/, '')}`, 
-        async () => { 
+        async () => {
+            if (USE_PROXY) {
+                return fetchNeteaseProxy<AlbumDetail>('/album', { id, cookie });
+            }
+
             const res = await requestWeapi<AlbumDetail>(`${BASE_URL}/weapi/v1/album/${id.replace(/^(nealbum_|ne_album_)/, '')}`, {}, cookie); 
             return res.data; 
         }, 
         TTL_LONG // 专辑发布后信息基本固定 
     ); 
 
-export const getAlbumDynamicDetail = async (id: string, cookie: string = '') => {
+export const getAlbumDynamicDetail = async (id: string, cookie: string = ''): Promise<AlbumDynamicDetail | null> => {
     try {
+        if (USE_PROXY) {
+            const res = await fetchNeteaseProxy<WrappedNeteaseResponse<AlbumDynamicDetail>>('/album/dynamic', { id, cookie });
+            return res.data ?? null;
+        }
+
         const res = await requestWeapi<AlbumDynamicDetail>(
             `${BASE_URL}/weapi/album/detail/dynamic`,
             { id: id.replace(/^(nealbum_|ne_album_)/, '') },
@@ -383,7 +444,7 @@ export const getAlbumDynamicDetail = async (id: string, cookie: string = '') => 
         );
         return res.data;
     } catch (e) {
-        console.warn('[API] getAlbumDynamicDetail failed', e);
+        logger.warn('NetEase', 'getAlbumDynamicDetail failed', e instanceof Error ? e : undefined);
         return null;
     }
 }; 
@@ -391,15 +452,24 @@ export const getAlbumDynamicDetail = async (id: string, cookie: string = '') => 
 export const getArtist = (id: string, cookie: string = '') => 
     cachedFetch( 
         `netease:artist:${id.replace(/^(neartist_|ne_artist_)/, '')}`, 
-        async () => { 
+        async () => {
+            if (USE_PROXY) {
+                return fetchNeteaseProxy<ArtistDetail>('/artist', { id, cookie });
+            }
+
             const res = await requestWeapi<ArtistDetail>(`${BASE_URL}/weapi/v1/artist/${id.replace(/^(neartist_|ne_artist_)/, '')}`, {}, cookie); 
             return res.data; 
         }, 
         TTL_LONG // 歌手基础信息低频变动 
     ); 
 
-export const getArtistDynamicDetail = async (id: string, cookie: string = '') => {
+export const getArtistDynamicDetail = async (id: string, cookie: string = ''): Promise<Record<string, unknown> | null> => {
     try {
+        if (USE_PROXY) {
+            const res = await fetchNeteaseProxy<WrappedNeteaseResponse<Record<string, unknown>>>('/artist/dynamic', { id, cookie });
+            return res.data ?? null;
+        }
+
         const res = await requestWeapi<any>(
             `${BASE_URL}/weapi/artist/detail/dynamic`,
             { id: id.replace(/^(neartist_|ne_artist_)/, '') },
@@ -407,7 +477,7 @@ export const getArtistDynamicDetail = async (id: string, cookie: string = '') =>
         );
         return res.data;
     } catch (e) {
-        console.warn('[API] getArtistDynamicDetail failed', e);
+        logger.warn('NetEase', 'getArtistDynamicDetail failed', e instanceof Error ? e : undefined);
         return null;
     }
 };
@@ -416,6 +486,11 @@ export const getArtistSongs = (id: string, limit: number = 50, offset: number = 
     cachedFetch(
         `netease:artist-songs:${id.replace(/^(neartist_|ne_artist_)/, '')}:${limit}:${offset}:${order}`,
         async () => {
+            if (USE_PROXY) {
+                const res = await fetchNeteaseProxy<{ data: { songs: SongDetail[], total: number, more: boolean } }>('/artist/songs', { id, limit, offset, order, cookie });
+                return res.data;
+            }
+
             const res = await requestWeapi<{ songs: SongDetail[], total: number, more: boolean }>(
                 `${BASE_URL}/weapi/v1/artist/songs`,
                 { id: id.replace(/^(neartist_|ne_artist_)/, ''), limit, offset, order, total: true },
@@ -430,6 +505,11 @@ export const getArtistAlbums = (id: string, limit: number = 30, offset: number =
     cachedFetch(
         `netease:artist-albums:${id.replace(/^(neartist_|ne_artist_)/, '')}:${limit}:${offset}`,
         async () => {
+            if (USE_PROXY) {
+                const res = await fetchNeteaseProxy<{ data: { hotAlbums: ArtistAlbum[], more: boolean } }>('/artist/albums', { id, limit, offset, cookie });
+                return res.data;
+            }
+
             const res = await requestWeapi<{ hotAlbums: ArtistAlbum[], more: boolean }>(
                 `${BASE_URL}/weapi/artist/albums/${id.replace(/^(neartist_|ne_artist_)/, '')}`,
                 { limit, offset, total: true },
@@ -446,6 +526,11 @@ export const getSubscribedAlbums = async (
   cookie: string = ''
 ): Promise<ArtistAlbum[]> => {
   try {
+    if (USE_PROXY) {
+      const r = await fetchNeteaseProxy<{ data?: { data?: ArtistAlbum[] } }>('/album/sublist', { limit, offset, cookie });
+      return r.data?.data ?? [];
+    }
+
     const r = await requestWeapi<{ data: ArtistAlbum[]; count: number }>(
       `${BASE_URL}/weapi/album/sublist`,
       { limit, offset, total: true },
@@ -454,7 +539,7 @@ export const getSubscribedAlbums = async (
 
     return r.data.data ?? [];
   } catch (e) {
-    console.warn('[API] getSubscribedAlbums failed', e);
+    logger.warn('NetEase', 'getSubscribedAlbums failed', e instanceof Error ? e : undefined);
     return [];
   }
 };
@@ -465,6 +550,11 @@ export const getSubscribedArtists = async (
   cookie: string = ''
 ): Promise<ArtistItem[]> => {
   try {
+    if (USE_PROXY) {
+      const r = await fetchNeteaseProxy<{ data?: { data?: ArtistItem[] } }>('/artist/sublist', { limit, offset, cookie });
+      return r.data?.data ?? [];
+    }
+
     const r = await requestWeapi<{ data: ArtistItem[]; count: number }>(
       `${BASE_URL}/weapi/artist/sublist`,
       { limit, offset, total: true },
@@ -473,12 +563,19 @@ export const getSubscribedArtists = async (
 
     return r.data.data ?? [];
   } catch (e) {
-    console.warn('[API] getSubscribedArtists failed', e);
+    logger.warn('NetEase', 'getSubscribedArtists failed', e instanceof Error ? e : undefined);
     return [];
   }
 };
 
 export const toggleSubArtist = async (id: string, shouldSub: boolean, cookie: string = '') => {
+    if (USE_PROXY) {
+        return fetchNeteaseProxy<{ data?: { code: number, message?: string }, code?: number, message?: string }>(
+            '/artist/sub',
+            { id, shouldSub, cookie }
+        );
+    }
+
     const realId = id.replace(/^(neartist_|ne_artist_)/, '');
     const action = shouldSub ? 'sub' : 'unsub';
     return requestWeapi<{ code: number, message?: string }>(
@@ -489,6 +586,13 @@ export const toggleSubArtist = async (id: string, shouldSub: boolean, cookie: st
 };
 
 export const toggleSubAlbum = async (id: string, shouldSub: boolean, cookie: string = '') => {
+    if (USE_PROXY) {
+        return fetchNeteaseProxy<{ data?: { code: number, message?: string }, code?: number, message?: string }>(
+            '/album/sub',
+            { id, shouldSub, cookie }
+        );
+    }
+
     const realId = id.replace(/^(nealbum_|ne_album_)/, '');
     const action = shouldSub ? 'sub' : 'unsub';
     return requestWeapi<{ code: number, message?: string }>(
@@ -499,6 +603,13 @@ export const toggleSubAlbum = async (id: string, shouldSub: boolean, cookie: str
 };
 
 export const toggleSubPlaylist = async (id: string, shouldSub: boolean, cookie: string = '') => {
+    if (USE_PROXY) {
+        return fetchNeteaseProxy<{ data?: { code: number, message?: string }, code?: number, message?: string }>(
+            '/playlist/sub',
+            { id, shouldSub, cookie }
+        );
+    }
+
     const realId = id.replace(/^(neplaylist_|ne_playlist_)/, '');
     return requestWeapi<{ code: number, message?: string }>(
         `${BASE_URL}/weapi/playlist/subscribe`,
@@ -511,6 +622,11 @@ export const getPlaylists = (cat: string = '全部', order: string = 'hot', limi
     cachedFetch( 
         `netease:playlists:${cat}:${order}:${limit}:${offset}`, 
         async () => {
+            if (USE_PROXY) {
+                const res = await fetchNeteaseProxy<{ data: { playlists: UserPlaylist[] } }>('/playlists', { cat, order, limit, offset, cookie });
+                return (res.data?.playlists || []).map(toMarketPlaylistFromUserPlaylist);
+            }
+
             const res = await requestWeapi<{ playlists: UserPlaylist[] }>(
                 `${BASE_URL}/weapi/playlist/list`,
                 { cat, order, limit, offset, total: true },
@@ -525,6 +641,11 @@ export const searchSuggest = (keyword: string, cookie: string = '') =>
     cachedFetch<SearchSuggestResult>(
         `netease:suggest:${keyword}`,
         async () => {
+            if (USE_PROXY) {
+                const res = await fetchNeteaseProxy<{ data?: { result?: SearchSuggestResult } }>('/search/suggest', { keyword, cookie });
+                return res.data?.result || {};
+            }
+
             const res = await requestWeapi<{ result: SearchSuggestResult }>(
                 `${BASE_URL}/weapi/search/suggest/web`,
                 { s: keyword },
@@ -539,6 +660,11 @@ export const getHotComments = (id: string, limit: number = 20, offset: number = 
     cachedFetch<NeteaseCommentResult>(
         `netease:comments:hot:${id.replace(/^(netrack_|ne_track_)/, '')}:${limit}:${offset}`,
         async () => {
+            if (USE_PROXY) {
+                const res = await fetchNeteaseProxy<{ data?: NeteaseCommentResult }>('/comments/hot', { id, limit, offset, cookie });
+                return res.data as NeteaseCommentResult;
+            }
+
             const realId = id.replace(/^(netrack_|ne_track_)/, '');
             const rid = `R_SO_4_${realId}`;
             const res = await requestWeapi<NeteaseCommentResult>(
@@ -562,6 +688,18 @@ export const getNewComments = (
     cachedFetch<NeteaseNewCommentResult['data']>(
         `netease:comments:new:${id.replace(/^(netrack_|ne_track_)/, '')}:${sortType}:${pageNo}:${cursor}`,
         async () => {
+            if (USE_PROXY) {
+                const res = await fetchNeteaseProxy<WrappedNeteaseResponse<NeteaseNewCommentResult['data']>>('/comments/new', {
+                    id,
+                    pageNo,
+                    pageSize,
+                    sortType,
+                    cursor,
+                    cookie,
+                });
+                return res.data ?? null;
+            }
+
             const realId = id.replace(/^(netrack_|ne_track_)/, '');
             const res = await requestWeapi<NeteaseNewCommentResult>(
                 `${BASE_URL}/weapi/comment/new`,

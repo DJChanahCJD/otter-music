@@ -38,9 +38,9 @@ const getCurrentVersion = async (): Promise<string> => {
       return info.version;
     }
   } catch (e) {
-    console.error("Failed to get app info", e);
+    console.error("Failed to get app version", e);
   }
-  return "0.0.0";
+  return __APP_VERSION__;
 };
 
 const normalizeVersion = (version: string): string => {

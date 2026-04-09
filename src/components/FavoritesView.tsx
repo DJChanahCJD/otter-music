@@ -13,7 +13,7 @@ import toast from "react-hot-toast";
 import { createTrackFromUrl, deduplicateTracks } from "@/lib/utils/music";
 import { toastUtils } from "@/lib/utils/toast";
 import { exportPlaylist } from "@/lib/utils/playlist-backup";
-import { AddByUrlDialog } from "./AddByUrlDialog";
+import { AddByUrlDrawer } from "./AddByUrlDrawer";
 
 interface FavoritesViewProps {
   tracks: MusicTrack[];
@@ -62,8 +62,7 @@ export function FavoritesView({
       return;
     }
 
-    // Update Favorites
-    musicStore.setFavorites(result.tracks);
+    musicStore.removeBatchFromFavorites(result.trackIdsToDelete);
     toast.success(`已移除 ${result.removedCount} 首重复歌曲`);
   };
 
@@ -80,6 +79,10 @@ export function FavoritesView({
   const handleRemove = (track: MusicTrack, silent?: boolean) => {
     useMusicStore.getState().removeFromFavorites(track.id);
     if (!silent) toast.success("已取消喜欢");
+  };
+
+  const handleBatchRemove = (tracks: MusicTrack[]) => {
+    useMusicStore.getState().removeBatchFromFavorites(tracks.map(t => t.id));
   };
 
   return (
@@ -134,11 +137,12 @@ export function FavoritesView({
           playlistId="favorites"
           onReorder={!searchQuery.trim() ? onReorder : undefined}
           onRemove={handleRemove}
+          onBatchRemove={handleBatchRemove}
           showItemRemove={false}
         />
       </div>
 
-      <AddByUrlDialog
+      <AddByUrlDrawer
         isOpen={isAddByUrlOpen}
         onClose={() => setIsAddByUrlOpen(false)}
         onConfirm={handleAddByUrl}

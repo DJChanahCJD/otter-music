@@ -9,6 +9,8 @@
 在 `assets/release/` 目录下添加对应版本的 Markdown 文件，要求文件名与新 Tag 一致（例如 `v2.0.2.md`）。
 *注：若未找到对应文件，GitHub Actions 将自动生成默认简易文案。*
 
+> 建议先运行 `npm run ci-test` 完成本地测试
+
 ## 1️⃣ 修改版本号并打 Tag
 
 确保 Git 工作区干净（无未提交更改），使用 npm 一键完成版本号更新、Android 版本同步和自动生成 Tag：

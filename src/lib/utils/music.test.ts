@@ -42,6 +42,30 @@ describe('music utils', () => {
       expect('variants' in cleaned).toBe(false);
       expect(cleaned.id).toBe('1');
     });
+
+    it('should remove privilege from _netease track', () => {
+      const track: MusicTrack = {
+        ...createTrack('299116', '约定', ['王菲'], '_netease'),
+        privilege: { id: 299116, fee: 1, payed: 1, st: 0, pl: 999000, maxbr: 999000, plLevel: 'lossless', freeTrialPrivilege: {} },
+      };
+
+      const cleaned = cleanTrack(track);
+      expect('privilege' in cleaned).toBe(false);
+      expect(cleaned.id).toBe('299116');
+    });
+
+    it('should remove both variants and privilege together', () => {
+      const track: MergedMusicTrack = {
+        ...createTrack('1', 'Song 1', ['Artist'], '_netease'),
+        variants: [createTrack('1-v1', 'Variant')],
+        privilege: { id: 1, fee: 1, payed: 0, st: 0, pl: 0, maxbr: 999000, plLevel: 'lossless', freeTrialPrivilege: {} },
+      };
+
+      const cleaned = cleanTrack(track);
+      expect('variants' in cleaned).toBe(false);
+      expect('privilege' in cleaned).toBe(false);
+      expect(cleaned.id).toBe('1');
+    });
   });
 
   describe('deduplicateTracks', () => {
@@ -57,9 +81,8 @@ describe('music utils', () => {
       
       const result = deduplicateTracks(tracks, isFavorite, isDownloaded);
       
-      expect(result.tracks).toHaveLength(2);
       expect(result.removedCount).toBe(1);
-      expect(result.tracks.map(t => t.id)).toEqual(['1', '2']);
+      expect(result.trackIdsToDelete).toEqual(['1']);
     });
 
     it('should group tracks by normalized name and artist', () => {
@@ -74,11 +97,9 @@ describe('music utils', () => {
       
       const result = deduplicateTracks(tracks, isFavorite, isDownloaded);
       
-      expect(result.tracks).toHaveLength(2);
       expect(result.removedCount).toBe(1);
       // Logic prefers later index if everything else equal, so '2' (Song A Live) should win over '1'
-      expect(result.tracks.map(t => t.id)).toContain('2');
-      expect(result.tracks.map(t => t.id)).toContain('3');
+      expect(result.trackIdsToDelete).toEqual(['1']);
     });
 
     it('should prioritize downloaded tracks', () => {
@@ -92,8 +113,7 @@ describe('music utils', () => {
       
       const result = deduplicateTracks(tracks, isFavorite, isDownloaded);
       
-      expect(result.tracks).toHaveLength(1);
-      expect(result.tracks[0].id).toBe('2'); // Should keep the downloaded one
+      expect(result.trackIdsToDelete).toEqual(['1']); // Should keep the downloaded one
     });
 
     it('should prioritize favorite tracks', () => {
@@ -107,8 +127,7 @@ describe('music utils', () => {
       
       const result = deduplicateTracks(tracks, isFavorite, isDownloaded);
       
-      expect(result.tracks).toHaveLength(1);
-      expect(result.tracks[0].id).toBe('2');
+      expect(result.trackIdsToDelete).toEqual(['1']);
     });
 
     it('should mark winner to like if loser was liked', () => {
@@ -124,8 +143,7 @@ describe('music utils', () => {
       
       const result = deduplicateTracks(tracks, isFavorite, isDownloaded);
       
-      expect(result.tracks).toHaveLength(1);
-      expect(result.tracks[0].id).toBe('2'); // t2 wins
+      expect(result.trackIdsToDelete).toEqual(['1']); // t2 wins
       expect(result.tracksToLike).toHaveLength(1);
       expect(result.tracksToLike[0].id).toBe('2'); // t2 should be liked
     });

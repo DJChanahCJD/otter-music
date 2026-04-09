@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Trash2, RefreshCw } from "lucide-react";
 import { Button } from "../ui/button";
 import {
@@ -19,6 +19,7 @@ export function SyncConfig() {
   const { syncKey, lastSyncTime, setSyncKey, clearSyncConfig } = useSyncStore();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [inputKey, setInputKey] = useState("");
+  const inputRef = useRef<HTMLInputElement>(null);
 
   const formatLastSyncTime = (timestamp: number) => {
     if (!timestamp) return "暂未同步";
@@ -67,7 +68,15 @@ export function SyncConfig() {
         onClick={() => setDialogOpen(true)}
       />
 
-      <Drawer open={dialogOpen} onOpenChange={setDialogOpen}>
+      <Drawer
+        open={dialogOpen}
+        onOpenChange={(open) => {
+          setDialogOpen(open);
+          if (open && !syncKey) {
+            setTimeout(() => inputRef.current?.focus(), 50);
+          }
+        }}
+      >
         <DrawerContent className="max-h-[85vh]">
           <DrawerHeader>
             <DrawerTitle>配置同步密钥</DrawerTitle>
@@ -79,6 +88,7 @@ export function SyncConfig() {
           </DrawerHeader>
           <div className="px-4 pb-4">
             <Input
+              ref={inputRef}
               type="password"
               placeholder="请输入 SYNC_KEY"
               value={inputKey}

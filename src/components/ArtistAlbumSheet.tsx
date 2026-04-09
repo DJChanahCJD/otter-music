@@ -9,6 +9,7 @@ import {
 import { MusicCover } from "@/components/MusicCover";
 import { getArtistAlbums } from "@/lib/netease/netease-api";
 import { ArtistAlbum } from "@/lib/netease/netease-raw-types";
+import { createArtistAlbumSheetState } from "@/lib/navigation/netease-detail-navigation";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { Loader2 } from "lucide-react";
@@ -166,8 +167,10 @@ export function ArtistAlbumSheet({
   };
 
   const handleAlbumClick = (albumId: number) => {
-    onOpenChange(false);
-    navigate(`/netease-album/${albumId}`);
+    if (!artistId) return;
+    navigate(`/netease-album/${albumId}`, {
+      state: createArtistAlbumSheetState(artistId, artistName),
+    });
   };
 
   return (

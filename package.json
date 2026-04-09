@@ -1,20 +1,25 @@
 {
   "name": "otter-music",
   "private": true,
-  "version": "2.2.1",
+  "version": "2.2.6",
   "type": "module",
+  "workspaces": [
+    "shared",
+    "functions"
+  ],
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "build:release": "npm run build && npm run clean:maps",
+    "build:release": "npm run build",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "test": "vitest",
+    "ci-test": "node scripts/ci-test.js",
     "preview": "vite preview",
     "resources": "capacitor-assets generate",
     "cap:add:android": "npx cap add android",
     "cap:sync:android": "npm run build && npx cap sync android",
-    "cap:sync:android:release": "npm run build && npm run clean:maps && npx cap sync android",
+    "cap:sync:android:release": "npm run build && npx cap sync android",
     "cap:open:android": "npx cap open android",
     "cap:update:android": "npx cap update android",
     "version": "node scripts/update-mobile-version.js && git add android/app/build.gradle",
@@ -34,6 +39,7 @@
     "@dnd-kit/sortable": "^10.0.0",
     "@dnd-kit/utilities": "^3.2.2",
     "@jofr/capacitor-media-session": "^4.0.0",
+    "@otter-music/shared": "*",
     "@tanstack/react-virtual": "^3.13.21",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
@@ -78,6 +84,7 @@
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.48.0",
     "vite": "^7.3.1",
+    "vite-plugin-pwa": "^1.2.0",
     "vitest": "^4.0.18"
   }
 }

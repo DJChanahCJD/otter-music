@@ -1,153 +1,22 @@
-import { NeteasePrivilege } from "@/lib/netease/netease-types";
+export {
+  aggregatedSourceOptions,
+  searchOptions,
+  sourceBadgeStyles,
+  sourceLabels,
+} from "@otter-music/shared";
 
-export interface SearchResult {
-  code: number;
-  data: MusicTrack[];
-  error?: string;
-}
-
-export interface SongUrl {
-  url: string;
-  br: number;
-  size: number;
-}
-
-export interface SongPic {
-  url: string;
-}
-
-export interface SongLyric {
-  lyric: string;
-  tlyric?: string;
-}
-
-export type MergedMusicTrack = MusicTrack & {
-  variants?: MusicTrack[];
-};
-
-export interface SearchPageResult<T = MusicTrack> {
-  items: T[];
-  hasMore: boolean;
-}
-
-export const searchOptions: Record<string, string> = {
-  all: "聚合搜索",
-  joox: "Joox",
-  netease: "网易云音乐",
-  kuwo: "酷我音乐",
-  _netease: "Netease",
-};
-
-export const sourceLabels: Record<string, string> = {
-  joox: "Joox",
-  netease: "网易",
-  kuwo: "酷我",
-  _netease: "Netease",
-};
-
-export const aggregatedSourceOptions: { value: MusicSource; label: string; description: string }[] = [
-  { value: 'joox', label: 'Joox', description: '腾讯海外版，专注东南亚及港台流行资源' },
-  { value: 'netease', label: '网易云音乐', description: '音源稳定，小众资源多' },
-  { value: '_netease', label: 'Netease', description: '网易云官方，稳定高速' },
-  { value: 'kuwo', label: '酷我音乐', description: '版权丰富，但稳定性一般' },
-];
-
-export const sourceBadgeStyles: Record<string, string> = {
-  netease: "text-red-500/70 border-red-500/20 bg-red-500/5 hover:bg-red-500/10",
-  _netease: "text-red-500/70 border-red-500/20 bg-red-500/5 hover:bg-red-500/10",
-  kuwo: "text-amber-500/70 border-amber-500/20 bg-amber-500/5 hover:bg-amber-500/10",
-  joox: "text-green-500/70 border-green-500/20 bg-green-500/5 hover:bg-green-500/10",
-  default: "text-muted-foreground/70 border-border bg-muted/30 hover:bg-muted/50",
-};
-
-// === Music Store Types ===
-
-// 音乐轨道信息
-export type MusicSource =
-  | 'netease' //  🌟
-  | '_netease' //  🌟 网易云客户端API
-  | 'joox'   //  🌟
-  | 'tencent'
-  | 'kugou'
-  | 'kuwo'
-  | 'bilibili'
-  | 'migu'
-  | 'qq'
-  | 'fivesing'
-  | 'tk'
-  | 'wy'
-  | 'kg'
-  | 'kw'
-  | 'mg'
-  | 'qi'
-  | 'lizhi'
-  | 'qingting'
-  | 'ximalaya'
-  | 'xiaoyuzhou'  //  小宇宙
-  | 'podcast'     //  RSS 播客
-  // Common sources mentioned in doc: netease, tencent, tidal, spotify, ytmusic, qobuz, joox, deezer, migu, kugou, kuwo, ximalaya, apple
-  | 'tidal' | 'spotify' | 'ytmusic' | 'qobuz' | 'deezer' | 'apple' | 'all' | 'local';
-
-export interface SearchIntent {
-  type: 'artist' | 'album' | 'playlist' | '';
-  id?: string;
-  name?: string;
-  artist?: string;
-}
-
-export interface SearchSuggestionItem {
-  id?: string;
-  text: string;
-  type: 'song' | 'artist' | 'album' | 'playlist';
-  source?: MusicSource;
-}
-
-export interface MusicTrack {
-  id: string;
-  name: string;
-  artist: string[];
-  album: string;
-  pic_id: string;
-  url_id: string;
-  lyric_id: string;
-  source: MusicSource;
-  update_time?: number;
-  is_deleted?: boolean;
-
-  privilege?: NeteasePrivilege;
-  artist_ids?: string[];  //  网易云歌手跳转用
-  album_id?: string;      // 网易云专辑跳转用
-}
-
-export interface Playlist {
-  id: string;
-  name: string;
-  tracks: MusicTrack[];
-  createdAt: number;
-  update_time?: number;
-  is_deleted?: boolean;
-  coverUrl?: string;
-  description?: string;
-}
-
-// 本地音乐轨道信息
-export interface LocalMusicTrack extends MusicTrack {
-  localPath: string;     // 本地文件路径
-  fileSize?: number;     // 文件大小
-  lastModified?: number; // 最后修改时间
-}
-
-// 需要持久化存储的音乐数据结构
-export interface MusicStoreData {
-  favorites: MusicTrack[];
-  playlists: Playlist[];
-  queue: MusicTrack[];
-  originalQueue?: MusicTrack[];
-  currentIndex: number;
-  volume: number;
-  isRepeat: boolean;
-  isShuffle: boolean;
-  quality: string;
-  searchSource: MusicSource;
-  updatedAt?: number;
-}
+export type {
+  LocalMusicTrack,
+  MergedMusicTrack,
+  MusicSource,
+  MusicStoreData,
+  MusicTrack,
+  Playlist,
+  SearchIntent,
+  SearchPageResult,
+  SearchResult,
+  SearchSuggestionItem,
+  SongLyric,
+  SongPic,
+  SongUrl,
+} from "@otter-music/shared";

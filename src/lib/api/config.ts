@@ -1,4 +1,4 @@
-import { type ApiResponse } from "@/types/index";
+import type { ApiResponse } from "@otter-music/shared";
 
 export const API_URL = "https://otter-music-web.pages.dev";
 export const API_TIMEOUT_MS = 10000;
@@ -103,10 +103,6 @@ export function fetchWithTimeout(input: RequestInfo | URL, init: RequestInit = {
 
 export function getProxyUrl(url: string) {
   return `${API_URL}/proxy?url=${encodeURIComponent(url)}`;
-}
-
-export function getProxyStreamUrl(url: string) {
-  return `${API_URL}/proxy/stream?url=${encodeURIComponent(url)}`;
 }
 
 /**

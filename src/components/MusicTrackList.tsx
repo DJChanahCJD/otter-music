@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState, useCallback } from "react";
+import React, { RefObject, useMemo, useRef, useState, useCallback } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import {
   DndContext, 
@@ -27,28 +27,30 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import { Button } from "@/components/ui/button";
 import {
-  ListChecks, Plus, Heart, Download, Trash2, ListMusic,
+  ListChecks, Plus, Heart, Download, Trash2, 
   Loader2, Search, Check, MoreVertical,
+  ListPlus,
 } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { MusicTrackItem } from "./MusicTrackItem";
-import { downloadMusicTrack, buildDownloadKey } from "@/lib/utils/download";
+import { AddToPlaylistDrawer } from "./AddToPlaylistDrawer";
+import { downloadMusicTrackBatch } from "@/lib/utils/download";
 import { useMusicStore } from "@/store/music-store";
-import { useActivePlaylists } from "@/hooks/use-active-playlists";
-import { useDownloadStore } from "@/store/download-store";
 import { MusicTrack } from "@/types/music";
 import toast from "react-hot-toast";
-import { processBatchCPU, processBatchIO } from "@/lib/utils";
+import { processBatchCPU } from "@/lib/utils";
 import { useShallow } from "zustand/react/shallow";
 
 interface MusicTrackListProps {
   tracks: MusicTrack[];
   onPlay: (track: MusicTrack) => void;
+  scrollContainerRef?: RefObject<HTMLDivElement | null>;
   playlistId?: string;
   currentTrackId?: string;
   isPlaying?: boolean;
   onRemove?: (track: MusicTrack, silent?: boolean) => void | Promise<void>;
+  onBatchRemove?: (tracks: MusicTrack[]) => void;
   onLoadMore?: () => void;
   hasMore?: boolean;
   loading?: boolean;
@@ -90,8 +92,8 @@ function SortableTrackItem({ track, children }: { track: MusicTrack, children: R
 }
 
 export function MusicTrackList({
-  tracks, onPlay, playlistId, currentTrackId, isPlaying,
-  onRemove, onLoadMore, hasMore, loading,
+  tracks, onPlay, scrollContainerRef, playlistId, currentTrackId, isPlaying,
+  onRemove, onBatchRemove, onLoadMore, hasMore, loading,
   emptyMessage = "暂无歌曲", removeLabel = "删除",
   showSourceBadge = false,
   onReorder,
@@ -100,6 +102,7 @@ export function MusicTrackList({
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [activeId, setActiveId] = useState<string | null>(null);
+  const [isAddToPlaylistOpen, setIsAddToPlaylistOpen] = useState(false);
   const internalRef = useRef<HTMLDivElement | null>(null);
 
   const sensors = useSensors(
@@ -133,25 +136,13 @@ export function MusicTrackList({
     }
   };
 
-  const { addToFavorites, addToPlaylist, createPlaylist, addToNextPlay, quality } = useMusicStore(
+  const { quality, addBatchToFavorites, addBatchToNextPlay } = useMusicStore(
     useShallow((state) => ({
-      addToFavorites: state.addToFavorites,
-      addToPlaylist: state.addToPlaylist,
-      createPlaylist: state.createPlaylist,
-      addToNextPlay: state.addToNextPlay,
       quality: state.quality,
+      addBatchToFavorites: state.addBatchToFavorites,
+      addBatchToNextPlay: state.addBatchToNextPlay,
     }))
   );
-  const playlists = useActivePlaylists();
-
-  const records = useDownloadStore((state) => state.records);
-
-  const downloadedStatusMap = useMemo(() => {
-    return new Map(tracks.map(track => [
-      track.id,
-      !!records[buildDownloadKey(track.source, track.id || "")]
-    ]));
-  }, [records, tracks]);
 
   const toggleSelect = useCallback((id: string) => {
     setSelectedIds((prev) => {
@@ -172,37 +163,47 @@ export function MusicTrackList({
 
   const getSelectedTracks = useCallback(() => tracks.filter((t) => selectedIds.has(t.id)), [tracks, selectedIds]);
 
-  const handleBatch = async (fn: (t: MusicTrack) => void, tip?: string) => {
+  const handleBatchFavorites = () => {
     const selected = getSelectedTracks();
-    const toastId = toast.loading(`处理中 0/${selected.length}`);
-    await processBatchCPU(selected, fn, (current, total) => toast.loading(`处理中 ${current}/${total}`, { id: toastId }));
-    tip ? toast.success(`${tip} ${selected.length} 首`, { id: toastId }) : toast.dismiss(toastId);
+    if (!selected.length) return;
+    addBatchToFavorites(selected);
+    toast.success(`已喜欢 ${selected.length} 首`);
+    resetSelection();
+  };
+
+  /** 批量添加到下一首（单次 setState，无迭代） */
+  const handleBatchNextPlay = () => {
+    const selected = getSelectedTracks();
+    if (!selected.length) return;
+    addBatchToNextPlay(selected);
+    toast.success(`已添加 ${selected.length} 首`);
     resetSelection();
   };
 
   const handleBatchRemove = async () => {
-    if (!onRemove) return;
+    if (!onRemove && !onBatchRemove) return;
     const count = selectedIds.size;
     if (!confirm(`确定${removeLabel}选中的 ${count} 首歌曲吗？`)) return;
-    
+
+    const selected = getSelectedTracks();
+    if (onBatchRemove) {
+      onBatchRemove(selected);
+      toast.success(`已${removeLabel} ${count} 首`);
+      resetSelection();
+      return;
+    }
+
     const toastId = toast.loading(`${removeLabel}中 0/${count}`);
-    await processBatchCPU(getSelectedTracks(), (t) => onRemove(t, true), (c, t) => toast.loading(`${removeLabel}中 ${c}/${t}`, { id: toastId }));
+    await processBatchCPU(selected, (t) => onRemove!(t, true), (c, t) => toast.loading(`${removeLabel}中 ${c}/${t}`, { id: toastId }));
     toast.success(`已${removeLabel} ${count} 首`, { id: toastId });
     resetSelection();
   };
 
   const handleBatchDownload = async () => {
     const selected = getSelectedTracks();
-    const toastId = toast.loading(`准备下载 0/${selected.length}`);
-    await processBatchIO(
-      selected,
-      async (track) => {
-        await downloadMusicTrack(track, parseInt(quality));
-      },
-      (c, t) => toast.loading(`下载中 ${c}/${t}`, { id: toastId }),
-      3
-    );
+    if (!selected.length) return;
     resetSelection();
+    await downloadMusicTrackBatch(selected, parseInt(quality));
   };
 
   const dropAnimation: DropAnimation = {
@@ -215,18 +216,9 @@ export function MusicTrackList({
     }),
   };
 
-  const handleCreatePlaylist = () => {
-    const name = window.prompt("输入歌单名称");
-    if (!name) return;
-    const id = createPlaylist(name);
-    selectedIds.size > 0 
-      ? handleBatch((t) => addToPlaylist(id, t), `已添加到「${name}」`)
-      : toast.success("已创建歌单");
-  };
-
   const virtualizer = useVirtualizer({
     count: tracks.length + 1,
-    getScrollElement: () => internalRef.current,
+    getScrollElement: () => scrollContainerRef?.current ?? internalRef.current,
     estimateSize: () => ROW_HEIGHT,
     overscan: 8,
   });
@@ -270,7 +262,7 @@ export function MusicTrackList({
                 size="sm" 
                 variant="secondary" 
                 className="h-7 px-2 text-[11px]" 
-                onClick={() => handleBatch(addToNextPlay, "已添加")} 
+                onClick={handleBatchNextPlay} 
                 disabled={selectedIds.size === 0}
               >
                 <Plus className="w-3 h-3" /> 下一首
@@ -291,22 +283,16 @@ export function MusicTrackList({
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent side="bottom" align="end" className="w-40 p-1">
-                  <div className="flex items-center px-2 py-1.5 text-xs rounded-sm hover:bg-accent cursor-pointer" onClick={() => handleBatch(addToFavorites, "已添加到喜欢")}>
+                  <div className="flex items-center px-2 py-1.5 text-xs rounded-sm hover:bg-accent cursor-pointer" onClick={handleBatchFavorites}>
                     <Heart className="mr-2 h-3.5 w-3.5" /> 喜欢
                   </div>
                   <div className="flex items-center px-2 py-1.5 text-xs rounded-sm hover:bg-accent cursor-pointer" onClick={handleBatchDownload}>
                     <Download className="mr-2 h-3.5 w-3.5" /> 下载
                   </div>
-                  <div className="border-t my-1" />
-                  {playlists.map((p) => (
-                    <div key={p.id} className="flex items-center px-2 py-1.5 text-xs rounded-sm hover:bg-accent cursor-pointer" onClick={() => handleBatch((t) => addToPlaylist(p.id, t), `已添加到「${p.name}」`)}>
-                      <ListMusic className="mr-2 h-3.5 w-3.5 opacity-50" /> <span className="truncate">{p.name}</span>
-                    </div>
-                  ))}
-                  <div className="flex items-center px-2 py-1.5 text-xs rounded-sm hover:bg-accent cursor-pointer text-muted-foreground" onClick={handleCreatePlaylist}>
-                    <Plus className="mr-2 h-3.5 w-3.5" /> 新建歌单
+                  <div className="flex items-center px-2 py-1.5 text-xs rounded-sm hover:bg-accent cursor-pointer" onClick={() => setIsAddToPlaylistOpen(true)}>
+                    <ListPlus className="mr-2 h-3.5 w-3.5" /> 添加到歌单
                   </div>
-                  {onRemove && (
+                  {(onRemove || onBatchRemove) && (
                     <>
                       <div className="border-t my-1" />
                       <div className="flex items-center px-2 py-1.5 text-xs rounded-sm hover:bg-accent cursor-pointer text-destructive" onClick={handleBatchRemove}>
@@ -352,7 +338,7 @@ export function MusicTrackList({
                   onPlay={() => onPlay(track)} showCheckbox={isSelectionMode}
                   isSelected={selectedIds.has(track.id)} onSelect={() => toggleSelect(track.id)}
                   onRemove={!isSelectionMode && onRemove && showItemRemove ? () => onRemove(track) : undefined}
-                  removeLabel={removeLabel} isDownloaded={downloadedStatusMap.get(track.id) ?? false}
+                  removeLabel={removeLabel}
                   quality={quality} showSourceBadge={showSourceBadge}
                 />
               ) : (
@@ -396,7 +382,6 @@ export function MusicTrackList({
                 isCurrent={track.id === currentTrackId} isPlaying={isPlaying}
                 onPlay={() => {}} showCheckbox={isSelectionMode}
                 isSelected={selectedIds.has(track.id)} 
-                isDownloaded={downloadedStatusMap.get(track.id) ?? false}
                 quality={quality} showSourceBadge={showSourceBadge}
                 dragHandleProps={{ style: { cursor: 'grabbing' } }}
                 isSortable={true}
@@ -406,6 +391,13 @@ export function MusicTrackList({
           })() : null}
         </DragOverlay>
       </DndContext>
+
+      <AddToPlaylistDrawer
+        open={isAddToPlaylistOpen}
+        onOpenChange={setIsAddToPlaylistOpen}
+        tracks={getSelectedTracks()}
+        onDone={resetSelection}
+      />
     </div>
   );
 }

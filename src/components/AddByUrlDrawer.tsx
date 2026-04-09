@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Link, Music2, User } from "lucide-react";
 import toast from "react-hot-toast";
 
-interface AddByUrlDialogProps {
+interface AddByUrlDrawerProps {
   isOpen: boolean;
   onClose: () => void;
   onConfirm: (title: string, url: string, artist?: string) => void;
@@ -50,7 +50,7 @@ async function readClipboardText() {
   return navigator.clipboard?.readText?.() || "";
 }
 
-export function AddByUrlDialog({ isOpen, onClose, onConfirm }: AddByUrlDialogProps) {
+export function AddByUrlDrawer({ isOpen, onClose, onConfirm }: AddByUrlDrawerProps) {
   const [formData, setFormData] = useState({ title: "", url: "", artist: "" });
 
   const updateField = (field: keyof typeof formData, value: string) => {

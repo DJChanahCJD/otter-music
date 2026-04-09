@@ -81,8 +81,20 @@ export async function processBatchIO<T>(
   );
 }
 
-/** 帧让位 */
-const nextFrame = () => new Promise(resolve => requestAnimationFrame(resolve));
+/**
+ * 让出主线程（不受后台标签页 rAF 节流影响）
+ * 优先使用 scheduler.yield（Chrome 129+），降级到 MessageChannel 宏任务
+ */
+const yieldToMain = (): Promise<void> => {
+  if (typeof (globalThis as any).scheduler?.yield === 'function') {
+    return (globalThis as any).scheduler.yield();
+  }
+  return new Promise<void>(resolve => {
+    const ch = new MessageChannel();
+    ch.port1.onmessage = () => resolve();
+    ch.port2.postMessage(null);
+  });
+};
 
 /**
  * 节流函数
@@ -126,7 +138,7 @@ export async function processBatchCPU<T>(
     }
     done += chunk.length;
     onProgress?.(done, total);
-    await nextFrame();
+    await yieldToMain();
   }
 }
 

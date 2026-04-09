@@ -11,11 +11,10 @@ export const formatMediaTime = (time: number) => {
 };
 
 /**
- * 清理 MusicTrack，移除 variants 字段
+ * 清理 MusicTrack，移除运行时专属字段（variants、privilege），仅保留需持久化的核心数据
  */
 export function cleanTrack(track: MusicTrack | MergedMusicTrack): MusicTrack {
-  // 使用解构剔除不需要的属性，_ 表示占位忽略
-  const { variants: _, ...rest } = track as MergedMusicTrack;
+  const { variants: _, privilege: __, ...rest } = track as MergedMusicTrack;
   return rest;
 }
 
@@ -23,8 +22,8 @@ export function cleanTrack(track: MusicTrack | MergedMusicTrack): MusicTrack {
  * 歌单去重结果
  */
 export interface DeduplicationResult {
-  tracks: MusicTrack[];
   removedCount: number;
+  trackIdsToDelete: string[];
   tracksToLike: MusicTrack[];
 }
 
@@ -52,6 +51,7 @@ export function deduplicateTracks(
   });
 
   const indicesToRemove = new Set<number>();
+  const trackIdsToDelete: string[] = [];
   let removedCount = 0;
   const tracksToLike: MusicTrack[] = [];
 
@@ -88,16 +88,14 @@ export function deduplicateTracks(
     // Mark losers for removal
     for (let i = 1; i < group.length; i++) {
       indicesToRemove.add(group[i].index);
+      trackIdsToDelete.push(group[i].track.id);
       removedCount++;
     }
   });
 
-  // 3. Update list
-  const newTracks = tracks.filter((_, index) => !indicesToRemove.has(index));
-
   return {
-    tracks: newTracks,
     removedCount,
+    trackIdsToDelete,
     tracksToLike,
   };
 }
