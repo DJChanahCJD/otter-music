@@ -44,9 +44,9 @@ const TTL_LONG = 7 * 24 * 60 * 60 * 1000;   // 7 days
 
 // 确保移动端（即便是开发环境连着手机测）也能指向绝对路径，避免报错
 const IS_NATIVE = Capacitor.isNativePlatform();
-const USE_PROXY = import.meta.env.PROD && !IS_NATIVE;    //  Web端，且生产环境，网易云API 因为跨域问题，需要代理
-const BASE_URL = (import.meta.env.DEV && !IS_NATIVE) ? '/api/netease' : 'https://music.163.com';
-const EAPI_BASE_URL = (import.meta.env.DEV && !IS_NATIVE) ? '/api/netease' : 'https://interface3.music.163.com';
+const USE_PROXY = import.meta.env.PROD && !IS_NATIVE;                                                               //  Web端，且生产环境，网易云API 因为跨域问题，需要代理
+const BASE_URL = (import.meta.env.DEV && !IS_NATIVE) ? '/api/netease' : 'https://music.163.com';                    // Web端，且开发环境，指向本地 Vite 代理
+const EAPI_BASE_URL = (import.meta.env.DEV && !IS_NATIVE) ? '/api/netease' : 'https://interface3.music.163.com';     // Web端，且开发环境，指向本地 Vite 代理
 const NETEASE_PROXY_PREFIX = '/music-api/netease';
 
 const PC_USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
