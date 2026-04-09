@@ -76,9 +76,9 @@ neteaseRoutes.get('/login/qr/check', async (c) => {
  * @returns {Promise<{ profile: UserProfile }>}
  */
 neteaseRoutes.post('/my-info', async (c) => {
-  const { cookie } = await c.req.json<{ cookie: string }>();
+  const { cookie } = await c.req.json<{ cookie?: string }>();
   try {
-    const res = await getMyInfo(cookie);
+    const res = await getMyInfo(cookie || '');
     return c.json(res);
   } catch (e: any) {
     return c.json({ error: e.message }, 500);
@@ -94,9 +94,9 @@ neteaseRoutes.post('/my-info', async (c) => {
  * @returns {Promise<{ playlist: UserPlaylist[], code: number }>}
  */
 neteaseRoutes.post('/user-playlists', async (c) => {
-  const { userId, cookie } = await c.req.json<{ userId: string, cookie: string }>();
+  const { userId, cookie } = await c.req.json<{ userId: string, cookie?: string }>();
   try {
-    const res = await getUserPlaylists(userId, cookie);
+    const res = await getUserPlaylists(userId, cookie || '');
     return c.json(res);
   } catch (e: any) {
     return c.json({ error: e.message }, 500);
@@ -112,9 +112,9 @@ neteaseRoutes.post('/user-playlists', async (c) => {
  * @returns {Promise<PlaylistDetail>}
  */
 neteaseRoutes.post('/playlist', async (c) => {
-  const { playlistId, cookie } = await c.req.json<{ playlistId: string, cookie: string }>();
+  const { playlistId, cookie } = await c.req.json<{ playlistId: string, cookie?: string }>();
   try {
-    const res = await getPlaylistDetail(playlistId, cookie);
+    const res = await getPlaylistDetail(playlistId, cookie || '');
     return c.json(res);
   } catch (e: any) {
     return c.json({ error: e.message }, 500);
@@ -177,9 +177,9 @@ neteaseRoutes.post('/playlist/dynamic', async (c) => {
  * @returns {Promise<{ result: RecommendPlaylist[] }>}
  */
 neteaseRoutes.post('/recommend', async (c) => {
-  const { cookie } = await c.req.json<{ cookie: string }>();
+  const { cookie } = await c.req.json<{ cookie?: string }>();
   try {
-    const res = await getRecommendPlaylists(cookie);
+    const res = await getRecommendPlaylists(cookie || '');
     return c.json(res);
   } catch (e: any) {
     return c.json({ error: e.message }, 500);
@@ -194,9 +194,9 @@ neteaseRoutes.post('/recommend', async (c) => {
  * @returns {Promise<{ list: Toplist[] }>}
  */
 neteaseRoutes.post('/toplist', async (c) => {
-  const { cookie } = await c.req.json<{ cookie: string }>();
+  const { cookie } = await c.req.json<{ cookie?: string }>();
   try {
-    const res = await getToplist(cookie);
+    const res = await getToplist(cookie || '');
     return c.json(res);
   } catch (e: any) {
     return c.json({ error: e.message }, 500);
@@ -212,9 +212,9 @@ neteaseRoutes.post('/toplist', async (c) => {
  * @returns {Promise<AlbumDetail>}
  */
 neteaseRoutes.post('/album', async (c) => {
-  const { id, cookie } = await c.req.json<{ id: string, cookie: string }>();
+  const { id, cookie } = await c.req.json<{ id: string, cookie?: string }>();
   try {
-    const res = await getAlbum(id, cookie);
+    const res = await getAlbum(id, cookie || '');
     return c.json(res);
   } catch (e: any) {
     return c.json({ error: e.message }, 500);
@@ -242,9 +242,9 @@ neteaseRoutes.post('/album/dynamic', async (c) => {
  * @returns {Promise<ArtistDetail>}
  */
 neteaseRoutes.post('/artist', async (c) => {
-  const { id, cookie } = await c.req.json<{ id: string, cookie: string }>();
+  const { id, cookie } = await c.req.json<{ id: string, cookie?: string }>();
   try {
-    const res = await getArtist(id, cookie);
+    const res = await getArtist(id, cookie || '');
     return c.json(res);
   } catch (e: any) {
     return c.json({ error: e.message }, 500);
