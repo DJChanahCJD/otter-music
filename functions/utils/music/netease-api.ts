@@ -191,6 +191,20 @@ export async function getSongUrl(id: string, br: number = 999000, cookie: string
 
 // ---------- 下方全线使用 requestWeapi 替代原本脆弱的 request ----------
 
+/**
+ * 游客登录，获取真实游客 cookie（MUSIC_A）
+ * 注意：此接口调用了加密算法，速度较慢
+ * @returns 游客 cookie 字符串，提取自响应头 Set-Cookie 中的 MUSIC_A 字段
+ */
+export async function registerAnonymous(): Promise<string> {
+    const { cookie } = await requestWeapi<Record<string, never>>(
+        `${BASE_URL}/weapi/register/anonimous`,
+        {}
+    );
+    // requestWeapi 返回 cleanCookie 处理后的 set-cookie，直接使用即可
+    return cookie || '';
+}
+
 export async function getQrKey() {
     return requestWeapi<QrKeyResponse>(`${BASE_URL}/weapi/login/qrcode/unikey`, { type: 1 });
 }

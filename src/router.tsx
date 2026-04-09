@@ -1,4 +1,5 @@
 import { createBrowserRouter, Navigate } from "react-router-dom";
+import { Suspense, lazy } from "react";
 import { RootLayout } from "@/components/RootLayout";
 import {
   SearchRoute,
@@ -16,6 +17,11 @@ import {
   PodcastDetailRoute
 } from "@/routes/RouteWrappers";
 import { RouteErrorPage } from "@/components/RouteErrorPage";
+import { PageLoader } from "@/components/PageLoader";
+
+const AdminPage = lazy(() =>
+  import("@/components/admin/AdminPage").then((m) => ({ default: m.AdminPage }))
+);
 
 // --- Router Config ---
 
@@ -82,5 +88,13 @@ export const router = createBrowserRouter([
         element: <TrashRoute />,
       },
     ],
+  },
+  {
+    path: "/admin",
+    element: (
+      <Suspense fallback={<PageLoader />}>
+        <AdminPage />
+      </Suspense>
+    ),
   },
 ]);

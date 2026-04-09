@@ -34,7 +34,7 @@ import {
 import { MusicTrack } from '@/types/music';
 import { cachedFetch } from "@/lib/utils/cache";
 import { API_URL, IS_NATIVE, IS_WEB_PROD } from "@/lib/api/config";
-import { Capacitor, CapacitorHttp } from '@capacitor/core';
+import { CapacitorHttp } from '@capacitor/core';
 import { useNeteaseStore } from '@/store/netease-store';
 import { logger } from '@/lib/logger';
 
@@ -81,9 +81,18 @@ function cleanCookie(cookieStr: string | null): string {
         .join('; ');
 }
 
+/**
+ * 获取游客 cookie（MUSIC_A），优先级：真实游客 cookie > 本地伪造 cookie
+ */
+const getAnonymousFallback = () => {
+    const { anonymousCookie } = useNeteaseStore.getState();
+    return anonymousCookie || buildVisitorCookie();
+};
+
 function buildCookie(rawCookie: string = ''): string {
     let finalCookie = (rawCookie || getStoredCookie()).trim();
-    if (!finalCookie) finalCookie = buildVisitorCookie();
+    // 优先级：用户登录 cookie > 真实游客 cookie > 本地伪造 cookie
+    if (!finalCookie) finalCookie = getAnonymousFallback();
     else if (!finalCookie.includes('=')) finalCookie = `MUSIC_U=${finalCookie}`;
     else finalCookie = cleanCookie(finalCookie);
     
@@ -311,8 +320,8 @@ export const getRecommendPlaylists = async (cookie: string = ''): Promise<Market
 };
 
 export const getPlaylistDetail = (playlistId: string, cookie: string = '') => 
-    cachedFetch<PlaylistDetail>(
-        `netease:playlist:${playlistId}:${resolveRequestCookie(cookie).slice(-16)}`,
+    cachedFetch<PlaylistDetail>( 
+        `netease:playlist:${playlistId}:${cookie.slice(-16)}`, 
         async () => {
             const finalCookie = resolveRequestCookie(cookie);
             if (IS_WEB_PROD) {
@@ -402,7 +411,7 @@ export const getLyric = (id: string, cookie: string = '') =>
 
 export const getSongDetail = (id: string, cookie: string = '') => 
     cachedFetch( 
-        `netease:song:${id.replace(/^(netrack_|ne_track_)/, '')}:${resolveRequestCookie(cookie).slice(-16)}`,
+        `netease:song:${id.replace(/^(netrack_|ne_track_)/, '')}:${cookie.slice(-16)}`, 
         async () => {
             const finalCookie = resolveRequestCookie(cookie);
             if (IS_WEB_PROD) {
@@ -647,7 +656,7 @@ export const toggleSubPlaylist = async (id: string, shouldSub: boolean, cookie: 
 
 export const getPlaylists = (cat: string = '全部', order: string = 'hot', limit: number = 30, offset: number = 0, cookie: string = '') => 
     cachedFetch( 
-        `netease:playlists:${cat}:${order}:${limit}:${offset}:${resolveRequestCookie(cookie).slice(-16)}`,
+        `netease:playlists:${cat}:${order}:${limit}:${offset}`, 
         async () => {
             const finalCookie = resolveRequestCookie(cookie);
             if (IS_WEB_PROD) {
@@ -767,6 +776,30 @@ export function resolveUrl(urlStr: string): ResolveUrlResult | null {
         if (url.pathname.includes('/song')) return { type: 'song', id: `netrack_${id}` };
     } catch { /* ignore parsing errors */ }
     return null;
+}
+
+/** 游客 cookie 有效期（28 天），留 2 天余量防止 MUSIC_A 到期前失效 */
+const ANONYMOUS_COOKIE_TTL_MS = 28 * 24 * 60 * 60 * 1000;
+
+/**
+ * 获取真实游客 cookie（MUSIC_A），统一走后端 Worker，所有环境一致。
+ * 获取成功后会自动写入 netease-store（含时间戳）。
+ */
+export async function getAnonymousCookie(): Promise<string> {
+    const res = await fetchNeteaseProxy<{ cookie: string }>('/login/anonymous');
+    const cookie = res.cookie || '';
+    if (cookie) useNeteaseStore.getState().setAnonymousCookie(cookie);
+    return cookie;
+}
+
+/**
+ * 检查游客 cookie 是否需要刷新（不存在或已超过 28 天）
+ */
+export function isAnonymousCookieStale(): boolean {
+    const { cookie, anonymousCookie, anonymousCookieSetAt } = useNeteaseStore.getState();
+    if (cookie) return false;
+    if (!anonymousCookie) return true;
+    return Date.now() - anonymousCookieSetAt > ANONYMOUS_COOKIE_TTL_MS;
 }
 
 export const convertSongToMusicTrack = (song: NeteaseSong): MusicTrack => {

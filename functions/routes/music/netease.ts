@@ -30,9 +30,25 @@ import {
   toggleSubArtist,
   toggleSubAlbum,
   toggleSubPlaylist,
+  registerAnonymous,
 } from '../../utils/music/netease-api';
 
 export const neteaseRoutes = new Hono<{ Bindings: Env }>();
+
+/**
+ * 游客登录，获取真实游客 cookie（MUSIC_A）
+ * @method GET
+ * @path /login/anonymous
+ * @returns {{ cookie: string }} 游客 cookie 字符串
+ */
+neteaseRoutes.get('/login/anonymous', async (c) => {
+  try {
+    const cookie = await registerAnonymous();
+    return c.json({ cookie });
+  } catch (e: any) {
+    return c.json({ error: e.message }, 500);
+  }
+});
 
 /**
  * 获取二维码登录所需的 key
