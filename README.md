@@ -53,8 +53,6 @@
 > APP 网页版：[Otter Music](https://otter-music.pages.dev/)
 > 
 > 项目已完整支持 PWA 功能。iOS 用户可使用 Safari 浏览器打开并「添加到主屏幕」，即可实现独立应用体验与后台播放。
-> 
-> 注：网易云歌单等部分功能暂未支持。
 
 ## 快速开始
 

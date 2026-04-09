@@ -33,8 +33,8 @@ import {
 } from "./netease-normalize";
 import { MusicTrack } from '@/types/music';
 import { cachedFetch } from "@/lib/utils/cache";
-import { API_URL } from "@/lib/api/config";
-import { Capacitor, CapacitorHttp } from '@capacitor/core';
+import { API_URL, IS_NATIVE, IS_WEB_PROD } from "@/lib/api/config";
+import { CapacitorHttp } from '@capacitor/core';
 import { useNeteaseStore } from '@/store/netease-store';
 import { logger } from '@/lib/logger';
 
@@ -43,10 +43,8 @@ const TTL_MEDIUM = 24 * 60 * 60 * 1000;     // 1 day
 const TTL_LONG = 7 * 24 * 60 * 60 * 1000;   // 7 days
 
 // 确保移动端（即便是开发环境连着手机测）也能指向绝对路径，避免报错
-const IS_NATIVE = Capacitor.isNativePlatform();
-const USE_PROXY = import.meta.env.PROD && !IS_NATIVE;    //  Web端，且生产环境，网易云API 因为跨域问题，需要代理
-const BASE_URL = (import.meta.env.DEV && !IS_NATIVE) ? '/api/netease' : 'https://music.163.com';
-const EAPI_BASE_URL = (import.meta.env.DEV && !IS_NATIVE) ? '/api/netease' : 'https://interface3.music.163.com';
+const BASE_URL = (import.meta.env.DEV && !IS_NATIVE) ? '/api/netease' : 'https://music.163.com';                    // Web端，且开发环境，指向本地 Vite 代理
+const EAPI_BASE_URL = (import.meta.env.DEV && !IS_NATIVE) ? '/api/netease' : 'https://interface3.music.163.com';     // Web端，且开发环境，指向本地 Vite 代理
 const NETEASE_PROXY_PREFIX = '/music-api/netease';
 
 const PC_USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
@@ -90,6 +88,13 @@ function buildCookie(rawCookie: string = ''): string {
     else finalCookie = cleanCookie(finalCookie);
     
     return `os=pc; appver=2.9.7; mode=31; ${finalCookie}`;
+}
+
+function resolveRequestCookie(rawCookie: string = ''): string {
+    const cookie = (rawCookie || getStoredCookie()).trim();
+    if (!cookie) return buildCookie('');
+    if (!cookie.includes('=')) return buildCookie(cookie);
+    return buildCookie(cleanCookie(cookie));
 }
 
 // 移动端允许写入真实 Cookie 和 UA，不再需要 X-Real- 伪装
@@ -175,7 +180,7 @@ async function crossFetch(url: string, options: { method: string; headers: Recor
 }
 
 async function requestWeapi<T = unknown>(url: string, data: Record<string, unknown>, cookie: string = '') {
-    const finalCookie = cookie || getStoredCookie();
+    const finalCookie = resolveRequestCookie(cookie);
     const headers = buildHeaders(finalCookie, PC_USER_AGENT);
     const params = new URLSearchParams(weapi(data) as Record<string, string>).toString();
 
@@ -184,7 +189,7 @@ async function requestWeapi<T = unknown>(url: string, data: Record<string, unkno
 }
 
 async function requestEapi<T = unknown>(url: string, path: string, data: Record<string, unknown>, cookie: string = '') {
-    const finalCookie = cookie || getStoredCookie();
+    const finalCookie = resolveRequestCookie(cookie);
     const headers = buildHeaders(finalCookie, MOBILE_USER_AGENT);
     const params = new URLSearchParams(eapi(path, data) as Record<string, string>).toString();
 
@@ -193,7 +198,7 @@ async function requestEapi<T = unknown>(url: string, path: string, data: Record<
 }
 
 async function fetchLocalApi<T>(endpoint: string, body?: Record<string, unknown>): Promise<T> {
-    const localApiBase = USE_PROXY ? '' : API_URL;
+    const localApiBase = IS_WEB_PROD ? '' : API_URL;
     const url = endpoint.startsWith('http') ? endpoint : `${localApiBase}${endpoint}`;
     const controller = new AbortController();
     const timer = window.setTimeout(() => controller.abort(), NETWORK_TIMEOUT_MS);
@@ -228,10 +233,11 @@ const LEVEL_MAP: Record<number, string> = {
 
 export async function getSongUrl(id: string, br: number = 999000, cookie: string = ''): Promise<WrappedNeteaseResponse<{ data: { url: string, br: number, size: number, freeTrialInfo?: unknown }[] }>> {
     const realId = id.replace(/^(netrack_|ne_track_)/, '');
-    if (USE_PROXY) {
+    const finalCookie = resolveRequestCookie(cookie);
+    if (IS_WEB_PROD) {
         return fetchNeteaseProxy<WrappedNeteaseResponse<{ data: { url: string, br: number, size: number, freeTrialInfo?: unknown }[] }>>(
             '/song-url',
-            { id: realId, br, cookie }
+            { id: realId, br, cookie: finalCookie }
         );
     }
 
@@ -242,7 +248,7 @@ export async function getSongUrl(id: string, br: number = 999000, cookie: string
             `${EAPI_BASE_URL}/eapi/song/enhance/player/url/v1`,
             '/api/song/enhance/player/url/v1',
             { ids: `[${realId}]`, level, encodeType: 'flac', header: { os: 'ios', appver: '8.9.70' } },
-            cookie
+            finalCookie
         );
         const trackData = eapiRes.data?.data?.[0];
         if (trackData?.url && !trackData.freeTrialInfo) return eapiRes;
@@ -253,7 +259,7 @@ export async function getSongUrl(id: string, br: number = 999000, cookie: string
     return requestWeapi<{ data: { url: string, br: number, size: number }[] }>(
         `${BASE_URL}/weapi/song/enhance/player/url/v1`,
         { ids: `[${realId}]`, level, encodeType: 'flac', csrf_token: '' },
-        cookie
+        finalCookie
     );
 }
 
@@ -268,19 +274,21 @@ export const checkQrStatus = async (key: string): Promise<QrStatusResult> => {
 };
 
 export const getMyInfo = async (cookie: string = ''): Promise<UserProfile | null> => {
+    const finalCookie = resolveRequestCookie(cookie);
     const res = await cachedFetch<UserProfile | null>(
-        `netease:v2:my-info:${cookie.slice(-16)}`,
-        async () => unwrapMyInfoProfile(await fetchLocalApi('/music-api/netease/my-info', { cookie })),
+        `netease:v2:my-info:${finalCookie.slice(-16)}`,
+        async () => unwrapMyInfoProfile(await fetchLocalApi('/music-api/netease/my-info', { cookie: finalCookie })),
         TTL_SHORT
     );
     return res ?? null;
 };
 
 export const getUserPlaylists = async (userId: string, cookie: string = ''): Promise<MarketPlaylist[]> => {
+    const finalCookie = resolveRequestCookie(cookie);
     const res = await cachedFetch<MarketPlaylist[]>(
         `netease:v2:user-playlists:${userId}`,
         async () => {
-            const r = await fetchLocalApi<{ playlist: UserPlaylist[]; code: number }>('/music-api/netease/user-playlists', { userId, cookie });
+            const r = await fetchLocalApi<{ playlist: UserPlaylist[]; code: number }>('/music-api/netease/user-playlists', { userId, cookie: finalCookie });
             if (r.code !== 200) throw new Error(`NetEase user playlists error: ${r.code}`);
             return r.playlist.map(toMarketPlaylistFromUserPlaylist);
         },
@@ -290,10 +298,11 @@ export const getUserPlaylists = async (userId: string, cookie: string = ''): Pro
 };
 
 export const getRecommendPlaylists = async (cookie: string = ''): Promise<MarketPlaylist[]> => {
+    const finalCookie = resolveRequestCookie(cookie);
     const res = await cachedFetch<MarketPlaylist[]>(
-        `netease:v2:recommend:${cookie.slice(-16)}`,
+        `netease:v2:recommend:${finalCookie.slice(-16)}`,
         async () => {
-            const r = await fetchLocalApi<{ result?: RecommendPlaylist[]; data?: { result?: RecommendPlaylist[] } }>('/music-api/netease/recommend', { cookie });
+            const r = await fetchLocalApi<{ result?: RecommendPlaylist[]; data?: { result?: RecommendPlaylist[] } }>('/music-api/netease/recommend', { cookie: finalCookie });
             return unwrapRecommendResult(r).map(toMarketPlaylistFromRecommend);
         },
         TTL_SHORT
@@ -302,19 +311,20 @@ export const getRecommendPlaylists = async (cookie: string = ''): Promise<Market
 };
 
 export const getPlaylistDetail = (playlistId: string, cookie: string = '') => 
-    cachedFetch<PlaylistDetail>( 
-        `netease:playlist:${playlistId}:${cookie.slice(-16)}`, 
+    cachedFetch<PlaylistDetail>(
+        `netease:playlist:${playlistId}`,
         async () => {
-            if (USE_PROXY) {
-                return fetchNeteaseProxy<PlaylistDetail>('/playlist', { playlistId, cookie });
+            const finalCookie = resolveRequestCookie(cookie);
+            if (IS_WEB_PROD) {
+                return fetchNeteaseProxy<PlaylistDetail>('/playlist', { playlistId, cookie: finalCookie });
             }
 
             const res = await requestWeapi<{ playlist: PlaylistDetail & { trackIds: { id: number }[] } }>( 
                 `${BASE_URL}/weapi/v3/playlist/detail`, 
                 { id: playlistId, offset: 0, total: true, limit: 1000, n: 1000, csrf_token: '' }, 
-                cookie 
+                finalCookie
             ); 
-            const tracks = await getTracksDetail(res.data.playlist.trackIds.map((t: { id: number }) => t.id), cookie); 
+            const tracks = await getTracksDetail(res.data.playlist.trackIds.map((t: { id: number }) => t.id), finalCookie);
             return { ...res.data.playlist, tracks } as PlaylistDetail; 
         }, 
         TTL_SHORT
@@ -322,15 +332,16 @@ export const getPlaylistDetail = (playlistId: string, cookie: string = '') =>
 
 export const getPlaylistDynamicDetail = async (id: string, cookie: string = ''): Promise<PlaylistDynamicDetail | null> => {
     try {
-        if (USE_PROXY) {
-            const res = await fetchNeteaseProxy<WrappedNeteaseResponse<PlaylistDynamicDetail>>('/playlist/dynamic', { id, cookie });
+        const finalCookie = resolveRequestCookie(cookie);
+        if (IS_WEB_PROD) {
+            const res = await fetchNeteaseProxy<WrappedNeteaseResponse<PlaylistDynamicDetail>>('/playlist/dynamic', { id, cookie: finalCookie });
             return res.data ?? null;
         }
 
         const res = await requestWeapi<PlaylistDynamicDetail>(
             `${BASE_URL}/weapi/playlist/detail/dynamic`,
             { id: id.replace(/^(neplaylist_|ne_playlist_)/, '') },
-            cookie
+            finalCookie
         );
         return res.data;
     } catch (e) {
@@ -358,14 +369,14 @@ async function getTracksDetail(trackIds: number[], cookie: string = '') {
 }
 
 export async function search(keyword: string, type: number = 1, page: number = 1, limit: number = 20, cookie: string = '') {
-    if (USE_PROXY) {
+    const finalCookie = resolveRequestCookie(cookie);
+    if (IS_WEB_PROD) {
         return fetchNeteaseProxy<{ data: { result: { songs?: NeteaseSong[]; songCount?: number; hasMore?: boolean }, code: number } }>(
             '/search',
-            { keyword, type, page, limit, cookie }
+            { keyword, type, page, limit, cookie: finalCookie }
         );
     }
 
-    const finalCookie = cookie || getStoredCookie();
     const headers = buildHeaders(finalCookie, PC_USER_AGENT, getRandomDomesticIp());
     const params = new URLSearchParams({ s: keyword, type: String(type), offset: String((page - 1) * limit), limit: String(limit) });
     
@@ -376,39 +387,44 @@ export async function search(keyword: string, type: number = 1, page: number = 1
 export const getLyric = (id: string, cookie: string = '') => 
     cachedFetch( 
         `netease:lyric:${id.replace(/^(netrack_|ne_track_)/, '')}`, 
-        (): Promise<WrappedNeteaseResponse<{ lrc: { lyric: string }, tlyric: { lyric: string } }>> => USE_PROXY
-            ? fetchNeteaseProxy<WrappedNeteaseResponse<{ lrc: { lyric: string }, tlyric: { lyric: string } }>>('/lyric', { id, cookie })
-            : requestWeapi<{ lrc: { lyric: string }, tlyric: { lyric: string } }>( 
+        (): Promise<WrappedNeteaseResponse<{ lrc: { lyric: string }, tlyric: { lyric: string } }>> => {
+            const finalCookie = resolveRequestCookie(cookie);
+            return IS_WEB_PROD
+            ? fetchNeteaseProxy<WrappedNeteaseResponse<{ lrc: { lyric: string }, tlyric: { lyric: string } }>>('/lyric', { id, cookie: finalCookie })
+            : requestWeapi<{ lrc: { lyric: string }, tlyric: { lyric: string } }>(
                 `${BASE_URL}/weapi/song/lyric`, 
                 { id: id.replace(/^(netrack_|ne_track_)/, ''), lv: -1, tv: -1 }, 
-                cookie 
-            ), 
+                finalCookie
+            );
+        }, 
         TTL_LONG // 歌词极少变动，使用长缓存 
     ); 
 
 export const getSongDetail = (id: string, cookie: string = '') => 
     cachedFetch( 
-        `netease:song:${id.replace(/^(netrack_|ne_track_)/, '')}:${cookie.slice(-16)}`, 
+        `netease:song:${id.replace(/^(netrack_|ne_track_)/, '')}`,
         async () => {
-            if (USE_PROXY) {
-                return fetchNeteaseProxy<SongDetail>('/song-detail', { id, cookie });
+            const finalCookie = resolveRequestCookie(cookie);
+            if (IS_WEB_PROD) {
+                return fetchNeteaseProxy<SongDetail>('/song-detail', { id, cookie: finalCookie });
             }
 
-            return (await getTracksDetail([parseInt(id.replace(/^(netrack_|ne_track_)/, ''))], cookie))[0];
+            return (await getTracksDetail([parseInt(id.replace(/^(netrack_|ne_track_)/, ''))], finalCookie))[0];
         }, 
         TTL_LONG // 歌曲基础信息固定，但携带 VIP 鉴权，因此 key 加上 cookie 尾缀 
     ); 
 
 export const getToplist = async (cookie: string = ''): Promise<MarketPlaylist[]> => {
+    const finalCookie = resolveRequestCookie(cookie);
     const res = await cachedFetch<MarketPlaylist[]>(
-        `netease:v2:toplist`,
+        `netease:v2:toplist:${finalCookie.slice(-16)}`,
         async () => {
-            if (USE_PROXY) {
-                const r = await fetchNeteaseProxy<{ data: { list: Toplist[] } }>('/toplist', { cookie });
+            if (IS_WEB_PROD) {
+                const r = await fetchNeteaseProxy<{ data: { list: Toplist[] } }>('/toplist', { cookie: finalCookie });
                 return (r.data?.list || []).map(toMarketPlaylistFromToplist);
             }
 
-            const r = await requestWeapi<{ list: Toplist[] }>(`${BASE_URL}/weapi/toplist/detail`, {}, cookie);
+            const r = await requestWeapi<{ list: Toplist[] }>(`${BASE_URL}/weapi/toplist/detail`, {}, finalCookie);
             return r.data.list.map(toMarketPlaylistFromToplist);
         },
         TTL_SHORT
@@ -420,11 +436,12 @@ export const getAlbum = (id: string, cookie: string = '') =>
     cachedFetch( 
         `netease:album:${id.replace(/^(nealbum_|ne_album_)/, '')}`, 
         async () => {
-            if (USE_PROXY) {
-                return fetchNeteaseProxy<AlbumDetail>('/album', { id, cookie });
+            const finalCookie = resolveRequestCookie(cookie);
+            if (IS_WEB_PROD) {
+                return fetchNeteaseProxy<AlbumDetail>('/album', { id, cookie: finalCookie });
             }
 
-            const res = await requestWeapi<AlbumDetail>(`${BASE_URL}/weapi/v1/album/${id.replace(/^(nealbum_|ne_album_)/, '')}`, {}, cookie); 
+            const res = await requestWeapi<AlbumDetail>(`${BASE_URL}/weapi/v1/album/${id.replace(/^(nealbum_|ne_album_)/, '')}`, {}, finalCookie);
             return res.data; 
         }, 
         TTL_LONG // 专辑发布后信息基本固定 
@@ -432,15 +449,16 @@ export const getAlbum = (id: string, cookie: string = '') =>
 
 export const getAlbumDynamicDetail = async (id: string, cookie: string = ''): Promise<AlbumDynamicDetail | null> => {
     try {
-        if (USE_PROXY) {
-            const res = await fetchNeteaseProxy<WrappedNeteaseResponse<AlbumDynamicDetail>>('/album/dynamic', { id, cookie });
+        const finalCookie = resolveRequestCookie(cookie);
+        if (IS_WEB_PROD) {
+            const res = await fetchNeteaseProxy<WrappedNeteaseResponse<AlbumDynamicDetail>>('/album/dynamic', { id, cookie: finalCookie });
             return res.data ?? null;
         }
 
         const res = await requestWeapi<AlbumDynamicDetail>(
             `${BASE_URL}/weapi/album/detail/dynamic`,
             { id: id.replace(/^(nealbum_|ne_album_)/, '') },
-            cookie
+            finalCookie
         );
         return res.data;
     } catch (e) {
@@ -453,11 +471,12 @@ export const getArtist = (id: string, cookie: string = '') =>
     cachedFetch( 
         `netease:artist:${id.replace(/^(neartist_|ne_artist_)/, '')}`, 
         async () => {
-            if (USE_PROXY) {
-                return fetchNeteaseProxy<ArtistDetail>('/artist', { id, cookie });
+            const finalCookie = resolveRequestCookie(cookie);
+            if (IS_WEB_PROD) {
+                return fetchNeteaseProxy<ArtistDetail>('/artist', { id, cookie: finalCookie });
             }
 
-            const res = await requestWeapi<ArtistDetail>(`${BASE_URL}/weapi/v1/artist/${id.replace(/^(neartist_|ne_artist_)/, '')}`, {}, cookie); 
+            const res = await requestWeapi<ArtistDetail>(`${BASE_URL}/weapi/v1/artist/${id.replace(/^(neartist_|ne_artist_)/, '')}`, {}, finalCookie);
             return res.data; 
         }, 
         TTL_LONG // 歌手基础信息低频变动 
@@ -465,15 +484,16 @@ export const getArtist = (id: string, cookie: string = '') =>
 
 export const getArtistDynamicDetail = async (id: string, cookie: string = ''): Promise<Record<string, unknown> | null> => {
     try {
-        if (USE_PROXY) {
-            const res = await fetchNeteaseProxy<WrappedNeteaseResponse<Record<string, unknown>>>('/artist/dynamic', { id, cookie });
+        const finalCookie = resolveRequestCookie(cookie);
+        if (IS_WEB_PROD) {
+            const res = await fetchNeteaseProxy<WrappedNeteaseResponse<Record<string, unknown>>>('/artist/dynamic', { id, cookie: finalCookie });
             return res.data ?? null;
         }
 
         const res = await requestWeapi<any>(
             `${BASE_URL}/weapi/artist/detail/dynamic`,
             { id: id.replace(/^(neartist_|ne_artist_)/, '') },
-            cookie
+            finalCookie
         );
         return res.data;
     } catch (e) {
@@ -486,15 +506,16 @@ export const getArtistSongs = (id: string, limit: number = 50, offset: number = 
     cachedFetch(
         `netease:artist-songs:${id.replace(/^(neartist_|ne_artist_)/, '')}:${limit}:${offset}:${order}`,
         async () => {
-            if (USE_PROXY) {
-                const res = await fetchNeteaseProxy<{ data: { songs: SongDetail[], total: number, more: boolean } }>('/artist/songs', { id, limit, offset, order, cookie });
+            const finalCookie = resolveRequestCookie(cookie);
+            if (IS_WEB_PROD) {
+                const res = await fetchNeteaseProxy<{ data: { songs: SongDetail[], total: number, more: boolean } }>('/artist/songs', { id, limit, offset, order, cookie: finalCookie });
                 return res.data;
             }
 
             const res = await requestWeapi<{ songs: SongDetail[], total: number, more: boolean }>(
                 `${BASE_URL}/weapi/v1/artist/songs`,
                 { id: id.replace(/^(neartist_|ne_artist_)/, ''), limit, offset, order, total: true },
-                cookie
+                finalCookie
             );
             return res.data;
         },
@@ -505,15 +526,16 @@ export const getArtistAlbums = (id: string, limit: number = 30, offset: number =
     cachedFetch(
         `netease:artist-albums:${id.replace(/^(neartist_|ne_artist_)/, '')}:${limit}:${offset}`,
         async () => {
-            if (USE_PROXY) {
-                const res = await fetchNeteaseProxy<{ data: { hotAlbums: ArtistAlbum[], more: boolean } }>('/artist/albums', { id, limit, offset, cookie });
+            const finalCookie = resolveRequestCookie(cookie);
+            if (IS_WEB_PROD) {
+                const res = await fetchNeteaseProxy<{ data: { hotAlbums: ArtistAlbum[], more: boolean } }>('/artist/albums', { id, limit, offset, cookie: finalCookie });
                 return res.data;
             }
 
             const res = await requestWeapi<{ hotAlbums: ArtistAlbum[], more: boolean }>(
                 `${BASE_URL}/weapi/artist/albums/${id.replace(/^(neartist_|ne_artist_)/, '')}`,
                 { limit, offset, total: true },
-                cookie
+                finalCookie
             );
             return res.data;
         },
@@ -526,15 +548,16 @@ export const getSubscribedAlbums = async (
   cookie: string = ''
 ): Promise<ArtistAlbum[]> => {
   try {
-    if (USE_PROXY) {
-      const r = await fetchNeteaseProxy<{ data?: { data?: ArtistAlbum[] } }>('/album/sublist', { limit, offset, cookie });
+    const finalCookie = resolveRequestCookie(cookie);
+    if (IS_WEB_PROD) {
+      const r = await fetchNeteaseProxy<{ data?: { data?: ArtistAlbum[] } }>('/album/sublist', { limit, offset, cookie: finalCookie });
       return r.data?.data ?? [];
     }
 
     const r = await requestWeapi<{ data: ArtistAlbum[]; count: number }>(
       `${BASE_URL}/weapi/album/sublist`,
       { limit, offset, total: true },
-      cookie
+      finalCookie
     );
 
     return r.data.data ?? [];
@@ -550,15 +573,16 @@ export const getSubscribedArtists = async (
   cookie: string = ''
 ): Promise<ArtistItem[]> => {
   try {
-    if (USE_PROXY) {
-      const r = await fetchNeteaseProxy<{ data?: { data?: ArtistItem[] } }>('/artist/sublist', { limit, offset, cookie });
+    const finalCookie = resolveRequestCookie(cookie);
+    if (IS_WEB_PROD) {
+      const r = await fetchNeteaseProxy<{ data?: { data?: ArtistItem[] } }>('/artist/sublist', { limit, offset, cookie: finalCookie });
       return r.data?.data ?? [];
     }
 
     const r = await requestWeapi<{ data: ArtistItem[]; count: number }>(
       `${BASE_URL}/weapi/artist/sublist`,
       { limit, offset, total: true },
-      cookie
+      finalCookie
     );
 
     return r.data.data ?? [];
@@ -569,10 +593,11 @@ export const getSubscribedArtists = async (
 };
 
 export const toggleSubArtist = async (id: string, shouldSub: boolean, cookie: string = '') => {
-    if (USE_PROXY) {
+    const finalCookie = resolveRequestCookie(cookie);
+    if (IS_WEB_PROD) {
         return fetchNeteaseProxy<{ data?: { code: number, message?: string }, code?: number, message?: string }>(
             '/artist/sub',
-            { id, shouldSub, cookie }
+            { id, shouldSub, cookie: finalCookie }
         );
     }
 
@@ -581,15 +606,16 @@ export const toggleSubArtist = async (id: string, shouldSub: boolean, cookie: st
     return requestWeapi<{ code: number, message?: string }>(
         `${BASE_URL}/weapi/artist/${action}`,
         { artistId: realId, artistIds: [realId] }, // !  TODO:当前收藏歌手会报 250 系统错误, 暂时无法使用
-        cookie
+        finalCookie
     );
 };
 
 export const toggleSubAlbum = async (id: string, shouldSub: boolean, cookie: string = '') => {
-    if (USE_PROXY) {
+    const finalCookie = resolveRequestCookie(cookie);
+    if (IS_WEB_PROD) {
         return fetchNeteaseProxy<{ data?: { code: number, message?: string }, code?: number, message?: string }>(
             '/album/sub',
-            { id, shouldSub, cookie }
+            { id, shouldSub, cookie: finalCookie }
         );
     }
 
@@ -598,15 +624,16 @@ export const toggleSubAlbum = async (id: string, shouldSub: boolean, cookie: str
     return requestWeapi<{ code: number, message?: string }>(
         `${BASE_URL}/weapi/album/${action}`,
         { id: realId, t: shouldSub ? 1 : 0 },
-        cookie
+        finalCookie
     );
 };
 
 export const toggleSubPlaylist = async (id: string, shouldSub: boolean, cookie: string = '') => {
-    if (USE_PROXY) {
+    const finalCookie = resolveRequestCookie(cookie);
+    if (IS_WEB_PROD) {
         return fetchNeteaseProxy<{ data?: { code: number, message?: string }, code?: number, message?: string }>(
             '/playlist/sub',
-            { id, shouldSub, cookie }
+            { id, shouldSub, cookie: finalCookie }
         );
     }
 
@@ -614,23 +641,24 @@ export const toggleSubPlaylist = async (id: string, shouldSub: boolean, cookie: 
     return requestWeapi<{ code: number, message?: string }>(
         `${BASE_URL}/weapi/playlist/subscribe`,
         { id: realId, t: shouldSub ? 1 : 2 },
-        cookie
+        finalCookie
     );
 };
 
 export const getPlaylists = (cat: string = '全部', order: string = 'hot', limit: number = 30, offset: number = 0, cookie: string = '') => 
     cachedFetch( 
-        `netease:playlists:${cat}:${order}:${limit}:${offset}`, 
+        `netease:playlists:${cat}:${order}:${limit}:${offset}`,
         async () => {
-            if (USE_PROXY) {
-                const res = await fetchNeteaseProxy<{ data: { playlists: UserPlaylist[] } }>('/playlists', { cat, order, limit, offset, cookie });
+            const finalCookie = resolveRequestCookie(cookie);
+            if (IS_WEB_PROD) {
+                const res = await fetchNeteaseProxy<{ data: { playlists: UserPlaylist[] } }>('/playlists', { cat, order, limit, offset, cookie: finalCookie });
                 return (res.data?.playlists || []).map(toMarketPlaylistFromUserPlaylist);
             }
 
             const res = await requestWeapi<{ playlists: UserPlaylist[] }>(
                 `${BASE_URL}/weapi/playlist/list`,
                 { cat, order, limit, offset, total: true },
-                cookie
+                finalCookie
             );
             return res.data.playlists.map(toMarketPlaylistFromUserPlaylist);
         },
@@ -641,15 +669,16 @@ export const searchSuggest = (keyword: string, cookie: string = '') =>
     cachedFetch<SearchSuggestResult>(
         `netease:suggest:${keyword}`,
         async () => {
-            if (USE_PROXY) {
-                const res = await fetchNeteaseProxy<{ data?: { result?: SearchSuggestResult } }>('/search/suggest', { keyword, cookie });
+            const finalCookie = resolveRequestCookie(cookie);
+            if (IS_WEB_PROD) {
+                const res = await fetchNeteaseProxy<{ data?: { result?: SearchSuggestResult } }>('/search/suggest', { keyword, cookie: finalCookie });
                 return res.data?.result || {};
             }
 
             const res = await requestWeapi<{ result: SearchSuggestResult }>(
                 `${BASE_URL}/weapi/search/suggest/web`,
                 { s: keyword },
-                cookie
+                finalCookie
             );
             return res.data?.result || {};
         },
@@ -660,8 +689,9 @@ export const getHotComments = (id: string, limit: number = 20, offset: number = 
     cachedFetch<NeteaseCommentResult>(
         `netease:comments:hot:${id.replace(/^(netrack_|ne_track_)/, '')}:${limit}:${offset}`,
         async () => {
-            if (USE_PROXY) {
-                const res = await fetchNeteaseProxy<{ data?: NeteaseCommentResult }>('/comments/hot', { id, limit, offset, cookie });
+            const finalCookie = resolveRequestCookie(cookie);
+            if (IS_WEB_PROD) {
+                const res = await fetchNeteaseProxy<{ data?: NeteaseCommentResult }>('/comments/hot', { id, limit, offset, cookie: finalCookie });
                 return res.data as NeteaseCommentResult;
             }
 
@@ -670,7 +700,7 @@ export const getHotComments = (id: string, limit: number = 20, offset: number = 
             const res = await requestWeapi<NeteaseCommentResult>(
                 `${BASE_URL}/weapi/v1/resource/hotcomments/${rid}`,
                 { rid, limit, offset, beforeTime: 0 },
-                cookie
+                finalCookie
             );
             return res.data;
         },
@@ -688,14 +718,15 @@ export const getNewComments = (
     cachedFetch<NeteaseNewCommentResult['data']>(
         `netease:comments:new:${id.replace(/^(netrack_|ne_track_)/, '')}:${sortType}:${pageNo}:${cursor}`,
         async () => {
-            if (USE_PROXY) {
+            const finalCookie = resolveRequestCookie(cookie);
+            if (IS_WEB_PROD) {
                 const res = await fetchNeteaseProxy<WrappedNeteaseResponse<NeteaseNewCommentResult['data']>>('/comments/new', {
                     id,
                     pageNo,
                     pageSize,
                     sortType,
                     cursor,
-                    cookie,
+                    cookie: finalCookie,
                 });
                 return res.data ?? null;
             }
@@ -711,7 +742,7 @@ export const getNewComments = (
                     pageSize,
                     pageNo,
                 },
-                cookie
+                finalCookie
             );
             return res.data?.data;
         },
