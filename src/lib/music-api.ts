@@ -176,8 +176,8 @@ export const musicApi = {
       };
 
       addTop(s.artists, "artist", a => a.name);
-      addTop(s.songs, "song", song => `${song.name} ${song.artists?.map(a => a.name).join('/') ?? ""}`);
-      addTop(s.albums, "album", a => `${a.name} ${a.artist?.name ?? ""}`);
+      addTop(s.songs, "song", song => `${song.name} - ${song.artists?.map(a => a.name).join('/') ?? ""}`);
+      addTop(s.albums, "album", a => `${a.name} - ${a.artist?.name ?? ""}`);
       addTop(s.playlists, "playlist", p => p.name);
 
       return suggestions;

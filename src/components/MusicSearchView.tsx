@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ChangeEvent, type KeyboardEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { useShallow } from "zustand/react/shallow";
 import toast from "react-hot-toast";
@@ -135,6 +135,51 @@ export function MusicSearchView({
     fetchPage(1, true, suggestion.text);
   };
 
+  const handleSearchChange = (event: ChangeEvent<HTMLInputElement>) => {
+    setSearchQuery(event.target.value);
+    setShowSuggestions(true);
+    setActiveSuggestionIndex(-1);
+  };
+
+  const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
+    const hasSuggest = suggestions.length > 0;
+
+    // 上下方向键逻辑
+    if (["ArrowDown", "ArrowUp"].includes(e.key)) {
+      e.preventDefault();
+      if (!hasSuggest) return;
+
+      setShowSuggestions(true);
+      setActiveSuggestionIndex((prev) => {
+        const len = suggestions.length;
+        return e.key === "ArrowDown"
+          ? (prev + 1) % len
+          : (prev - 1 + len) % len;
+      });
+      return;
+    }
+
+    // 回车确认
+    if (e.key === "Enter") {
+      e.preventDefault();
+      const activeItem = suggestions[activeSuggestionIndex];
+      if (showSuggestions && activeItem) {
+        handleSelectSuggestion(activeItem);
+      } else {
+        setSearchIntent(null);
+        fetchPage(1, true);
+        setShowSuggestions(false);
+      }
+    }
+  };
+
+  const clearSearch = () => {
+    setSearchQuery("");
+    setSuggestions([]);
+    setShowSuggestions(false);
+    searchInputRef.current?.focus();
+  };
+
   /* ---------------- 请求核心 ---------------- */
   useEffect(() => {
     if (searchResults.length === 0 && searchIntent && searchQuery.trim()) {
@@ -227,18 +272,8 @@ export function MusicSearchView({
             <Input
               ref={searchInputRef}
               value={searchQuery}
-              onChange={(e) => {
-                setSearchQuery(e.target.value);
-                setShowSuggestions(true);
-                setActiveSuggestionIndex(-1);
-              }}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  setSearchIntent(null);
-                  fetchPage(1, true);
-                  setShowSuggestions(false);
-                }
-              }}
+              onChange={handleSearchChange}
+              onKeyDown={handleKeyDown}
               onFocus={() => {
                 if (suggestions.length > 0) setShowSuggestions(true);
               }}
@@ -254,12 +289,7 @@ export function MusicSearchView({
                   ? "opacity-100 scale-100"
                   : "pointer-events-none opacity-0 scale-90"
               } text-muted-foreground hover:bg-muted hover:text-foreground`}
-              onClick={() => {
-                setSearchQuery("");
-                setSuggestions([]);
-                setShowSuggestions(false);
-                searchInputRef.current?.focus();
-              }}
+              onClick={clearSearch}
             >
               <X className="h-3.5 w-3.5" />
             </button>

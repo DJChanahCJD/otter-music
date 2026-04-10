@@ -41,18 +41,18 @@
 - **歌单管理增强**：支持搜索、去重、导出、封面设置、URL 添加歌曲。
 - **播放生态**：支持历史记录、喜欢列表、歌词显示、主题切换与数据同步配置。
 
-> API 来自GD音乐台(<https://music.gdstudio.xyz>)
+> 免费音源 API 来自 [GD音乐台](https://music.gdstudio.xyz)
 >
-> 数据同步由 [Otter Music Web](https://github.com/DJChanahCJD/otter-music-web) 驱动，通过管理员手动分配的 `SYNC_KEY` 接入。存储基于 Cloudflare KV（上限 25 MB），单用户理论可稳定同步 5 万首歌曲
+> 数据同步功能：通过管理员手动分配的 `SYNC_KEY` 接入。存储基于 Cloudflare KV（上限 25 MB），单用户理论可稳定同步 5 万首歌曲
 >
 > 最低支持版本：minSdkVersion = 24 (Android 7.0)
 >
 > **注意**：在 Android 13（API 33）以下的设备上，部分 CSS 特性（如 `color-mix()`）可能不受支持，导致主题色失效或界面样式异常。建议升级至 Android 13 以上以获得最佳体验。
 
->  [!IMPORTANT]
+> [!IMPORTANT]
 > APP 网页版：[Otter Music](https://otter-music.pages.dev/)
-> 
-> 项目已完整支持 PWA 功能。iOS 用户可使用 Safari 浏览器打开并「添加到主屏幕」，即可实现独立应用体验与后台播放。
+>
+> 已支持 PWA，可添加到主屏幕获得原生应用体验（iOS 请使用 Safari）
 
 ## 快速开始
 
@@ -115,6 +115,8 @@ src/
 │   └── utils/                  # 缓存、下载、检索、歌名匹配等工具
 ├── store/                      # Zustand 全局状态
 └── types/                      # 类型定义
+functions/                 # Cloudflare Workers 后端
+shared/                     # 跨端共享类型
 ```
 
 ## TODO
@@ -133,10 +135,28 @@ src/
 - 不做 Tauri 桌面端：维护成本太高，只做网页端即可，通过pwa实现桌面端功能
 - 不接入 JOOX、KUWO 等官方接口：当前网易云官方接口够用，无需增加复杂度；接入 JOOX 还需要做代理
 
+## 📦 部署指南 (Cloudflare Pages)
+
+1. **创建项目**：Fork 本仓库，在 [Cloudflare Dashboard](https://dash.cloudflare.com/) 创建 Pages 项目。
+2. **构建配置**：
+   - **Build command**: `npm run build`
+   - **Build output directory**: `frontend/out`
+3. **环境变量**：
+   - `PASSWORD`: 设置你的管理员密码，用于管理`SYNC_KEY`（必须）
+4. **KV 绑定**：
+   - 创建 KV Namespace 命名为 `oh_file_url`
+   - 在 Pages 设置中绑定该 KV，变量名设为 `oh_file_url`
+
+> 你可以将 [src/lib/api/config.ts](/src/lib/api/config.ts) 中的 `API_URL` 替换为你自己的 Pages 域名。例如：`https://otter-music.pages.dev`。
+
 ## 参考资料
 
 - [GD Studio](https://music-api.gdstudio.xyz/api.php)：免费音源 API 服务支持
 - [Listen1](https://github.com/listen1/listen1_chrome_extension/blob/master/js/provider/netease.js)：网易云接口实现参考
+
+## 🤝 贡献
+
+欢迎提交 Issue 或 Pull Request！
 
 ## License
 

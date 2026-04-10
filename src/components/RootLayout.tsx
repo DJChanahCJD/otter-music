@@ -8,8 +8,11 @@ import { useMusicStore } from "@/store/music-store";
 import toast from "react-hot-toast";
 import { toastUtils } from "@/lib/utils/toast";
 import { useMusicCover } from "@/hooks/useMusicCover";
-import { useRef, useEffect } from "react";
-import { App as CapacitorApp } from '@capacitor/app';
+import { App as CapacitorApp } from "@capacitor/app";
+import { Capacitor } from "@capacitor/core";
+import { useRef, useEffect, useCallback } from "react";
+
+const ROOT_TAB_PATHS = ["/", "/search", "/favorites", "/mine"] as const;
 
 export function RootLayout() {
   const location = useLocation();
@@ -25,33 +28,66 @@ export function RootLayout() {
     locationRef.current = location;
   }, [isFullScreenPlayer, location]);
 
+  const isRootTabPath = useCallback((path: string) => {
+    return ROOT_TAB_PATHS.includes(path as (typeof ROOT_TAB_PATHS)[number]);
+  }, []);
+
+  const handleExitLayer = useCallback(() => {
+    if (isFullScreenRef.current) {
+      setStoreFullScreen(false);
+      return true;
+    }
+
+    return false;
+  }, [setStoreFullScreen]);
+
+  const handleBackAction = useCallback(async () => {
+    if (handleExitLayer()) return;
+
+    const path = locationRef.current.pathname;
+
+    if (isRootTabPath(path)) {
+      if (Capacitor.isNativePlatform()) {
+        await CapacitorApp.minimizeApp();
+      }
+      return;
+    }
+
+    const historyIndex = window.history.state?.idx;
+    if (typeof historyIndex === "number" && historyIndex > 0) {
+      navigate(-1);
+      return;
+    }
+
+    navigate("/search", { replace: true });
+  }, [handleExitLayer, isRootTabPath, navigate]);
+
   useEffect(() => {
-    const handleBackButton = async () => {
-        // 如果有弹窗/抽屉打开，模拟 ESC 关闭
-        if (document.querySelector('[role="dialog"]') || document.querySelector('[role="alertdialog"]')) {
-            document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
-            return;
-        }
+    if (!Capacitor.isNativePlatform()) return;
 
-        if (isFullScreenRef.current) {
-            setStoreFullScreen(false);
-        } else {
-            const path = locationRef.current.pathname;
-            // 如果是主 Tab 页，最小化应用
-            if (path === "/" || path === "/search" || path === "/favorites" || path === "/mine") {
-                CapacitorApp.minimizeApp();
-            } else {
-                // 否则后退
-                navigate(-1);
-            }
-        }
-    };
+    const listener = CapacitorApp.addListener("backButton", handleBackAction);
 
-    const listener = CapacitorApp.addListener('backButton', handleBackButton);
     return () => {
-        listener.then(l => l.remove());
+      listener.then((l) => l.remove());
     };
-  }, [navigate, setStoreFullScreen]);
+  }, [handleBackAction]);
+
+  useEffect(() => {
+    if (Capacitor.isNativePlatform()) return;
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+
+      const handled = handleExitLayer();
+      if (handled) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [handleExitLayer]);
 
   const {
     queue,
@@ -72,7 +108,7 @@ export function RootLayout() {
   const currentTrack = queue[currentIndex] || null;
   const coverUrl = useMusicCover(currentTrack);
 
-  const isTab = ["/search", "/favorites", "/mine"].includes(location.pathname) || location.pathname === "/";
+  const isTab = isRootTabPath(location.pathname);
   
   // Handlers
   const handlePrev = () => {
