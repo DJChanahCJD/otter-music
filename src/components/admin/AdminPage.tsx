@@ -347,7 +347,7 @@ function KeyManager({ onLogout }: KeyManagerProps) {
                         <Button
                           variant="ghost"
                           size="sm"
-                          className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
+                          className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
                           disabled={deletingKey === item.key}
                           onClick={() => handleDelete(item.key)}
                           title="删除"
