@@ -44,7 +44,8 @@
 > 免费音源 API 来自 [GD音乐台](https://music.gdstudio.xyz)
 >
 > 数据同步功能：通过管理员手动分配的 `SYNC_KEY` 接入。存储基于 Cloudflare KV（上限 25 MB），单用户理论可稳定同步 5 万首歌曲
->
+
+> [!NOTE]
 > 最低支持版本：minSdkVersion = 24 (Android 7.0)
 >
 > **注意**：在 Android 13（API 33）以下的设备上，部分 CSS 特性（如 `color-mix()`）可能不受支持，导致主题色失效或界面样式异常。建议升级至 Android 13 以上以获得最佳体验。
@@ -119,6 +120,22 @@ functions/                 # Cloudflare Workers 后端
 shared/                     # 跨端共享类型
 ```
 
+
+## 📦 部署指南 (Cloudflare Pages)
+
+1. **创建项目**：Fork 本仓库，在 [Cloudflare Dashboard](https://dash.cloudflare.com/) 创建 Pages 项目。
+2. **构建配置**：
+   - **Build command**: `npm run build`
+   - **Build output directory**: `frontend/out`
+3. **环境变量**：
+   - `PASSWORD`: 设置你的管理员密码，用于管理`SYNC_KEY`（必须）
+4. **KV 绑定**：
+   - 创建 KV Namespace 命名为 `oh_file_url`
+   - 在 Pages 设置中绑定该 KV，变量名设为 `oh_file_url`
+
+> 你可以将 [src/lib/api/config.ts](/src/lib/api/config.ts) 中的 `API_URL` 替换为你自己的 Pages 域名。例如：`https://otter-music.pages.dev`。
+
+
 ## TODO
 
 ### Low Priority
@@ -135,19 +152,6 @@ shared/                     # 跨端共享类型
 - 不做 Tauri 桌面端：维护成本太高，只做网页端即可，通过pwa实现桌面端功能
 - 不接入 JOOX、KUWO 等官方接口：当前网易云官方接口够用，无需增加复杂度；接入 JOOX 还需要做代理
 
-## 📦 部署指南 (Cloudflare Pages)
-
-1. **创建项目**：Fork 本仓库，在 [Cloudflare Dashboard](https://dash.cloudflare.com/) 创建 Pages 项目。
-2. **构建配置**：
-   - **Build command**: `npm run build`
-   - **Build output directory**: `frontend/out`
-3. **环境变量**：
-   - `PASSWORD`: 设置你的管理员密码，用于管理`SYNC_KEY`（必须）
-4. **KV 绑定**：
-   - 创建 KV Namespace 命名为 `oh_file_url`
-   - 在 Pages 设置中绑定该 KV，变量名设为 `oh_file_url`
-
-> 你可以将 [src/lib/api/config.ts](/src/lib/api/config.ts) 中的 `API_URL` 替换为你自己的 Pages 域名。例如：`https://otter-music.pages.dev`。
 
 ## 参考资料
 
