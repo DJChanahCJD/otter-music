@@ -118,7 +118,7 @@ shared/                     # 跨端共享类型
 1. **创建项目**：Fork 本仓库，在 [Cloudflare Dashboard](https://dash.cloudflare.com/) 创建 Pages 项目。
 2. **构建配置**：
    - **Build command**: `npm run build`
-   - **Build output directory**: `frontend/out`
+   - **Build output directory**: `dist`
 3. **环境变量**：
    - `PASSWORD`: 设置你的管理员密码，用于管理`SYNC_KEY`（必须）
 4. **KV 绑定**：

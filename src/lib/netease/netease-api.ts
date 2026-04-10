@@ -438,7 +438,8 @@ export const getAlbum = (id: string, cookie: string = '') =>
         async () => {
             const finalCookie = resolveRequestCookie(cookie);
             if (IS_WEB_PROD) {
-                return fetchNeteaseProxy<AlbumDetail>('/album', { id, cookie: finalCookie });
+                const res = await fetchNeteaseProxy<WrappedNeteaseResponse<AlbumDetail>>('/album', { id, cookie: finalCookie });
+                return res.data;
             }
 
             const res = await requestWeapi<AlbumDetail>(`${BASE_URL}/weapi/v1/album/${id.replace(/^(nealbum_|ne_album_)/, '')}`, {}, finalCookie);
@@ -473,7 +474,8 @@ export const getArtist = (id: string, cookie: string = '') =>
         async () => {
             const finalCookie = resolveRequestCookie(cookie);
             if (IS_WEB_PROD) {
-                return fetchNeteaseProxy<ArtistDetail>('/artist', { id, cookie: finalCookie });
+                const res = await fetchNeteaseProxy<WrappedNeteaseResponse<ArtistDetail>>('/artist', { id, cookie: finalCookie });
+                return res.data;
             }
 
             const res = await requestWeapi<ArtistDetail>(`${BASE_URL}/weapi/v1/artist/${id.replace(/^(neartist_|ne_artist_)/, '')}`, {}, finalCookie);
