@@ -57,7 +57,7 @@ export function PlaylistMarket() {
   const { scrollRef } = useScrollSave(`scroll-${snapshotKey}`, items.length > 0 || activeCategory === "mine" || activeCategory === "播客");
 
   const displayFilters = useMemo(() => {
-    const baseFilters = [RECOMMEND_CATS[0], { id: "mine", name: "我的" }, ...RECOMMEND_CATS.slice(1)];
+    const baseFilters = RECOMMEND_CATS
     if (!activeCategory || baseFilters.some((f) => f.id === activeCategory)) return baseFilters;
     return [...baseFilters, { id: activeCategory, name: activeCategory }];
   }, [activeCategory]);

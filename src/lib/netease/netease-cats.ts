@@ -144,6 +144,7 @@ export const SPECIAL_CATS: CatItem[] = [
 
 export const RECOMMEND_CATS: CatItem[] = [
   F("全部"),
+  { id: "mine", name: "我的" },
   { id: "featured", name: "精选" },
 
   F("华语"),
