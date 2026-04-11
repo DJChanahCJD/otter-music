@@ -32,11 +32,12 @@ export function FavoritesView({
 }: FavoritesViewProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [isAddByUrlOpen, setIsAddByUrlOpen] = useState(false);
+  const [dedupeSelectedIds, setDedupeSelectedIds] = useState<Set<string> | undefined>();
 
   const filteredTracks = useMemo(() => {
     if (!searchQuery.trim()) return tracks;
     const lower = searchQuery.toLowerCase();
-    return tracks.filter(t => 
+    return tracks.filter(t =>
       t.name.toLowerCase().includes(lower) ||
       t.artist?.some(a => a?.toLowerCase().includes(lower)) ||
       t.album?.toLowerCase().includes(lower)
@@ -44,11 +45,6 @@ export function FavoritesView({
   }, [tracks, searchQuery]);
 
   const handleDeduplicate = () => {
-    if (!confirm("确定要对「我的喜欢」进行去重吗？\n\n规则：\n1. 繁简体转换后歌名、歌手完全相同的视为重复\n2. 保留优先级：已下载 > 序号较大")) {
-      return;
-    }
-
-    const musicStore = useMusicStore.getState();
     const downloadStore = useDownloadStore.getState();
 
     const result = deduplicateTracks(
@@ -62,8 +58,8 @@ export function FavoritesView({
       return;
     }
 
-    musicStore.removeBatchFromFavorites(result.trackIdsToDelete);
-    toast.success(`已移除 ${result.removedCount} 首重复歌曲`);
+    setDedupeSelectedIds(new Set(result.trackIdsToDelete));
+    toast.success(`发现 ${result.removedCount} 首重复歌曲，已自动选中`);
   };
 
   const handleAddByUrl = (title: string, url: string, artist?: string) => {
@@ -100,20 +96,20 @@ export function FavoritesView({
             <span>{tracks.length} 首歌曲</span>
           </div>
           <div className="pt-1 flex gap-2 items-center">
-             <Button 
-                onClick={() => onPlay(null)} 
+             <Button
+                onClick={() => onPlay(null)}
                 className="rounded-full px-3 h-8"
                 size="sm"
              >
                 <Play className="h-3 w-3 fill-current" />
              </Button>
 
-             <PlaylistOperations 
+             <PlaylistOperations
                 onDeduplicate={handleDeduplicate}
                 onExport={() => exportPlaylist("我喜欢的音乐", tracks)}
                 onAddByUrl={() => setIsAddByUrlOpen(true)}
              />
-             
+
              <div className="relative ml-auto w-32">
                 <Search className="absolute left-2 top-2.5 h-3 w-3 text-muted-foreground" />
                 <Input
@@ -139,6 +135,8 @@ export function FavoritesView({
           onRemove={handleRemove}
           onBatchRemove={handleBatchRemove}
           showItemRemove={false}
+          preselectedIds={dedupeSelectedIds}
+          onSelectionModeChange={(active) => { if (!active) setDedupeSelectedIds(undefined); }}
         />
       </div>
 

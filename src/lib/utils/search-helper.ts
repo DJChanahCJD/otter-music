@@ -11,7 +11,7 @@ import {
 import { useSourceQualityStore } from '@/store';
 
 /* ================= 常量定义 ================= */
-const SOURCE_WEIGHT: Partial<Record<MusicSource, number>> = {
+export const SOURCE_WEIGHT: Partial<Record<MusicSource, number>> = {
   joox: 30,
   netease: 28,
   kuwo: 20,
@@ -77,21 +77,21 @@ function mergeAndCluster(tracks: PreparedTrack[]): (MergedMusicTrack & PreparedT
   }
 
   const finalClusters: (MergedMusicTrack & PreparedTrack)[] = [];
-  
+
   for (const list of clusterMap.values()) {
     const clusters: (MergedMusicTrack & PreparedTrack)[] = [];
-    
+
     for (const item of list) {
-      const target = clusters.find(c => 
+      const target = clusters.find(c =>
         item.normalizedArtists.some(a => c.normalizedArtists.includes(a))
       );
 
       if (target) {
         // 核心：永远让原始排名最靠前的做主曲
-        const [main, sub] = item.originalIndex < target.originalIndex 
-          ? [item, target] 
+        const [main, sub] = item.originalIndex < target.originalIndex
+          ? [item, target]
           : [target, item];
-        
+
         target.id = main.id; // 原地更新以维持引用
         Object.assign(target, main, {
           variants: [...(main.variants || []), sub, ...(sub.variants || [])]
@@ -135,7 +135,7 @@ function score(t: MergedMusicTrack & PreparedTrack, q: string): number {
 
 export function mergeAndSortTracks(tracks: MusicTrack[], query = ''): MergedMusicTrack[] {
   if (!tracks?.length) return [];
-  
+
   const q = normalizeText(query);
   const clustered = mergeAndCluster(prepareTracks(tracks));
 
@@ -164,7 +164,7 @@ export function applySearchIntentSort(items: MergedMusicTrack[], intent: SearchI
       else if (artistTarget && isArtistContainsMatch(t.artist, [artistTarget])) s += 8;
 
       if (albumExact && artistExact) s += 16;
-    } 
+    }
     else if (intent.type === 'artist') {
       if (artistExact) s += 60;
       else if (artistTarget && isArtistContainsMatch(t.artist, [artistTarget])) s += 20;

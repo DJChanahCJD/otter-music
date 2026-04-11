@@ -1,5 +1,6 @@
-import { MusicTrack, MergedMusicTrack } from "@/types/music";
+import { MusicTrack, MergedMusicTrack, MusicSource } from "@/types/music";
 import { getExactKey } from "./music-key";
+import { SOURCE_WEIGHT } from "./search-helper";
 import { v4 as uuidv4 } from "uuid";
 
 // 格式化音视频时间为分秒格式
@@ -64,18 +65,23 @@ export function deduplicateTracks(
 
     // Sort to find the winner
     group.sort((a, b) => {
-      const aDown = isDownloaded(a.track);
-      const bDown = isDownloaded(b.track);
-      // Priority 1: Downloaded (True > False)
-      if (aDown !== bDown) return aDown ? -1 : 1;
-
       const aLiked = isFavorite(a.track.id);
       const bLiked = isFavorite(b.track.id);
-      // Priority 2: Liked (True > False)
+      // Priority 1: Liked (True > False)
       if (aLiked !== bLiked) return aLiked ? -1 : 1;
 
-      // Priority 3: Larger index first (descending) - Keep the newer/later one
-      return b.index - a.index;
+      const aDown = isDownloaded(a.track);
+      const bDown = isDownloaded(b.track);
+      // Priority 2: Downloaded (True > False)
+      if (aDown !== bDown) return aDown ? -1 : 1;
+
+      // Priority 3: Source weight (higher wins)
+      const aWeight = SOURCE_WEIGHT[a.track.source as MusicSource] ?? 0;
+      const bWeight = SOURCE_WEIGHT[b.track.source as MusicSource] ?? 0;
+      if (aWeight !== bWeight) return bWeight - aWeight;
+
+      // Priority 4: Earlier index wins (ascending) — 新加入可信度更高
+      return a.index - b.index;
     });
 
     const winner = group[0];

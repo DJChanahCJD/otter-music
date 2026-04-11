@@ -37,7 +37,7 @@ describe('music utils', () => {
         ...createTrack('1', 'Song 1'),
         variants: [createTrack('1-v1', 'Song 1 Variant')]
       };
-      
+
       const cleaned = cleanTrack(track);
       expect('variants' in cleaned).toBe(false);
       expect(cleaned.id).toBe('1');
@@ -75,12 +75,12 @@ describe('music utils', () => {
         createTrack('1', 'Song A'),
         createTrack('2', 'Song B')
       ];
-      
+
       const isFavorite = () => false;
       const isDownloaded = () => false;
-      
+
       const result = deduplicateTracks(tracks, isFavorite, isDownloaded);
-      
+
       expect(result.removedCount).toBe(1);
       expect(result.trackIdsToDelete).toEqual(['1']);
     });
@@ -91,61 +91,59 @@ describe('music utils', () => {
         createTrack('2', 'Song A (Live)'), // Should normalize to same key
         createTrack('3', 'Song B')
       ];
-      
+
       const isFavorite = () => false;
       const isDownloaded = () => false;
-      
+
       const result = deduplicateTracks(tracks, isFavorite, isDownloaded);
-      
+
       expect(result.removedCount).toBe(1);
-      // Logic prefers later index if everything else equal, so '2' (Song A Live) should win over '1'
-      expect(result.trackIdsToDelete).toEqual(['1']);
+      // New logic: earlier index wins when all else equal, so '1' (index 0) stays, '2' (index 1) is removed
+      expect(result.trackIdsToDelete).toEqual(['2']);
     });
 
     it('should prioritize downloaded tracks', () => {
       const t1 = createTrack('1', 'Song A'); // Not downloaded
       const t2 = createTrack('2', 'Song A'); // Downloaded (different ID)
-      
+
       const tracks = [t1, t2];
-      
+
       const isFavorite = () => false;
       const isDownloaded = (t: MusicTrack) => t.id === '2';
-      
+
       const result = deduplicateTracks(tracks, isFavorite, isDownloaded);
-      
+
       expect(result.trackIdsToDelete).toEqual(['1']); // Should keep the downloaded one
     });
 
     it('should prioritize favorite tracks', () => {
       const t1 = createTrack('1', 'Song A'); // Not favorite
       const t2 = createTrack('2', 'Song A'); // Favorite
-      
+
       const tracks = [t1, t2];
-      
+
       const isFavorite = (id: string) => id === '2';
       const isDownloaded = () => false;
-      
+
       const result = deduplicateTracks(tracks, isFavorite, isDownloaded);
-      
+
       expect(result.trackIdsToDelete).toEqual(['1']);
     });
 
-    it('should mark winner to like if loser was liked', () => {
-      // Scenario: t1 is liked but t2 is downloaded. t2 wins due to download priority.
-      // t2 should be added to tracksToLike because we don't want to lose the "liked" status of the song group.
+    it('liked track wins over downloaded track (liked has higher priority)', () => {
+      // New priority: Liked > Downloaded. So the liked track always wins.
       const t1 = createTrack('1', 'Song A'); // Liked
-      const t2 = createTrack('2', 'Song A'); // Downloaded
-      
+      const t2 = createTrack('2', 'Song A'); // Downloaded but not liked
+
       const tracks = [t1, t2];
-      
+
       const isFavorite = (id: string) => id === '1'; // t1 is liked
       const isDownloaded = (t: MusicTrack) => t.id === '2'; // t2 is downloaded
-      
+
       const result = deduplicateTracks(tracks, isFavorite, isDownloaded);
-      
-      expect(result.trackIdsToDelete).toEqual(['1']); // t2 wins
-      expect(result.tracksToLike).toHaveLength(1);
-      expect(result.tracksToLike[0].id).toBe('2'); // t2 should be liked
+
+      expect(result.trackIdsToDelete).toEqual(['2']); // t1 wins (liked priority)
+      expect(result.tracksToLike).toHaveLength(0); // Winner is already liked
     });
   });
 });

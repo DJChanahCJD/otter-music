@@ -34,7 +34,7 @@ interface MusicPlaylistViewProps {
   title: string;
   tracks: MusicTrack[];
   playlistId?: string;
-  /** 
+  /**
    * index 可选：
    * - 传入 index：播放指定歌曲
    * - 不传 index：播放全部（由上层/Store 决定起始点，如随机播放）
@@ -78,6 +78,7 @@ export function MusicPlaylistView({
   const [isCoverDialogOpen, setIsCoverDialogOpen] = useState(false);
   const [isAddByUrlOpen, setIsAddByUrlOpen] = useState(false);
   const [coverUrlInput, setCoverUrlInput] = useState("");
+  const [dedupeSelectedIds, setDedupeSelectedIds] = useState<Set<string> | undefined>();
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   const playlists = useMusicStore(useShallow(state => state.playlists));
@@ -95,7 +96,7 @@ export function MusicPlaylistView({
   const filteredTracks = useMemo(() => {
     if (!searchQuery.trim()) return tracks;
     const lower = searchQuery.toLowerCase();
-    return tracks.filter(t => 
+    return tracks.filter(t =>
       t.name.toLowerCase().includes(lower) ||
       t.artist?.some(a => a?.toLowerCase().includes(lower)) ||
       t.album?.toLowerCase().includes(lower)
@@ -104,10 +105,6 @@ export function MusicPlaylistView({
 
   const handleDeduplicate = () => {
     if (!playlistId) return;
-
-    if (!confirm("确定要对当前歌单进行去重吗？\n\n规则：\n1. 繁简体转换后歌名、歌手完全相同的视为重复\n2. 保留优先级：已下载 > 已喜欢 > 序号较大\n3. 自动合并「已喜欢」状态")) {
-      return;
-    }
 
     const musicStore = useMusicStore.getState();
     const downloadStore = useDownloadStore.getState();
@@ -123,7 +120,7 @@ export function MusicPlaylistView({
       return;
     }
 
-    // 1. Update Favorites (Merge logic)
+    // 自动合并喜欢状态（元数据修正，非删除操作）
     if (result.tracksToLike.length > 0) {
       result.tracksToLike.forEach(track => {
         musicStore.addToFavorites(track);
@@ -131,9 +128,8 @@ export function MusicPlaylistView({
       toast.success(`已合并 ${result.tracksToLike.length} 首歌曲的喜欢状态`);
     }
 
-    // 2. Update Playlist
-    musicStore.removeBatchFromPlaylist(playlistId, result.trackIdsToDelete);
-    toast.success(`已移除 ${result.removedCount} 首重复歌曲`);
+    setDedupeSelectedIds(new Set(result.trackIdsToDelete));
+    toast.success(`发现 ${result.removedCount} 首重复歌曲，已自动选中`);
   };
 
   const handleSetCover = () => {
@@ -166,7 +162,7 @@ export function MusicPlaylistView({
 
   const handleSaveCover = () => {
     if (!playlistId) return;
-    
+
     // 如果为空，则是清除封面
     if (coverUrlInput && !coverUrlInput.startsWith("http")) {
       toast.error("请输入有效的图片链接");
@@ -229,8 +225,8 @@ export function MusicPlaylistView({
             )}
           </div>
           <div className="pt-1 flex gap-2 items-center">
-             <Button 
-                onClick={() => onPlay(null)} 
+             <Button
+                onClick={() => onPlay(null)}
                 className="rounded-full px-3 h-8"
                 size="sm"
              >
@@ -256,7 +252,7 @@ export function MusicPlaylistView({
                  onAddByUrl={isPersonalPlaylist ? () => setIsAddByUrlOpen(true) : undefined}
                />
              )}
-             
+
              <div className="relative ml-auto w-32">
                 <Search className="absolute left-2 top-2.5 h-3 w-3 text-muted-foreground" />
                 <Input
@@ -283,6 +279,8 @@ export function MusicPlaylistView({
           onBatchRemove={onBatchRemove}
           removeLabel={removeLabel}
           onReorder={isPersonalPlaylist && !searchQuery ? handleReorder : undefined}
+          preselectedIds={dedupeSelectedIds}
+          onSelectionModeChange={(active) => { if (!active) setDedupeSelectedIds(undefined); }}
         />
       </div>
 
