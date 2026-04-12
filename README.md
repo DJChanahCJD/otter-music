@@ -8,7 +8,7 @@
 <p align="center"><strong>Stream your music like an otter</strong></p>
 
 <p align="center">
-  基于 [GD Studio's API](https://music.gdstudio.xyz/api.php) 的多音源聚合音乐播放器
+  基于 <a href="https://music.gdstudio.xyz/api.php">GD Studio's API</a> 的多音源聚合音乐播放器
 </p>
 
 <p align="center">
