@@ -69,6 +69,14 @@ vi.mock("@capacitor/core", () => ({
   Capacitor: {
     isNativePlatform: capacitorMocks.isNativePlatform,
   },
+  registerPlugin: vi.fn(() => ({
+    scanLocalMusic: vi.fn(),
+    scanAllStorage: vi.fn(),
+    getLocalFileUrl: vi.fn(),
+    openManageStorageSettings: vi.fn(),
+    hasAllStoragePermission: vi.fn(),
+    deleteLocalMusic: vi.fn(),
+  })),
 }));
 
 vi.mock("@capacitor/app", () => ({
