@@ -219,7 +219,7 @@ export function MinePage({ onSelectPlaylist }: MinePageProps) {
                       handleDelete(playlist.id);
                     }}
                   >
-                    <Trash2 className="h-4 w-4 mr-2" />
+                    <Trash2 className="text-destructive h-4 w-4 mr-2" />
                     删除
                   </DropdownMenuItem>
                 </DropdownMenuContent>

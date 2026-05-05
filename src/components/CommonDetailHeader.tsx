@@ -1,7 +1,10 @@
-import { useState, memo } from "react";
+import { useState, memo, useCallback } from "react";
 import { MusicCover } from "@/components/MusicCover";
 import { format } from "date-fns";
-import { cn } from "@/lib/utils"; // 假设你有 cn 工具函数
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { Play } from "lucide-react";
+import type { MusicTrack } from "@/types/music";
 
 export interface CommonDetailHeaderProps {
   title: string;
@@ -11,6 +14,11 @@ export interface CommonDetailHeaderProps {
   publishTime?: number;
   countDesc?: string;
   fallbackIcon?: React.ReactNode;
+  /** @deprecated 使用 onPlayTrack 替代以支持随机播放 */
+  onPlay?: () => void;
+  onPlayTrack?: (track: MusicTrack) => void;
+  isShuffle?: boolean;
+  tracks?: MusicTrack[];
 }
 
 export const CommonDetailHeader = memo(function CommonDetailHeader({
@@ -21,8 +29,25 @@ export const CommonDetailHeader = memo(function CommonDetailHeader({
   publishTime,
   countDesc,
   fallbackIcon,
+  onPlay,
+  onPlayTrack,
+  isShuffle,
+  tracks,
 }: CommonDetailHeaderProps) {
   const [isExpanded, setIsExpanded] = useState(false);
+
+  const handlePlay = useCallback(() => {
+    if (onPlayTrack && tracks && tracks.length > 0) {
+      if (isShuffle) {
+        const randomIndex = Math.floor(Math.random() * tracks.length);
+        onPlayTrack(tracks[randomIndex]);
+      } else {
+        onPlayTrack(tracks[0]);
+      }
+    } else {
+      onPlay?.();
+    }
+  }, [isShuffle, tracks, onPlay, onPlayTrack]);
 
   return (
     <div className="w-full shrink-0 p-5 flex gap-4 items-start">
@@ -44,7 +69,7 @@ export const CommonDetailHeader = memo(function CommonDetailHeader({
           {publishTime && <span>{format(publishTime, "yyyy-MM-dd")}</span>}
         </div>
 
-        {description && (
+        {description ? (
           <p
             onClick={() => setIsExpanded(!isExpanded)}
             className={cn(
@@ -55,6 +80,12 @@ export const CommonDetailHeader = memo(function CommonDetailHeader({
           >
             {description}
           </p>
+        ) : (onPlay || onPlayTrack) && (
+          <div className="mt-1">
+            <Button size="sm" className="rounded-full px-3 h-8" onClick={handlePlay}>
+              <Play className="h-3 w-3 fill-current" />
+            </Button>
+          </div>
         )}
       </div>
     </div>

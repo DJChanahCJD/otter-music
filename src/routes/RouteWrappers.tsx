@@ -103,7 +103,6 @@ export const PlaylistDetailRoute = withSuspense(() => {
     <PageLayout title={playlist.name}>
       <MusicPlaylistView
         title={playlist.name}
-        showTitle={false}
         createdAt={playlist.createdAt}
         description={playlist.description}
         coverUrl={playlist.coverUrl}

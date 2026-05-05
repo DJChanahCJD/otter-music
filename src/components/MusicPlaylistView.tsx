@@ -5,7 +5,6 @@ import { Input } from "@/components/ui/input";
 import { useState, useMemo, useRef } from "react";
 import { MusicCover } from "./MusicCover";
 import { PlaylistCover } from "./PlaylistCover";
-import { cn } from "@/lib/utils";
 import { PlaylistOperations } from "./PlaylistOperations";
 import { MusicTrack } from "@/types/music";
 import { useMusicStore } from "@/store/music-store";
@@ -52,7 +51,6 @@ interface MusicPlaylistViewProps {
   coverUrl?: string;
   removeLabel?: string;
   icon?: React.ReactNode;
-  showTitle?: boolean;
 }
 
 export function MusicPlaylistView({
@@ -72,7 +70,6 @@ export function MusicPlaylistView({
   coverUrl,
   removeLabel,
   icon,
-  showTitle = true,
 }: MusicPlaylistViewProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [isCoverDialogOpen, setIsCoverDialogOpen] = useState(false);
@@ -185,10 +182,7 @@ export function MusicPlaylistView({
   return (
     <div ref={scrollContainerRef} className="flex flex-1 min-h-0 flex-col overflow-y-auto">
       {/* Header */}
-      <div className={cn(
-        "p-4 border-b flex gap-4 bg-muted/10 relative",
-        showTitle ? "items-end" : "items-center"
-      )}>
+      <div className="p-4 border-b flex gap-4 bg-muted/10 relative items-end">
         <div className="h-22 w-22 bg-primary/10 rounded-lg flex items-center justify-center shadow-sm border overflow-hidden shrink-0">
           {playlist ? (
             <PlaylistCover
@@ -208,7 +202,7 @@ export function MusicPlaylistView({
           )}
         </div>
         <div className="flex-1 space-y-1">
-          {showTitle && <h1 className="text-xl font-bold tracking-tight">{title}</h1>}
+          <h2 className="text-base font-bold tracking-tight line-clamp-1">{title}</h2>
           <div className="text-xs text-muted-foreground flex items-center gap-2">
             <span>{tracks.length} 首歌曲</span>
             {createdAt && (

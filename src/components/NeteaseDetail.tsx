@@ -89,6 +89,7 @@ export function NeteaseDetail({
   }>({ loading: true, error: false, detail: null, tracks: [] });
 
   const { createPlaylist, setPlaylistTracks } = useMusicStore();
+  const isShuffle = useMusicStore(state => state.isShuffle);
   const { cookie } = useNeteaseStore();
   const { toggleAlbumInSession } = useMarketSession();
   const navigationState =
@@ -341,6 +342,9 @@ export function NeteaseDetail({
           <CommonDetailHeader
             title={detail.name} coverUrl={detail.coverImgUrl} description={detail.description}
             creator={detail.creator} countDesc={`${detail.trackCount} 首`} publishTime={detail.publishTime}
+            isShuffle={isShuffle}
+            tracks={tracks}
+            onPlayTrack={tracks.length > 0 ? (track) => onPlay(track, tracks) : undefined}
           />
         )}
         <div className="flex-1 min-h-0">

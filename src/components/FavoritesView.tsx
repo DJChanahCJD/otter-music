@@ -91,7 +91,7 @@ export function FavoritesView({
           <Heart className="h-8 w-8 text-primary/80 fill-current" />
         </div>
         <div className="flex-1 space-y-1">
-          <h1 className="text-xl font-bold tracking-tight">我的喜欢</h1>
+          <h2 className="text-base font-bold tracking-tight line-clamp-1">我的喜欢</h2>
           <div className="text-xs text-muted-foreground flex items-center gap-2">
             <span>{tracks.length} 首歌曲</span>
           </div>
