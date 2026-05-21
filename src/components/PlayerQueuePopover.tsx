@@ -57,6 +57,8 @@ export function PlayerQueuePopover({
         side="top"
         align="center"
         className="w-80 p-0 h-96 flex flex-col"
+        // Portal 内容在 React Fiber 树中仍会冒泡到祖先组件（如 MusicNowPlayingBar 的 onClick）
+        onClick={(e) => e.stopPropagation()}
         onOpenAutoFocus={(e) => {
           // 防止 Popover 打开时自动聚焦导致滚动跳动，或者可以在这里也触发一次滚动
            e.preventDefault();
@@ -98,7 +100,10 @@ export function PlayerQueuePopover({
                     "flex items-center gap-2 p-2 rounded text-sm cursor-pointer hover:bg-muted/50",
                     i === currentIndex && "bg-muted/50 text-primary",
                   )}
-                  onClick={() => onPlay(i)}
+                  onClick={() => {
+                    onPlay(i);
+                    setOpen(false);
+                  }}
                 >
                   {i === currentIndex && isPlaying ? (
                     <div className="relative w-4 h-4 flex items-center justify-center shrink-0">
