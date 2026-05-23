@@ -118,6 +118,15 @@ export default defineConfig({
             proxyReq.removeHeader('x-real-ua');
           });
         }
+      },
+      '/api/qqmusic': {
+        target: 'https://i.y.qq.com',
+        changeOrigin: true,
+        rewrite: (path: string) => path.replace(/^\/api\/qqmusic/, ''),
+        headers: {
+          'Referer': 'https://y.qq.com',
+          'Origin': 'https://y.qq.com'
+        }
       }
     }
   }

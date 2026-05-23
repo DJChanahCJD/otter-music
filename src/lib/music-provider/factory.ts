@@ -6,6 +6,7 @@ import { PodcastProvider } from "./providers/podcast-provider";
 import { JooxProvider } from "./providers/joox-provider";
 import { KuwoProvider } from "./providers/kuwo-provider";
 import { NeteaseProvider } from "./providers/netease-provider";
+import { QqProvider } from "./providers/qq-provider";
 import { NeteaseApiProvider } from "./providers/netease-api-provider";
 
 export class MusicProviderFactory {
@@ -40,6 +41,9 @@ export class MusicProviderFactory {
         break;
       case 'netease':
         provider = new NeteaseProvider();
+        break;
+      case 'qq':
+        provider = new QqProvider();
         break;
       default:
         throw new Error(`不支持的音乐源: ${source}`);

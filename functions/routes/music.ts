@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 import type { Env } from '../types/hono';
 import { handleNeteaseRequest } from '@utils/music/netease-handler';
 import { neteaseRoutes } from './music/netease';
+import { qqmusicRoutes } from './music/qqmusic';
 import { getFromCache, putToCache } from '@utils/cache';
 
 export const musicRoutes = new Hono<{ Bindings: Env }>();
@@ -58,3 +59,4 @@ musicRoutes.get('/', async (c) => {
 });
 
 musicRoutes.route('/netease', neteaseRoutes);
+musicRoutes.route('/qqmusic', qqmusicRoutes);

@@ -23,6 +23,7 @@ import {
   SelectValue,
 } from "./ui/select";
 import { PlaylistImport } from "./settings/PlaylistImport";
+import { PlaylistUrlImport } from "./settings/PlaylistUrlImport";
 import { SettingItem } from "./settings/SettingItem";
 import { UpdateCheck } from "./settings/UpdateCheck";
 import { IssueLogs } from "./settings/IssueLogs";
@@ -119,6 +120,7 @@ export function SettingsPage({ onBack }: SettingsPageProps) {
           <NeteaseLogin />
           <ApiUrlConfig />
           <SyncConfig />
+          <PlaylistUrlImport />
           <PlaylistImport />
           <SettingItem
             icon={Trash2}
