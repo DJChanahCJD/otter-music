@@ -24,6 +24,9 @@ import {
 } from "./ui/select";
 import { PlaylistImport } from "./settings/PlaylistImport";
 import { PlaylistUrlImport } from "./settings/PlaylistUrlImport";
+import { DownloadQualitySelect } from "./settings/DownloadQualitySelect";
+import { DownloadSettingToggles } from "./settings/DownloadSettingToggles";
+import { DownloadDirectorySelect } from "./settings/DownloadDirectorySelect";
 import { SettingItem } from "./settings/SettingItem";
 import { UpdateCheck } from "./settings/UpdateCheck";
 import { IssueLogs } from "./settings/IssueLogs";
@@ -127,6 +130,12 @@ export function SettingsPage({ onBack }: SettingsPageProps) {
               </div>
             }
           />
+        </Section>
+
+        <Section title="下载设置">
+          <DownloadQualitySelect />
+          <DownloadSettingToggles />
+          <DownloadDirectorySelect />
         </Section>
 
         <Section title="账号数据">

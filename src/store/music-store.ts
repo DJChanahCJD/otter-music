@@ -69,6 +69,14 @@ export interface MusicState {
   setEnableAutoMatch: (enable: boolean) => void;
   setFullScreenBackgroundMode: (mode: FullScreenBackgroundMode) => void;
   setShowSourceBadge: (show: boolean) => void;
+  downloadQuality: string;
+  embedCover: boolean;
+  embedLyric: boolean;
+  downloadDirectory: string;
+  setDownloadQuality: (quality: string) => void;
+  setEmbedCover: (embed: boolean) => void;
+  setEmbedLyric: (embed: boolean) => void;
+  setDownloadDirectory: (dir: string) => void;
 
   searchQuery: string;
   searchIntent: SearchIntent | null;
@@ -218,6 +226,11 @@ export const useMusicStore = create<MusicState>()(
       setAggregatedSources: (aggregatedSources) => set({ aggregatedSources }), setLastPlaylistCategory: (lastPlaylistCategory) => set({ lastPlaylistCategory }),
       setLastMineTab: (lastMineTab) => set({ lastMineTab }), setLastFeaturedTab: (lastFeaturedTab) => set({ lastFeaturedTab }), setEnableAutoMatch: (enableAutoMatch) => set({ enableAutoMatch }),
       setFullScreenBackgroundMode: (fullScreenBackgroundMode) => set({ fullScreenBackgroundMode }), setShowSourceBadge: (showSourceBadge) => set({ showSourceBadge }),
+      downloadQuality: "320", embedCover: true, embedLyric: true, downloadDirectory: "",
+      setDownloadQuality: (downloadQuality) => set({ downloadQuality }),
+      setEmbedCover: (embedCover) => set({ embedCover }),
+      setEmbedLyric: (embedLyric) => set({ embedLyric }),
+      setDownloadDirectory: (downloadDirectory) => set({ downloadDirectory }),
 
       // --- Search State ---
       searchQuery: "", searchIntent: null, searchResults: [], searchLoading: false, searchHasMore: false, searchPage: 0,
@@ -351,6 +364,8 @@ export const useMusicStore = create<MusicState>()(
         aggregatedSources: state.aggregatedSources, lastPlaylistCategory: state.lastPlaylistCategory,
         lastMineTab: state.lastMineTab, lastFeaturedTab: state.lastFeaturedTab, enableAutoMatch: state.enableAutoMatch,
         fullScreenBackgroundMode: state.fullScreenBackgroundMode, showSourceBadge: state.showSourceBadge,
+        downloadQuality: state.downloadQuality, embedCover: state.embedCover,
+        embedLyric: state.embedLyric, downloadDirectory: state.downloadDirectory,
       }),
     }
   )

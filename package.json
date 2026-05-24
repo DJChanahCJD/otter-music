@@ -41,6 +41,7 @@
     "@jofr/capacitor-media-session": "^4.0.0",
     "@otter-music/shared": "*",
     "@tanstack/react-virtual": "^3.13.21",
+    "browser-id3-writer": "^6.3.1",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "colord": "^2.9.3",

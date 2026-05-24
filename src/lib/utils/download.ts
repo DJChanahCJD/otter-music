@@ -7,10 +7,12 @@ import { MusicSource, MusicTrack } from "@/types/music";
 import toast from "react-hot-toast";
 import { LocalMusicFile } from "@/plugins/local-music";
 import { useDownloadStore } from "@/store/download-store";
+import { useMusicStore } from "@/store/music-store";
 import { toastUtils } from "./toast";
 import { getProxyUrl, isProxyUrl } from "@/lib/api/config";
 import { logger } from "@/lib/logger";
 import { processBatchIO } from "@/lib/utils";
+import { embedMetadata } from "./id3-embed";
 
 /* ================= 主入口 ================= */
 
@@ -18,17 +20,22 @@ export function buildDownloadKey(source: MusicSource, id: string) {
   return `${source}:${id}`;
 }
 
+interface PerformDownloadOpts {
+  skipMetadata?: boolean;
+}
+
 /**
  * 单首曲目下载核心逻辑
  * @param toastId 传入则展示详细进度（单曲模式）；不传则彻底静默（批量模式）
  */
-async function performDownloadOne(track: MusicTrack, br: number, toastId?: string): Promise<void> {
+async function performDownloadOne(track: MusicTrack, _br: number, toastId?: string, opts?: PerformDownloadOpts): Promise<void> {
   const fileName = buildFileName(track);
   const isNative = Capacitor.isNativePlatform();
+  const br = parseInt(useMusicStore.getState().downloadQuality) || 320;
 
   if (isNative) {
     const key = buildDownloadKey(track.source, track.id);
-    if (useDownloadStore.getState().hasRecord(key)) return; // 已存在，直接跳过
+    if (useDownloadStore.getState().hasRecord(key)) return;
   }
 
   const url = await musicApi.getUrl(track.url_id || track.id, track.source, br);
@@ -36,8 +43,8 @@ async function performDownloadOne(track: MusicTrack, br: number, toastId?: strin
 
   const doDownload = async (downloadUrl: string) => {
     await (isNative
-      ? downloadNative(downloadUrl, fileName, track, toastId)
-      : downloadWeb(downloadUrl, fileName, toastId));
+      ? downloadNative(downloadUrl, fileName, track, toastId, opts)
+      : downloadWeb(downloadUrl, fileName, track, toastId, opts));
   };
 
   try {
@@ -97,7 +104,6 @@ export async function downloadMusicTrackBatch(tracks: MusicTrack[], br = 192) {
     validTracks,
     async (track) => {
       try {
-        // 批量模式：刻意不传 toastId，底层函数将静默执行，由外部的 updateProgress 统一接管 UI
         await performDownloadOne(track, br);
       } catch (err) {
         failCount++;
@@ -128,14 +134,18 @@ async function downloadNative(
   url: string,
   fileName: string,
   track: MusicTrack,
-  toastId?: string
+  toastId?: string,
+  opts?: PerformDownloadOpts
 ) {
   await ensurePermission();
-  await ensureDir(AppPaths.Music);
+  const store = useMusicStore.getState();
+  const musicPath = store.downloadDirectory || AppPaths.Music;
+  await ensureDir(musicPath);
 
+  const filePath = `${musicPath}/${fileName}`;
   const fileUri = await Filesystem.getUri({
     directory: STORAGE_CONFIG.BASE_DIR,
-    path: `${AppPaths.Music}/${fileName}`,
+    path: filePath,
   });
 
   const listener = await FileTransfer.addListener("progress", ({ bytes, contentLength }) => {
@@ -150,14 +160,67 @@ async function downloadNative(
       path: fileUri.uri,
     });
 
+    // 元数据嵌入
+    if (!opts?.skipMetadata && (store.embedCover || store.embedLyric)) {
+      await embedMetadataNative(filePath, track, toastId);
+    }
+
     const key = buildDownloadKey(track.source, track.id);
     await useDownloadStore.getState().addRecord(key, fileUri.uri);
 
-    if (toastId) toast.success("下载完成", { id: toastId });  // 判断静默执行
+    if (toastId) toast.success("下载完成", { id: toastId });
 
   } finally {
     await listener.remove();
   }
+}
+
+async function embedMetadataNative(filePath: string, track: MusicTrack, toastId?: string) {
+  try {
+    if (toastId) toast.loading("正在写入元数据...", { id: toastId });
+
+    const readResult = await Filesystem.readFile({
+      path: filePath,
+      directory: STORAGE_CONFIG.BASE_DIR,
+    });
+
+    const blob = base64ToBlob(readResult.data as string, "audio/mpeg");
+
+    const store = useMusicStore.getState();
+    const result = await embedMetadata(blob, track, {
+      embedCover: store.embedCover,
+      embedLyric: store.embedLyric,
+    });
+
+    const newBase64 = await blobToBase64(result.blob);
+
+    await Filesystem.writeFile({
+      path: filePath,
+      data: newBase64,
+      directory: STORAGE_CONFIG.BASE_DIR,
+    });
+  } catch (e) {
+    logger.warn("download", "Native 元数据嵌入失败", e);
+  }
+}
+
+function base64ToBlob(base64: string, mimeType: string): Blob {
+  const binaryStr = atob(base64);
+  const bytes = new Uint8Array(binaryStr.length);
+  for (let i = 0; i < binaryStr.length; i++) {
+    bytes[i] = binaryStr.charCodeAt(i);
+  }
+  return new Blob([bytes.buffer], { type: mimeType });
+}
+
+async function blobToBase64(blob: Blob): Promise<string> {
+  const buffer = await blob.arrayBuffer();
+  const bytes = new Uint8Array(buffer);
+  let binary = "";
+  for (let i = 0; i < bytes.length; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  return btoa(binary);
 }
 
 /* ================= Web 下载 ================= */
@@ -165,7 +228,9 @@ async function downloadNative(
 async function downloadWeb(
   url: string,
   fileName: string,
-  toastId?: string
+  track: MusicTrack,
+  toastId?: string,
+  opts?: PerformDownloadOpts
 ) {
   const res = await fetch(url);
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -174,7 +239,9 @@ async function downloadWeb(
   const reader = res.body?.getReader();
 
   if (!reader) {
-    return triggerBlobDownload(await res.blob(), fileName, toastId);
+    const rawBlob = await res.blob();
+    const blob = await applyMetadata(rawBlob, track, toastId, opts);
+    return triggerBlobDownload(blob, fileName, toastId);
   }
 
   const chunks: Uint8Array[] = [];
@@ -193,8 +260,34 @@ async function downloadWeb(
     }
   }
 
-  const blob = new Blob(chunks as BlobPart[], { type: "audio/mpeg" });
+  const rawBlob = new Blob(chunks as BlobPart[], { type: "audio/mpeg" });
+  const blob = await applyMetadata(rawBlob, track, toastId, opts);
   triggerBlobDownload(blob, fileName, toastId);
+}
+
+async function applyMetadata(
+  blob: Blob,
+  track: MusicTrack,
+  toastId?: string,
+  opts?: PerformDownloadOpts
+): Promise<Blob> {
+  if (opts?.skipMetadata) return blob;
+
+  const store = useMusicStore.getState();
+  if (!store.embedCover && !store.embedLyric) return blob;
+
+  if (toastId) toast.loading("正在写入元数据...", { id: toastId });
+
+  try {
+    const result = await embedMetadata(blob, track, {
+      embedCover: store.embedCover,
+      embedLyric: store.embedLyric,
+    });
+    return result.blob;
+  } catch (e) {
+    logger.warn("download", "元数据嵌入失败", e);
+    return blob;
+  }
 }
 
 /* ================= 工具函数 ================= */

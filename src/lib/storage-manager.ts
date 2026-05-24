@@ -50,3 +50,21 @@ function sanitize(name: string) {
     .replace(/\s+/g, " ")
     .trim();
 }
+
+/** 获取当前下载目录（优先使用用户自定义目录，否则使用默认目录） */
+export function getMusicPath(customDir?: string): string {
+  if (customDir) {
+    return `${STORAGE_CONFIG.ROOT}/${customDir}`.replace(/\/+/g, "/");
+  }
+  return AppPaths.Music;
+}
+
+const INVALID_PATH_RE = /\.\./;
+
+/** 验证下载路径合法性 */
+export function validateDownloadPath(path: string): string | null {
+  if (!path.trim()) return null;
+  if (INVALID_PATH_RE.test(path)) return "路径不允许包含 ..";
+  if (/[*?"<>|]/.test(path)) return "路径包含非法字符 (* ? \" < > |)";
+  return null;
+}
