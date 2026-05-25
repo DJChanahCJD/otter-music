@@ -33,7 +33,7 @@ export function PlaylistImport() {
     <SettingItem
       icon={FileInput}
       title="导入歌单"
-      subtitle="仅支持导入从当前 APP 导出的歌单"
+      subtitle="仅支持本 APP 导出的歌单"
       action={<span className="text-xs">支持 .json 格式</span>}
       onClick={() => fileInputRef.current?.click()}
       showChevron

@@ -278,7 +278,7 @@ export function PlaylistUrlImport() {
       <SettingItem
         icon={Link2}
         title="链接导入歌单"
-        subtitle="粘贴网易云/QQ音乐/酷狗/酷我/咪咕歌单链接"
+        subtitle="支持网易云/QQ音乐/酷狗/酷我/咪咕"
         onClick={() => setOpen(true)}
         showChevron
       />

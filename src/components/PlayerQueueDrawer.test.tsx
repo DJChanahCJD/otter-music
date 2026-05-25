@@ -116,7 +116,7 @@ describe("PlayerQueueDrawer", () => {
     click(document.querySelector("button")!);
 
     const removeFirst = document.body.querySelector(
-      'button[aria-label="删除 First"]'
+      'button[aria-label="移除 First"]'
     );
     expect(removeFirst).not.toBeNull();
 

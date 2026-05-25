@@ -127,11 +127,18 @@
   --safe-area-left: env(safe-area-inset-left, 0px);
   --safe-area-right: env(safe-area-inset-right, 0px);
   --tab-bar-base-height: 56px;
-  --tab-bar-safe-height: calc(var(--tab-bar-base-height) + var(--safe-area-bottom));
+  --tab-bar-safe-height: calc(
+    var(--tab-bar-base-height) + var(--safe-area-bottom)
+  );
   --now-playing-base-height: 72px;
-  --now-playing-safe-height: calc(var(--now-playing-base-height) + var(--safe-area-bottom));
+  --now-playing-safe-height: calc(
+    var(--now-playing-base-height) + var(--safe-area-bottom)
+  );
   --bottom-stack-gap: 8px;
-  --bottom-stack-height: calc(var(--tab-bar-safe-height) + var(--now-playing-base-height) + var(--bottom-stack-gap));
+  --bottom-stack-height: calc(
+    var(--tab-bar-safe-height) + var(--now-playing-base-height) +
+      var(--bottom-stack-gap)
+  );
 }
 
 @layer utilities {
@@ -173,12 +180,12 @@
   }
 
   html {
-      scrollbar-gutter: auto;
-      scrollbar-width: thin;
-      /* 日间模式 */
-      scrollbar-color: var(--border) transparent;
-      /* 暗夜模式 */
-      @apply dark:[scrollbar-color:var(--muted-foreground)_transparent];
+    scrollbar-gutter: auto;
+    scrollbar-width: thin;
+    /* 日间模式 */
+    scrollbar-color: var(--border) transparent;
+    /* 暗夜模式 */
+    @apply dark:[scrollbar-color:var(--muted-foreground)_transparent];
   }
 
   html::-webkit-scrollbar {
@@ -245,16 +252,20 @@
 @keyframes audio-bar {
   0%,
   100% {
-    height: 0.5rem;
+    height: 0.3rem;
   }
   50% {
-    height: 1.5rem;
+    height: 0.9rem;
   }
 }
 
 @keyframes marquee {
-  0% { transform: translateX(0); }
-  100% { transform: translateX(-50%); }
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
 }
 
 .animate-marquee {

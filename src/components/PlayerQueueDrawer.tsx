@@ -12,7 +12,9 @@ import {
   DrawerTitle,
   DrawerTrigger,
 } from "@/components/ui/drawer";
+import { MusicCover } from "@/components/MusicCover";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { useMusicCover } from "@/hooks/useMusicCover";
 import { cn } from "@/lib/utils";
 import type { MusicTrack } from "@/types/music";
 
@@ -28,7 +30,96 @@ interface PlayerQueueDrawerProps {
   trigger: React.ReactNode;
 }
 
-/** 显示当前播放队列，并支持切歌、清空、重新打乱和删除单曲。 */
+interface QueueTrackItemProps {
+  track: MusicTrack;
+  isCurrent: boolean;
+  isPlaying: boolean;
+  onSelect: () => void;
+  onRemove: () => void;
+  itemRef?: (el: HTMLDivElement | null) => void;
+}
+
+function QueueTrackItem({
+  track,
+  isCurrent,
+  isPlaying,
+  onSelect,
+  onRemove,
+  itemRef,
+}: QueueTrackItemProps) {
+  const coverUrl = useMusicCover(track);
+
+  const handleRemove = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (isCurrent && !confirm(`确定删除《${track.name}》吗？`)) {
+      return;
+    }
+    onRemove();
+  };
+
+  return (
+    <div
+      ref={itemRef}
+      role="button"
+      tabIndex={0}
+      aria-label={`播放 ${track.name}`}
+      className={cn(
+        "grid grid-cols-[48px_1fr_auto] items-center gap-4 rounded-2xl px-4 py-3 transition-colors hover:bg-muted/60 active:bg-muted",
+        isCurrent && "bg-muted/50"
+      )}
+      onClick={onSelect}
+      onKeyDown={(e) => {
+        if (e.key !== "Enter" && e.key !== " ") return;
+        e.preventDefault();
+        onSelect();
+      }}
+    >
+      <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-lg">
+        <MusicCover
+          src={coverUrl}
+          alt=""
+          className="rounded-lg"
+          iconClassName="h-5 w-5 text-muted-foreground/40"
+        />
+
+        {/* 极致小巧的顺序波动动画 */}
+        {isCurrent && isPlaying && (
+          <div className="absolute inset-0 flex items-center justify-center gap-[3px] rounded-lg bg-black/30 backdrop-blur-[2px]">
+            <div className="h-1 w-[2.5px] rounded-full bg-primary animate-[audio-bar_1s_ease-in-out_infinite]" />
+            <div className="h-1 w-[2.5px] rounded-full bg-primary animate-[audio-bar_1s_ease-in-out_infinite] [animation-delay:200ms]" />
+            <div className="h-1 w-[2.5px] rounded-full bg-primary animate-[audio-bar_1s_ease-in-out_infinite] [animation-delay:400ms]" />
+          </div>
+        )}
+      </div>
+
+      <div className="min-w-0 flex flex-col justify-center overflow-hidden">
+        <span
+          className={cn(
+            "text-[15px] font-medium truncate leading-snug transition-colors",
+            isCurrent ? "text-primary" : "text-foreground"
+          )}
+        >
+          {track.name}
+        </span>
+        <span className="text-[13px] text-muted-foreground/70 truncate leading-snug">
+          {track.artist.join(" / ")}
+        </span>
+      </div>
+
+      <div className="flex items-center justify-center -mr-2">
+        <button
+          className="rounded-lg p-2 text-muted-foreground/50 hover:text-foreground"
+          onClick={handleRemove}
+          title={`删除`}
+          aria-label={`删除 ${track.name}`}
+        >
+          <X className="h-5 w-5" />
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export function PlayerQueueDrawer({
   queue,
   currentIndex,
@@ -70,23 +161,26 @@ export function PlayerQueueDrawer({
     <Drawer open={open} onOpenChange={setOpen}>
       <DrawerTrigger asChild>{trigger}</DrawerTrigger>
       <DrawerContent
-        className="h-[70vh] max-h-[70vh] gap-0 rounded-t-3xl outline-none"
+        className="h-[75vh] max-h-[75vh] gap-0 rounded-t-3xl outline-none"
         onClick={(e) => e.stopPropagation()}
       >
-        <DrawerHeader className="shrink-0 px-4 pb-3 pt-4">
+        <DrawerHeader className="shrink-0 px-6 pb-4 pt-6">
           <div className="flex items-center justify-between">
-            <DrawerTitle className="text-base font-semibold">
-              播放列表 ({queue.length})
+            <DrawerTitle className="text-lg font-medium tracking-tight">
+              播放列表{" "}
+              <span className="text-muted-foreground/60 text-base ml-1">
+                ({queue.length})
+              </span>
             </DrawerTitle>
             <DrawerDescription className="sr-only">
               当前播放队列，可切换、清空或删除歌曲。
             </DrawerDescription>
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-2">
               {isShuffle && (
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-8 w-8 text-muted-foreground hover:bg-transparent hover:text-primary"
+                  className="h-9 w-9 text-muted-foreground/70 hover:bg-muted hover:text-foreground transition-colors"
                   onClick={onReshuffle}
                   title="再次打乱"
                 >
@@ -96,7 +190,7 @@ export function PlayerQueueDrawer({
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-8 w-8 text-muted-foreground hover:bg-transparent hover:text-destructive"
+                className="h-9 w-9 text-muted-foreground/70 hover:bg-destructive/10 hover:text-destructive transition-colors"
                 onClick={onClear}
                 title="清空播放列表"
               >
@@ -108,64 +202,20 @@ export function PlayerQueueDrawer({
 
         <div className="min-h-0 flex-1">
           <ScrollArea className="h-full">
-            <div className="px-3 pb-[calc(1rem+env(safe-area-inset-bottom))]">
+            <div className="px-4 pb-[calc(2rem+env(safe-area-inset-bottom))] flex flex-col gap-1">
               {queue.map((track, i) => (
-                <div
+                <QueueTrackItem
                   key={`${track.id}-${i}`}
-                  ref={i === currentIndex ? setCurrentRef : undefined}
-                  role="button"
-                  tabIndex={0}
-                  aria-label={`播放 ${track.name}`}
-                  className={cn(
-                    "flex min-h-11 cursor-pointer items-center gap-2 rounded-lg px-2 py-2 text-sm hover:bg-muted/50",
-                    i === currentIndex && "bg-muted/50 text-primary"
-                  )}
-                  onClick={() => {
+                  track={track}
+                  isCurrent={i === currentIndex}
+                  isPlaying={isPlaying}
+                  onSelect={() => {
                     onPlay(i);
                     setOpen(false);
                   }}
-                  onKeyDown={(e) => {
-                    if (e.key !== "Enter" && e.key !== " ") return;
-                    e.preventDefault();
-                    onPlay(i);
-                    setOpen(false);
-                  }}
-                >
-                  {i === currentIndex && isPlaying ? (
-                    <div className="relative flex h-4 w-4 shrink-0 items-center justify-center">
-                      <span className="relative flex h-2.5 w-2.5">
-                        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-75" />
-                        <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-primary" />
-                      </span>
-                    </div>
-                  ) : (
-                    <span className="w-4 shrink-0 text-center font-mono text-xs text-muted-foreground">
-                      {i + 1}
-                    </span>
-                  )}
-                  <div className="min-w-0 flex-1 truncate">
-                    <span className="font-medium">{track.name}</span>
-                    <span className="ml-2 text-xs text-muted-foreground">
-                      - {track.artist.join("/")}
-                    </span>
-                  </div>
-                  <button
-                    className="shrink-0 rounded p-1 text-muted-foreground hover:bg-muted hover:text-destructive"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if (
-                        i === currentIndex &&
-                        !confirm(`确定删除正在播放的《${track.name}》吗？`)
-                      ) {
-                        return;
-                      }
-                      onRemove(track);
-                    }}
-                    aria-label={`删除 ${track.name}`}
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
-                </div>
+                  onRemove={() => onRemove(track)}
+                  itemRef={i === currentIndex ? setCurrentRef : undefined}
+                />
               ))}
             </div>
           </ScrollArea>
