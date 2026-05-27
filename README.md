@@ -43,16 +43,14 @@
 | Netease          |  ✅  |  ✅  |  ✅  |    ✅    | 网易云官方，搜索建议/专辑/歌手详情 |
 | Joox             |  ✅  |  ✅  |  ✅  |    ❌    | GD Studio API                      |
 | 酷我音乐         |  ✅  |  ✅  |  ✅  |    ✅    | GD Studio API                      |
-| 咪咕音乐         |  ✅  |  ✅  |  ✅  |    ✅    | 网页端不支持搜索                   |
-| B站              |  ✅  |  ✅  |  ❌  |    ❌    | 网页端不支持播放                   |
+| 咪咕音乐         |  ✅  |  ✅  |  ✅  |    ✅    | 仅移动端                           |
+| B站              |  ✅  |  ✅  |  ❌  |    ❌    | 仅移动端                           |
 | QQ音乐           |  ❌  |  ❌  |  ❌  |    ✅    |                                    |
 | 酷狗音乐         |  ❌  |  ❌  |  ❌  |    ✅    |                                    |
 | 本地音乐         |  ❌  |  ✅  |  ✅  |    ❌    | 仅移动端支持                       |
 | 播客（歌单广场） |  ✅  |  ✅  |  ❌  |    ❌    | RSS 播客订阅                       |
 
-> **聚合搜索**：选择"聚合搜索"时，默认并行搜索网易云、Joox、咪咕三个音源，智能去重后按音质排序。
->
-> QQ音乐和酷狗音乐的搜索/播放能力由 GD Studio API 提供（对应 Joox/酷我），官方 API 仅用于歌单链接解析导入。
+> **聚合搜索**：选择"聚合搜索"时，默认并行搜索网易云、Joox 两个音源，智能去重后按音质排序。可在设置中开启更多音源。
 
 > [!NOTE]
 > 最低支持版本：minSdkVersion = 24 (Android 7.0)
@@ -117,11 +115,20 @@ src/
 │   ├── music-api.ts            # 统一音乐能力入口（搜索/URL/歌词/封面）
 │   ├── audio-match.ts          # 自动换源与匹配结果回写
 │   ├── api/                    # 服务端配置、同步、更新、播客接口
+│   ├── bilibili/               # B站 API 客户端与播放适配
+│   ├── kugou/                  # 酷狗 API 客户端
+│   ├── kuwo/                   # 酷我 API 客户端
+│   ├── migu/                   # 咪咕 API 客户端
 │   ├── netease/                # 网易云 API 适配层
-│   ├── music-provider/         # Provider 抽象与实现（netease/kuwo/joox/local/podcast/aggregate）
+│   ├── qqmusic/                # QQ音乐 API 客户端
+│   ├── music-provider/         # Provider 抽象与实现
 │   ├── sync.ts                 # 数据同步核心逻辑
 │   ├── storage-*.ts            # 存储适配与统一存储管理
+│   ├── clipboard.ts            # 跨平台剪贴板
+│   ├── crypto-storage.ts       # 加密存储
 │   └── utils/                  # 缓存、下载、检索、歌名匹配等工具
+├── plugins/                    # Capacitor 插件封装
+├── routes/                     # 路由定义
 ├── store/                      # Zustand 全局状态
 └── types/                      # 类型定义
 functions/                 # Cloudflare Workers 后端
@@ -149,12 +156,16 @@ shared/                     # 跨端共享类型
 - [ ] 媒体状态同步一致性（Web 与 Native MediaSession），移动端通过媒体控件进入APP会导致音频暂停，UI也同步暂停，重新播放后再次点击媒体控件进入后，音频不会暂停，但UI上还是显示暂停按钮。
 - [ ] 评估是否学习 musicfree 那种插件化机制(CommonJS + 沙箱 VM)
 - [ ] B站音源支持将合集作为专辑搜索
+- [ ] 定时关闭
+- [ ] fullscreenplayer 的歌名支持长按复制完整歌名
+- [ ] B 站的封面会被截断，需要支持点击预览完整封面
 
 ### Low Priority
 
-- [ ] 倍速播放、定时关闭、音效选择
+- [ ] 倍速播放、音效选择
 - [ ] 适配平板端，优化移动端体验
 - [ ] UI 重构（极简高效，打开即听）
+- [ ] 是否引入 GSAP 动画库
 
 ### Not TODO
 

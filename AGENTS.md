@@ -11,9 +11,13 @@ Otter Music 是一款 Capacitor 混合架构音乐播放器——同一套 React
 | `src/lib`        | 共享逻辑：API 客户端、音乐提供方、存储、工具函数             |
 | `src/store`      | Zustand store 层，通过 `partialize` 选择性持久化至 IndexedDB |
 | `src/plugins`    | 自定义 Capacitor 插件（如 `LocalMusicPlugin`）的 TS 接口定义 |
+| `src/routes`     | react-router-dom 路由层定义                                  |
+| `src/types`      | 共享 TypeScript 类型定义                                     |
 | `android/`       | Capacitor Android 项目，自定义插件原生实现在此               |
 | `shared/`        | 前后端共享代码，包含类型定义、工具函数                       |
-| `functions/`     | Cloudflare functions, 基于 Hono 框架             |
+| `functions/`     | Cloudflare functions, 基于 Hono 框架                         |
+
+`shared/` 和 `functions/` 是 npm workspaces，`shared/` 以 `@otter-music/shared` 导入。
 
 ## 常用命令
 
@@ -40,7 +44,9 @@ Otter Music 是一款 Capacitor 混合架构音乐播放器——同一套 React
 
 - 使用 TypeScript，`@/` 路径别名指向 `src/`
 - Zustand store 放在 `src/store/`，新增持久化字段需在 `partialize` 中声明
-- 测试文件与源文件同目录，命名 `*.test.ts` 或 `*.test.tsx`
+- 测试文件与源文件同目录，命名 `*.test.ts` 或 `*.test.tsx`（Vitest + jsdom，`src/test/setup.ts` 加载 `@testing-library/jest-dom`）
 - 保持改动最小，不引入无必要的抽象或依赖
 - 修改播放、同步、Store 逻辑时，补充或更新对应测试
 - 重要业务逻辑应使用 `src/lib/logger.ts` 记录日志 info、error、warn 等
+- 使用 Tailwind CSS 4 + shadcn/ui (New York)，UI 原语位于 `src/components/ui/`
+- 移动端优先，极简主义。当前 apk 大小仅 2 MB，包体积和性能需要优先考虑。
