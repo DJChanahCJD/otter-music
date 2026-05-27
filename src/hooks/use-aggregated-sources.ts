@@ -2,7 +2,7 @@ import { useMusicStore } from "@/store/music-store";
 import { useShallow } from "zustand/react/shallow";
 
 export const EXCLUDED_FOR_SEARCH = ["local", "podcast"];
-export const EXCLUDED_FOR_AUTO_MATCH = ["local", "podcast", "_netease"];
+export const EXCLUDED_FOR_AUTO_MATCH = ["local", "podcast", "_netease", "migu", "bilibili"];
 
 /**
  * 用于【搜索】的聚合数据源

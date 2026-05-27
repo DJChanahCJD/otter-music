@@ -35,6 +35,25 @@
 
 > 数据同步功能：通过管理员手动分配的 `SYNC_KEY` 接入。存储基于 Cloudflare KV（上限 25 MB），单用户理论可稳定同步 5 万首歌曲
 
+## 音源支持
+
+| 音源 | 搜索 | 播放 | 歌词 | 歌单导入 | 备注 |
+|------|:----:|:----:|:----:|:--------:|------|
+| 网易云音乐 | ✓ | ✓ | ✓ | ✓ | GD Studio API，聚合默认源 |
+| Netease（官方） | ✓ | ✓ | ✓ | ✓ | 官方 API，变灰解锁、搜索建议 |
+| Joox | ✓ | ✓ | ✓ | ✗ | 东南亚/港台风 |
+| 酷我音乐 | ✓ | ✓ | ✓ | ✓ | |
+| 咪咕音乐 | ✓ | ✓ | ✓ | ✓ | V3 接口 |
+| B站 | ✓ | ✓ | ✗ | ✗ | 用户上传资源，无歌词 |
+| QQ音乐 | ✗ | ✗ | ✗ | ✓ | 仅歌单导入 |
+| 酷狗音乐 | ✗ | ✗ | ✗ | ✓ | 仅歌单导入 |
+| 本地音乐 | ✗ | ✓ | ✓ | ✗ | 需 Capacitor 原生环境 |
+| 播客 | ✓ | ✓ | ✗ | ✗ | RSS 播客订阅 |
+
+> **聚合搜索**：选择"聚合搜索"时，默认并行搜索网易云、Joox、咪咕三个音源，智能去重后按音质排序。
+>
+> QQ音乐和酷狗音乐的搜索/播放能力由 GD Studio API 提供（对应 Joox/酷我），官方 API 仅用于歌单链接解析导入。
+
 > [!NOTE]
 > 最低支持版本：minSdkVersion = 24 (Android 7.0)
 >
@@ -127,14 +146,68 @@ shared/                     # 跨端共享类型
 
 ## TODO
 
-- [ ] 媒体状态同步一致性（Web 与 Native MediaSession）
+- [ ] 媒体状态同步一致性（Web 与 Native MediaSession），移动端通过媒体控件进入APP会导致音频暂停，重新播放后再次点击媒体控件进入后，音频不会暂停，但UI上还是显示暂停按钮。
 - [x] 支持「边听边缓存」功能
 - [x] 支持主流音乐APP的歌单导入功能（网易云、酷我、酷狗、QQ音乐、咪咕等）
 - [x] 下载设置优化，支持内嵌封面、内嵌歌词，支持选定下载目录。
-- [ ] 评估是否学习 musicfree 那种插件化机制(CommonJS + 沙箱 VM)
-- [ ] 「我的」页面添加歌单导入入口
 - [x] 引入B站音源支持
-- [ ] README 添加音源支持表格
+- [ ] 评估是否学习 musicfree 那种插件化机制(CommonJS + 沙箱 VM)
+- [x] 对应音源的歌手、专辑跳转应该走对应逻辑。当前咪咕音源的会聚合搜索。
+- [ ] 咪咕音乐能够播放但不能下载
+- [ ] 歌单导入文件导入tab不需要底部的确认按钮
+调整聚合b站和咪咕的权重
+B站能否直连流式播放？不要下载完整音频后再blob返回
+咪咕VIP标识，看哪些歌曲不能播放
+- [ ] FullScreenPlayer 支持长按封面预览，当前该组件点击更多按钮会导致Minifed React Error
+- [ ] B站音源播放成功过一次，但后面又失败了，不太稳定？当前边听边缓存功能是否适用B站音源？能否不要base64和blob之间转换，太消耗时间了。
+““
+[2026-05-27 00:20:58] INFO system: App started at 2026-05-27 00:20:58
+context: {
+  "version": "2.3.0-preview",
+  "platform": "native",
+  "env": "production"
+}
+
+[2026-05-27 00:23:11] INFO index-B2jOEI2Q.js: bilibili-blob] typeof=data:string, len=83015, hasNewlines=true, first80="/9j/4AAQSkZJRgABAQAAAQABAAD/4gHYSUNDX1BST0ZJTEUAAQEAAAHIAAAAAAQwAABtbnRyUkdC\nIFh"
+
+[2026-05-27 00:23:11] INFO index-B2jOEI2Q.js: bilibili-blob] blob created, size=61450
+
+[2026-05-27 00:23:11] INFO index-B2jOEI2Q.js: bilibili-blob] typeof=data:string, len=318071, hasNewlines=true, first80="/9j/4AAQSkZJRgABAQAAAQABAAD/4gHYSUNDX1BST0ZJTEUAAQEAAAHIAAAAAAQwAABtbnRyUkdC\nIFh"
+
+[2026-05-27 00:23:11] INFO index-B2jOEI2Q.js: bilibili-blob] blob created, size=235455
+
+[2026-05-27 00:23:11] INFO index-B2jOEI2Q.js: bilibili-blob] typeof=data:string, len=215446, hasNewlines=true, first80="/9j/4AAQSkZJRgABAQAAAQABAAD/4gHYSUNDX1BST0ZJTEUAAQEAAAHIAAAAAAQwAABtbnRyUkdC\nIFh"
+
+[2026-05-27 00:23:11] INFO index-B2jOEI2Q.js: bilibili-blob] blob created, size=159484
+
+[2026-05-27 00:23:11] INFO index-B2jOEI2Q.js: bilibili-blob] typeof=data:string, len=324126, hasNewlines=true, first80="/9j/4AAQSkZJRgABAQAAAQABAAD/4gHYSUNDX1BST0ZJTEUAAQEAAAHIAAAAAAQwAABtbnRyUkdC\nIFh"
+
+[2026-05-27 00:23:11] INFO index-B2jOEI2Q.js: bilibili-blob] blob created, size=239937
+
+[2026-05-27 00:23:13] INFO index-B2jOEI2Q.js: bilibili-blob] typeof=data:string, len=148254, hasNewlines=true, first80="/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgMCAgMDAwMEAwMEBQgFBQQEBQoHBwYIDAoMDAsK\nCws"
+
+[2026-05-27 00:23:13] INFO index-B2jOEI2Q.js: bilibili-blob] blob created, size=109745
+
+[2026-05-27 00:23:13] INFO index-B2jOEI2Q.js: bilibili-blob] typeof=data:string, len=394958, hasNewlines=true, first80="/9j/4AAQSkZJRgABAQAAAQABAAD/4gIoSUNDX1BST0ZJTEUAAQEAAAIYAAAAAAIQAABtbnRyUkdC\nIFh"
+
+[2026-05-27 00:23:13] INFO index-B2jOEI2Q.js: bilibili-blob] blob created, size=292369
+
+[2026-05-27 00:23:14] INFO index-B2jOEI2Q.js: bilibili-blob] typeof=data:string, len=882343, hasNewlines=true, first80="/9j/4AAQSkZJRgABAQAAAQABAAD/4gHYSUNDX1BST0ZJTEUAAQEAAAHIAAAAAAQwAABtbnRyUkdC\nIFh"
+
+[2026-05-27 00:23:14] INFO index-B2jOEI2Q.js: bilibili-blob] blob created, size=653162
+
+[2026-05-27 00:23:15] INFO index-B2jOEI2Q.js: bilibili-blob] typeof=data:string, len=525282, hasNewlines=true, first80="/9j/4AAQSkZJRgABAQAASABIAAD/4QBMRXhpZgAATU0AKgAAAAgAAYdpAAQAAAABAAAAGgAAAAAA\nA6A"
+
+[2026-05-27 00:23:15] INFO index-B2jOEI2Q.js: bilibili-blob] blob created, size=388843
+
+[2026-05-27 00:23:15] INFO index-B2jOEI2Q.js: bilibili-blob] typeof=data:string, len=754714, hasNewlines=true, first80="/9j/4AAQSkZJRgABAQAAAQABAAD/4gHYSUNDX1BST0ZJTEUAAQEAAAHIAAAAAAQwAABtbnRyUkdC\nIFh"
+
+[2026-05-27 00:23:15] INFO index-B2jOEI2Q.js: bilibili-blob] blob created, size=558683
+
+[2026-05-27 00:23:16] INFO index-B2jOEI2Q.js: bilibili-blob] typeof=data:string, len=2819315, hasNewlines=true, first80="iVBORw0KGgoAAAANSUhEUgAABsAAAAQ4CAYAAAC35xkjAAAgAElEQVR4nOy9y5LkuLH3+XeQkbeq\n6ot"
+
+[2026-05-27 00:23:16] INFO index-B2jOEI2Q.js: bilibili-blob] blob created, size=2087023
+””
 
 ### Low Priority
 

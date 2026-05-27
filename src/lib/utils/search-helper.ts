@@ -22,6 +22,7 @@ export const SOURCE_WEIGHT: Partial<Record<MusicSource, number>> = {
   kuwo: 20,
   _netease: 20,
   migu: 20,
+  bilibili: 15,
 };
 
 export const SOURCE_RANK: Partial<Record<MusicSource, number>> =

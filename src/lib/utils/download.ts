@@ -80,7 +80,19 @@ async function performDownloadOne(
   if (!url) {
     url = await MusicProviderFactory.getProvider(track.source).getUrl(track, br);
   }
-
+  // 音质降级重试：高音质无 URL 时逐级降级
+  if (!url) {
+    const fallbackQualities = [192, 128];
+    for (const fallbackBr of fallbackQualities) {
+      if (fallbackBr >= br) continue;
+      url = await MusicProviderFactory.getProvider(track.source).getUrl(
+        track,
+        fallbackBr
+      );
+      if (url) break;
+    }
+  }
+  
   if (!url) throw new Error("无法获取下载链接");
 
   const doDownload = async (downloadUrl: string) => {

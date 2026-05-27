@@ -92,16 +92,6 @@ async function fetchMiguJson<T>(
   return res.json() as Promise<T>;
 }
 
-export async function fetchMiguPlaylistDetail(
-  playlistId: string
-): Promise<MiguPlaylistDetail> {
-  const fetchText = async (path: string) => {
-    const data = await fetchMiguJson<unknown>(path);
-    return JSON.stringify(data);
-  };
-  return fetchMiguPlaylistDetail(playlistId, fetchText);
-}
-
 // ============================================================
 // 播放地址获取
 // ============================================================

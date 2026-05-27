@@ -45,4 +45,26 @@ export class MiguApiProvider implements IMusicProvider {
   async getLyric(track: MusicTrack): Promise<SongLyric | null> {
     return getMiguLyric(track.lyric_id);
   }
+
+  /**
+   * 搜索歌手（内部调用 search，使歌手跳转走咪咕音源自身搜索而非聚合搜索）
+   */
+  async searchArtist(
+    query: string,
+    page: number,
+    count: number,
+  ): Promise<SearchPageResult<MusicTrack>> {
+    return this.search(query, page, count);
+  }
+
+  /**
+   * 搜索专辑（内部调用 search，使专辑跳转走咪咕音源自身搜索而非聚合搜索）
+   */
+  async searchAlbum(
+    query: string,
+    page: number,
+    count: number,
+  ): Promise<SearchPageResult<MusicTrack>> {
+    return this.search(query, page, count);
+  }
 }

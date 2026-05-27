@@ -43,8 +43,4 @@ Otter Music 是一款 Capacitor 混合架构音乐播放器——同一套 React
 - 测试文件与源文件同目录，命名 `*.test.ts` 或 `*.test.tsx`
 - 保持改动最小，不引入无必要的抽象或依赖
 - 修改播放、同步、Store 逻辑时，补充或更新对应测试
-
-## 提交格式
-
-- 使用简短约定式前缀：`feat:`、`fix:`、`refactor:`、`chore:`、`docs:`
-- 禁止执行 push 操作
+- 重要业务逻辑应使用 `src/lib/logger.ts` 记录日志 info、error、warn 等
