@@ -1,13 +1,21 @@
 import { useState, useEffect, useRef } from "react";
-import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerFooter } from "@/components/ui/drawer";
+import {
+  Drawer,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerFooter,
+} from "@/components/ui/drawer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Link2, Loader2, Music4, Upload } from "lucide-react";
+import { Link2, Loader2, Upload, ListMusic } from "lucide-react";
+import { MusicCover } from "@/components/MusicCover";
 import { useMusicStore } from "@/store/music-store";
 import { toastUtils } from "@/lib/utils/toast";
 import { logger } from "@/lib/logger";
 import { detectPlatform, type Platform } from "@/lib/platform-detector";
+import { readClipboardText } from "@/lib/clipboard";
 
 // 聚合各平台 API 导入
 import * as netease from "@/lib/netease/netease-api";
@@ -32,37 +40,59 @@ const PLATFORM_LABELS: Record<Platform, string> = {
 };
 
 // 平台解析策略配置
-const platformStrategies: Record<Platform, {
-  resolveId: (url: string) => any;
-  getDetail: (id: any) => Promise<any>;
-  convert: (song: any) => MusicTrack;
-}> = {
+const platformStrategies: Record<
+  Platform,
+  {
+    resolveId: (url: string) => any;
+    getDetail: (id: any) => Promise<any>;
+    convert: (song: any) => MusicTrack;
+  }
+> = {
   netease: {
     resolveId: (url) => {
       const res = netease.resolveUrl(url);
-      if (!res || res.type !== "playlist") throw new Error(res ? "此链接为单曲或专辑，暂仅支持歌单导入" : "无法解析此链接");
+      if (!res || res.type !== "playlist")
+        throw new Error(
+          res ? "此链接为单曲或专辑，暂仅支持歌单导入" : "无法解析此链接"
+        );
       return res.id;
     },
     getDetail: netease.getPlaylistDetail,
     convert: netease.convertSongToMusicTrack,
   },
   qq: {
-    resolveId: (url) => qqmusic.parseQqMusicUrl(url) || (() => { throw new Error("无法从此链接提取歌单ID") })(),
+    resolveId: (url) =>
+      qqmusic.parseQqMusicUrl(url) ||
+      (() => {
+        throw new Error("无法从此链接提取歌单ID");
+      })(),
     getDetail: qqmusic.getQqPlaylistDetail,
     convert: qqmusic.convertQqSongToMusicTrack,
   },
   kugou: {
-    resolveId: async (url) => (await kugou.resolveKugouPlaylistId(url)) || (() => { throw new Error("无法从此链接提取歌单ID") })(),
+    resolveId: async (url) =>
+      (await kugou.resolveKugouPlaylistId(url)) ||
+      (() => {
+        throw new Error("无法从此链接提取歌单ID");
+      })(),
     getDetail: kugou.getKugouPlaylistDetail,
     convert: kugou.convertKugouSongToMusicTrack,
   },
   kuwo: {
-    resolveId: (url) => kuwo.parseKuwoPlaylistUrl(url) || (() => { throw new Error("无法从此链接提取歌单ID") })(),
+    resolveId: (url) =>
+      kuwo.parseKuwoPlaylistUrl(url) ||
+      (() => {
+        throw new Error("无法从此链接提取歌单ID");
+      })(),
     getDetail: kuwo.getKuwoPlaylistDetail,
     convert: kuwo.convertKuwoSongToMusicTrack,
   },
   migu: {
-    resolveId: async (url) => (await migu.resolveMiguPlaylistId(url)) || (() => { throw new Error("无法从此链接提取歌单ID") })(),
+    resolveId: async (url) =>
+      (await migu.resolveMiguPlaylistId(url)) ||
+      (() => {
+        throw new Error("无法从此链接提取歌单ID");
+      })(),
     getDetail: migu.getMiguPlaylistDetail,
     convert: migu.convertMiguSongToMusicTrack,
   },
@@ -83,7 +113,10 @@ interface PlaylistImportDrawerProps {
   onOpenChange: (open: boolean) => void;
 }
 
-export function PlaylistImportDrawer({ open, onOpenChange }: PlaylistImportDrawerProps) {
+export function PlaylistImportDrawer({
+  open,
+  onOpenChange,
+}: PlaylistImportDrawerProps) {
   const [url, setUrl] = useState("");
   const [phase, setPhase] = useState<Phase>("input");
   const [preview, setPreview] = useState<PlaylistPreview | null>(null);
@@ -106,13 +139,15 @@ export function PlaylistImportDrawer({ open, onOpenChange }: PlaylistImportDrawe
   // 自动读取剪贴板
   useEffect(() => {
     if (!open || url) return;
-    navigator.clipboard?.readText?.()
+    readClipboardText()
       .then((text) => {
         const extractedUrl = parseInput(text);
         const platform = detectPlatform(extractedUrl);
         if (extractedUrl && platform) {
           setUrl(extractedUrl);
-          toastUtils.success(`已识别${PLATFORM_LABELS[platform]}歌单链接`, { id: "clipboard-import" });
+          toastUtils.success(`已识别${PLATFORM_LABELS[platform]}歌单链接`, {
+            id: "clipboard-import",
+          });
         }
       })
       .catch(() => {});
@@ -125,7 +160,9 @@ export function PlaylistImportDrawer({ open, onOpenChange }: PlaylistImportDrawe
 
     const platform = detectPlatform(trimmed);
     if (!platform) {
-      setErrorMsg("不支持的链接格式，目前支持网易云、QQ、酷狗、酷我和咪咕音乐的歌单链接");
+      setErrorMsg(
+        "不支持的链接格式，目前支持网易云、QQ、酷狗、酷我和咪咕音乐的歌单链接"
+      );
       setPhase("error");
       return;
     }
@@ -159,7 +196,11 @@ export function PlaylistImportDrawer({ open, onOpenChange }: PlaylistImportDrawe
     }
   };
 
-  const savePlaylistToStore = (name: string, coverUrl: string | undefined, tracks: MusicTrack[]) => {
+  const savePlaylistToStore = (
+    name: string,
+    coverUrl: string | undefined,
+    tracks: MusicTrack[]
+  ) => {
     const playlistId = useMusicStore.getState().createPlaylist(name, coverUrl);
     useMusicStore.getState().setPlaylistTracks(playlistId, tracks);
     toastUtils.success(`成功导入歌单「${name}」\n共 ${tracks.length} 首歌曲`);
@@ -197,13 +238,25 @@ export function PlaylistImportDrawer({ open, onOpenChange }: PlaylistImportDrawe
     <Drawer open={open} onOpenChange={(isOpen) => !isOpen && handleClose()}>
       <DrawerContent className="max-h-[92vh] outline-none">
         <DrawerHeader className="pb-2">
-          <DrawerTitle className="text-center text-lg font-bold">导入歌单</DrawerTitle>
+          <DrawerTitle className="text-center text-lg font-bold">
+            导入歌单
+          </DrawerTitle>
         </DrawerHeader>
 
-        <Tabs defaultValue="link" className="px-5" onValueChange={(v) => setActiveTab(v as "link" | "file")}>
+        <Tabs
+          defaultValue="link"
+          className="px-5"
+          onValueChange={(v) => setActiveTab(v as "link" | "file")}
+        >
           <TabsList className="w-full">
-            <TabsTrigger value="link" className="flex-1"><Link2 className="h-4 w-4 mr-1.5" />链接导入</TabsTrigger>
-            <TabsTrigger value="file" className="flex-1"><Upload className="h-4 w-4 mr-1.5" />文件导入</TabsTrigger>
+            <TabsTrigger value="link" className="flex-1">
+              <Link2 className="h-4 w-4 mr-1.5" />
+              链接导入
+            </TabsTrigger>
+            <TabsTrigger value="file" className="flex-1">
+              <Upload className="h-4 w-4 mr-1.5" />
+              文件导入
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="link" className="mt-4 space-y-4">
@@ -229,24 +282,30 @@ export function PlaylistImportDrawer({ open, onOpenChange }: PlaylistImportDrawe
             {phase === "loading" && (
               <div className="flex flex-col items-center py-12 gap-3">
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                <p className="text-sm text-muted-foreground">正在获取歌单信息...</p>
+                <p className="text-sm text-muted-foreground">
+                  正在获取歌单信息...
+                </p>
               </div>
             )}
 
             {phase === "preview" && preview && (
               <div className="space-y-4">
                 <div className="bg-muted/30 rounded-2xl p-4 flex items-center gap-4">
-                  {preview.coverUrl ? (
-                    <img src={preview.coverUrl} alt={preview.name} className="w-20 h-20 rounded-xl object-cover shadow-lg" />
-                  ) : (
-                    <div className="w-20 h-20 rounded-xl bg-muted flex items-center justify-center">
-                      <Music4 className="h-8 w-8 text-muted-foreground" />
-                    </div>
-                  )}
+                  <MusicCover
+                    src={preview.coverUrl}
+                    alt={preview.name}
+                    className="w-20 h-20 rounded-xl shadow-lg"
+                    fallbackIcon={
+                      <ListMusic className="h-8 w-8 text-muted-foreground" />
+                    }
+                  />
                   <div className="flex-1 min-w-0">
-                    <h3 className="font-semibold text-base truncate">{preview.name}</h3>
+                    <h3 className="font-semibold text-base truncate">
+                      {preview.name}
+                    </h3>
                     <p className="text-sm text-muted-foreground mt-1">
-                      {PLATFORM_LABELS[preview.platform]} · {preview.trackCount} 首歌曲
+                      {PLATFORM_LABELS[preview.platform]} · {preview.trackCount}{" "}
+                      首歌曲
                     </p>
                   </div>
                 </div>
@@ -266,9 +325,19 @@ export function PlaylistImportDrawer({ open, onOpenChange }: PlaylistImportDrawe
               onClick={() => fileInputRef.current?.click()}
             >
               <Upload className="h-10 w-10 text-muted-foreground/60 mx-auto mb-3" />
-              <p className="text-sm font-medium text-foreground">点击选择 JSON 文件</p>
-              <p className="text-xs text-muted-foreground mt-1">仅支持本 APP 导出的 .json 格式歌单文件</p>
-              <input type="file" ref={fileInputRef} className="hidden" accept=".json" onChange={handleFileImport} />
+              <p className="text-sm font-medium text-foreground">
+                点击选择 JSON 文件
+              </p>
+              <p className="text-xs text-muted-foreground mt-1">
+                仅支持本应用导出的 .json 格式歌单文件
+              </p>
+              <input
+                type="file"
+                ref={fileInputRef}
+                className="hidden"
+                accept=".json"
+                onChange={handleFileImport}
+              />
             </div>
           </TabsContent>
         </Tabs>
@@ -277,29 +346,50 @@ export function PlaylistImportDrawer({ open, onOpenChange }: PlaylistImportDrawe
           {activeTab === "link" && (
             <div className="mt-2 w-full space-y-2">
               {phase === "error" && (
-                <Button variant="outline" className="h-12 rounded-2xl w-full" onClick={() => setPhase("input")}>
+                <Button
+                  variant="outline"
+                  className="h-12 rounded-2xl w-full"
+                  onClick={() => setPhase("input")}
+                >
                   返回修改链接
                 </Button>
               )}
               {(phase === "input" || phase === "error") && (
-                <Button className="h-12 rounded-2xl shadow-lg w-full" disabled={!url.trim()} onClick={handleFetch}>
+                <Button
+                  className="h-12 rounded-2xl shadow-lg w-full"
+                  disabled={!url.trim()}
+                  onClick={handleFetch}
+                >
                   {phase === "error" ? "重试" : "获取歌单"}
                 </Button>
               )}
               {phase === "loading" && (
                 <Button className="h-12 rounded-2xl w-full" disabled>
-                  <Loader2 className="h-4 w-4 animate-spin mr-2" />获取中...
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  获取中...
                 </Button>
               )}
               {phase === "preview" && (
                 <>
-                  <Button className="h-12 rounded-2xl shadow-lg w-full" onClick={handleUrlImport}>确认导入</Button>
-                  <Button variant="ghost" className="h-12 rounded-2xl w-full" onClick={() => setPhase("input")}>返回</Button>
+                  <Button
+                    className="h-12 rounded-2xl shadow-lg w-full"
+                    onClick={handleUrlImport}
+                  >
+                    确认导入
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    className="h-12 rounded-2xl w-full"
+                    onClick={() => setPhase("input")}
+                  >
+                    返回
+                  </Button>
                 </>
               )}
               {phase === "importing" && (
                 <Button className="h-12 rounded-2xl w-full" disabled>
-                  <Loader2 className="h-4 w-4 animate-spin mr-2" />导入中...
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  导入中...
                 </Button>
               )}
             </div>

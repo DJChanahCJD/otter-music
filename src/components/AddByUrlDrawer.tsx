@@ -1,9 +1,16 @@
 import { useState, FormEvent, useEffect } from "react";
-import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerFooter } from "@/components/ui/drawer";
+import {
+  Drawer,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerFooter,
+} from "@/components/ui/drawer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Link, Music2, User } from "lucide-react";
 import toast from "react-hot-toast";
+import { readClipboardText } from "@/lib/clipboard";
 
 interface AddByUrlDrawerProps {
   isOpen: boolean;
@@ -23,7 +30,9 @@ function extractTitleFromUrl(url: string) {
   try {
     const { pathname } = new URL(url);
     const name = pathname.split("/").filter(Boolean).pop() || "";
-    return safeDecode(name).replace(/\.[^/.]+$/, "").trim();
+    return safeDecode(name)
+      .replace(/\.[^/.]+$/, "")
+      .trim();
   } catch {
     return "";
   }
@@ -46,11 +55,11 @@ function parseInput(text: string) {
   };
 }
 
-async function readClipboardText() {
-  return navigator.clipboard?.readText?.() || "";
-}
-
-export function AddByUrlDrawer({ isOpen, onClose, onConfirm }: AddByUrlDrawerProps) {
+export function AddByUrlDrawer({
+  isOpen,
+  onClose,
+  onConfirm,
+}: AddByUrlDrawerProps) {
   const [formData, setFormData] = useState({ title: "", url: "", artist: "" });
 
   const updateField = (field: keyof typeof formData, value: string) => {
@@ -83,9 +92,12 @@ export function AddByUrlDrawer({ isOpen, onClose, onConfirm }: AddByUrlDrawerPro
           title: prev.title || parsed.title,
         }));
 
-        toast.success(parsed.title ? `识别到：${parsed.title}` : "已自动填充链接", {
-          id: "clipboard",
-        });
+        toast.success(
+          parsed.title ? `识别到：${parsed.title}` : "已自动填充链接",
+          {
+            id: "clipboard",
+          }
+        );
       })
       .catch(() => {});
   }, [isOpen, formData.url]);
@@ -117,7 +129,9 @@ export function AddByUrlDrawer({ isOpen, onClose, onConfirm }: AddByUrlDrawerPro
     <Drawer open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DrawerContent className="max-h-[92vh] outline-none">
         <DrawerHeader className="pb-2">
-          <DrawerTitle className="text-center text-lg font-bold">通过 URL 添加</DrawerTitle>
+          <DrawerTitle className="text-center text-lg font-bold">
+            通过 URL 添加
+          </DrawerTitle>
         </DrawerHeader>
 
         <form onSubmit={handleSubmit} className="px-5 space-y-5">
@@ -155,7 +169,10 @@ export function AddByUrlDrawer({ isOpen, onClose, onConfirm }: AddByUrlDrawerPro
           </div>
 
           <DrawerFooter className="px-0 pt-2 pb-8">
-            <Button type="submit" className="h-12 rounded-2xl shadow-lg shadow-primary/20">
+            <Button
+              type="submit"
+              className="h-12 rounded-2xl shadow-lg shadow-primary/20"
+            >
               添加
             </Button>
           </DrawerFooter>
