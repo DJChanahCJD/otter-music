@@ -39,16 +39,16 @@
 
 | 音源 | 搜索 | 播放 | 歌词 | 歌单导入 | 备注 |
 |------|:----:|:----:|:----:|:--------:|------|
-| 网易云音乐 | ✓ | ✓ | ✓ | ✓ | GD Studio API，聚合默认源 |
-| Netease（官方） | ✓ | ✓ | ✓ | ✓ | 官方 API，变灰解锁、搜索建议 |
-| Joox | ✓ | ✓ | ✓ | ✗ | 东南亚/港台风 |
-| 酷我音乐 | ✓ | ✓ | ✓ | ✓ | |
-| 咪咕音乐 | ✓ | ✓ | ✓ | ✓ | V3 接口 |
-| B站 | ✓ | ✓ | ✗ | ✗ | 用户上传资源，无歌词 |
-| QQ音乐 | ✗ | ✗ | ✗ | ✓ | 仅歌单导入 |
-| 酷狗音乐 | ✗ | ✗ | ✗ | ✓ | 仅歌单导入 |
-| 本地音乐 | ✗ | ✓ | ✓ | ✗ | 需 Capacitor 原生环境 |
-| 播客 | ✓ | ✓ | ✗ | ✗ | RSS 播客订阅 |
+| 网易云音乐 | ✅ | ✅ | ✅ | ✅ | GD Studio API |
+| Netease | ✅ | ✅ | ✅ | ✅ | 网易云官方，搜索建议/专辑/歌手详情 |
+| Joox | ✅ | ✅ | ✅ | ❌ | GD Studio API |
+| 酷我音乐 | ✅ | ✅ | ✅ | ✅ | GD Studio API |
+| 咪咕音乐 | ✅ | ✅ | ✅ | ✅ | 网页端不支持搜索 |
+| B站 | ✅ | ✅ | ❌ | ❌ | 网页端不支持播放 |
+| QQ音乐 | ❌ | ❌ | ❌ | ✅ |  |
+| 酷狗音乐 | ❌ | ❌ | ❌ | ✅ |  |
+| 本地音乐 | ❌ | ✅ | ✅ | ❌ | 仅移动端支持 |
+| 播客（歌单广场） | ✅ | ✅ | ❌ | ❌ | RSS 播客订阅 |
 
 > **聚合搜索**：选择"聚合搜索"时，默认并行搜索网易云、Joox、咪咕三个音源，智能去重后按音质排序。
 >
@@ -153,56 +153,7 @@ shared/                     # 跨端共享类型
 - [x] 引入B站音源支持
 - [ ] 评估是否学习 musicfree 那种插件化机制(CommonJS + 沙箱 VM)
 - [x] 对应音源的歌手、专辑跳转应该走对应逻辑。当前咪咕音源的会聚合搜索。
-- [ ] 要不要在web端去掉migu和B站搜索源？当前不可用
 - [ ] B站音源播放播放不太稳定，当前边听边缓存功能是否适用B站音源？B站能否直连流式播放？不要下载完整音频后再blob返回能否不要base64和blob之间转换，太消耗时间了。（已验证：移动端直连audio_url无法播放, 靠 cldouflare functions代理也无法播放）
-““
-[2026-05-27 00:20:58] INFO system: App started at 2026-05-27 00:20:58
-context: {
-  "version": "2.3.0-preview",
-  "platform": "native",
-  "env": "production"
-}
-
-[2026-05-27 00:23:11] INFO index-B2jOEI2Q.js: bilibili-blob] typeof=data:string, len=83015, hasNewlines=true, first80="/9j/4AAQSkZJRgABAQAAAQABAAD/4gHYSUNDX1BST0ZJTEUAAQEAAAHIAAAAAAQwAABtbnRyUkdC\nIFh"
-
-[2026-05-27 00:23:11] INFO index-B2jOEI2Q.js: bilibili-blob] blob created, size=61450
-
-[2026-05-27 00:23:11] INFO index-B2jOEI2Q.js: bilibili-blob] typeof=data:string, len=318071, hasNewlines=true, first80="/9j/4AAQSkZJRgABAQAAAQABAAD/4gHYSUNDX1BST0ZJTEUAAQEAAAHIAAAAAAQwAABtbnRyUkdC\nIFh"
-
-[2026-05-27 00:23:11] INFO index-B2jOEI2Q.js: bilibili-blob] blob created, size=235455
-
-[2026-05-27 00:23:11] INFO index-B2jOEI2Q.js: bilibili-blob] typeof=data:string, len=215446, hasNewlines=true, first80="/9j/4AAQSkZJRgABAQAAAQABAAD/4gHYSUNDX1BST0ZJTEUAAQEAAAHIAAAAAAQwAABtbnRyUkdC\nIFh"
-
-[2026-05-27 00:23:11] INFO index-B2jOEI2Q.js: bilibili-blob] blob created, size=159484
-
-[2026-05-27 00:23:11] INFO index-B2jOEI2Q.js: bilibili-blob] typeof=data:string, len=324126, hasNewlines=true, first80="/9j/4AAQSkZJRgABAQAAAQABAAD/4gHYSUNDX1BST0ZJTEUAAQEAAAHIAAAAAAQwAABtbnRyUkdC\nIFh"
-
-[2026-05-27 00:23:11] INFO index-B2jOEI2Q.js: bilibili-blob] blob created, size=239937
-
-[2026-05-27 00:23:13] INFO index-B2jOEI2Q.js: bilibili-blob] typeof=data:string, len=148254, hasNewlines=true, first80="/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgMCAgMDAwMEAwMEBQgFBQQEBQoHBwYIDAoMDAsK\nCws"
-
-[2026-05-27 00:23:13] INFO index-B2jOEI2Q.js: bilibili-blob] blob created, size=109745
-
-[2026-05-27 00:23:13] INFO index-B2jOEI2Q.js: bilibili-blob] typeof=data:string, len=394958, hasNewlines=true, first80="/9j/4AAQSkZJRgABAQAAAQABAAD/4gIoSUNDX1BST0ZJTEUAAQEAAAIYAAAAAAIQAABtbnRyUkdC\nIFh"
-
-[2026-05-27 00:23:13] INFO index-B2jOEI2Q.js: bilibili-blob] blob created, size=292369
-
-[2026-05-27 00:23:14] INFO index-B2jOEI2Q.js: bilibili-blob] typeof=data:string, len=882343, hasNewlines=true, first80="/9j/4AAQSkZJRgABAQAAAQABAAD/4gHYSUNDX1BST0ZJTEUAAQEAAAHIAAAAAAQwAABtbnRyUkdC\nIFh"
-
-[2026-05-27 00:23:14] INFO index-B2jOEI2Q.js: bilibili-blob] blob created, size=653162
-
-[2026-05-27 00:23:15] INFO index-B2jOEI2Q.js: bilibili-blob] typeof=data:string, len=525282, hasNewlines=true, first80="/9j/4AAQSkZJRgABAQAASABIAAD/4QBMRXhpZgAATU0AKgAAAAgAAYdpAAQAAAABAAAAGgAAAAAA\nA6A"
-
-[2026-05-27 00:23:15] INFO index-B2jOEI2Q.js: bilibili-blob] blob created, size=388843
-
-[2026-05-27 00:23:15] INFO index-B2jOEI2Q.js: bilibili-blob] typeof=data:string, len=754714, hasNewlines=true, first80="/9j/4AAQSkZJRgABAQAAAQABAAD/4gHYSUNDX1BST0ZJTEUAAQEAAAHIAAAAAAQwAABtbnRyUkdC\nIFh"
-
-[2026-05-27 00:23:15] INFO index-B2jOEI2Q.js: bilibili-blob] blob created, size=558683
-
-[2026-05-27 00:23:16] INFO index-B2jOEI2Q.js: bilibili-blob] typeof=data:string, len=2819315, hasNewlines=true, first80="iVBORw0KGgoAAAANSUhEUgAABsAAAAQ4CAYAAAC35xkjAAAgAElEQVR4nOy9y5LkuLH3+XeQkbeq\n6ot"
-
-[2026-05-27 00:23:16] INFO index-B2jOEI2Q.js: bilibili-blob] blob created, size=2087023
-””
 
 ### Low Priority
 

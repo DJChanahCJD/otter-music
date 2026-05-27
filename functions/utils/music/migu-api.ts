@@ -4,8 +4,10 @@ import {
   buildMiguV3SearchPath,
   convertMiguSongToMusicTrack,
   convertMiguV3SearchSongToMusicTrack,
+  fetchMiguPlaylistDetail as fetchMiguPlaylistDetailCore,
   MIGU_PAGE_SIZE,
   parseMiguSongUrlResponse,
+  type MiguPlaylistDetail,
   type MiguSongUrlResponse,
   type MiguV3SearchSongRaw,
   type MusicTrack,
@@ -74,6 +76,23 @@ export async function resolveMiguShortPlaylistId(
 // ============================================================
 // 歌单获取（直接 fetch + 调用 shared 核心算法）
 // ============================================================
+
+/**
+ * 获取咪咕歌单详情
+ */
+export async function fetchMiguPlaylistDetail(
+  playlistId: string
+): Promise<MiguPlaylistDetail> {
+  return fetchMiguPlaylistDetailCore(playlistId, async (path: string) => {
+    const res = await fetch(`${MIGU_BASE_URL}${path}`, {
+      headers: {
+        "User-Agent": MIGU_USER_AGENT,
+      },
+    });
+    if (!res.ok) throw new Error(`Migu API error: ${res.status}`);
+    return res.text();
+  });
+}
 
 async function fetchMiguJson<T>(
   path: string,
