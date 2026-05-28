@@ -29,6 +29,8 @@ import { SettingItem } from "./settings/SettingItem";
 import { UpdateCheck } from "./settings/UpdateCheck";
 import { IssueLogs } from "./settings/IssueLogs";
 import { StreamCacheSetting } from "./settings/StreamCacheSetting";
+import { SleepTimerSetting } from "./settings/SleepTimerSetting";
+import { PlaybackSpeedSetting } from "./settings/PlaybackSpeedSetting";
 
 interface SettingsPageProps {
   onBack?: () => void;
@@ -101,6 +103,8 @@ export function SettingsPage({ onBack }: SettingsPageProps) {
           />
           <QualitySelect />
           <StreamCacheSetting />
+          <SleepTimerSetting />
+          <PlaybackSpeedSetting />
         </SettingsSection>
 
         <SettingsSection title="界面设置">

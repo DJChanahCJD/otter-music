@@ -89,6 +89,14 @@ export interface MusicState {
   fullScreenBackgroundMode: FullScreenBackgroundMode;
   showSourceBadge: boolean;
   enableStreamCache: boolean;
+  sleepTimerDuration: number;
+  sleepTimerRemaining: number;
+  sleepTimerIsActive: boolean;
+  sleepTimerEndTime: number;
+  setSleepTimerDuration: (duration: number) => void;
+  setSleepTimerRemaining: (remaining: number) => void;
+  setSleepTimerIsActive: (isActive: boolean) => void;
+  setSleepTimerEndTime: (endTime: number) => void;
   setQuality: (quality: string) => void;
   setSearchSource: (source: MusicSource) => void;
   setAggregatedSources: (sources: MusicSource[]) => void;
@@ -109,6 +117,8 @@ export interface MusicState {
   setEmbedLyric: (embed: boolean) => void;
   setDownloadDirectory: (dir: string) => void;
   setEnableStreamCache: (enable: boolean) => void;
+  playbackSpeed: number;
+  setPlaybackSpeed: (speed: number) => void;
 
   searchQuery: string;
   searchIntent: SearchIntent | null;
@@ -345,6 +355,17 @@ export const useMusicStore = create<MusicState>()(
       fullScreenBackgroundMode: "theme",
       showSourceBadge: true,
       enableStreamCache: true,
+      sleepTimerDuration: 30,
+      sleepTimerRemaining: 0,
+      sleepTimerIsActive: false,
+      sleepTimerEndTime: 0,
+      setSleepTimerDuration: (sleepTimerDuration) =>
+        set({ sleepTimerDuration }),
+      setSleepTimerRemaining: (sleepTimerRemaining) =>
+        set({ sleepTimerRemaining }),
+      setSleepTimerIsActive: (sleepTimerIsActive) =>
+        set({ sleepTimerIsActive }),
+      setSleepTimerEndTime: (sleepTimerEndTime) => set({ sleepTimerEndTime }),
       setQuality: (quality) => set({ quality }),
       setSearchSource: (searchSource) => set({ searchSource }),
       setAggregatedSources: (aggregatedSources) => set({ aggregatedSources }),
@@ -365,6 +386,8 @@ export const useMusicStore = create<MusicState>()(
       setEmbedLyric: (embedLyric) => set({ embedLyric }),
       setDownloadDirectory: (downloadDirectory) => set({ downloadDirectory }),
       setEnableStreamCache: (enableStreamCache) => set({ enableStreamCache }),
+      playbackSpeed: 1.0,
+      setPlaybackSpeed: (playbackSpeed) => set({ playbackSpeed }),
 
       // --- Search State ---
       searchQuery: "",
@@ -705,6 +728,8 @@ export const useMusicStore = create<MusicState>()(
         embedLyric: state.embedLyric,
         downloadDirectory: state.downloadDirectory,
         enableStreamCache: state.enableStreamCache,
+        sleepTimerDuration: state.sleepTimerDuration,
+        playbackSpeed: state.playbackSpeed,
       }),
     }
   )
