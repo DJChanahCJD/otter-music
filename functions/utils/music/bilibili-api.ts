@@ -180,7 +180,9 @@ export async function fetchBilibiliCollectionDetail(
 
         return {
           meta,
-          tracks: parsed.archives.map(convertSeriesArchiveToMusicTrack),
+          tracks: parsed.archives.map((archive) =>
+            convertSeriesArchiveToMusicTrack(archive, albumId)
+          ),
           total: parsed.total,
         };
       }
@@ -196,8 +198,8 @@ export async function fetchBilibiliCollectionDetail(
           if (seasonsResult.meta) {
             return {
               meta: seasonsResult.meta,
-              tracks: seasonsResult.archives.map(
-                convertSeasonArchiveToMusicTrack
+              tracks: seasonsResult.archives.map((archive) =>
+                convertSeasonArchiveToMusicTrack(archive, undefined, albumId)
               ),
               total: seasonsResult.total,
             };

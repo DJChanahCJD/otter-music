@@ -442,7 +442,7 @@ describe("bilibili music utilities", () => {
       });
     });
 
-    it("converts series archive to MusicTrack", () => {
+    it("converts series archive to MusicTrack without albumId", () => {
       const track = convertSeriesArchiveToMusicTrack({
         bvid: "BV1xx411c7mD",
         title: "晴天 - 周杰伦",
@@ -459,6 +459,21 @@ describe("bilibili music utilities", () => {
         source: "bilibili",
         artist_ids: ["999"],
       });
+      expect(track.album_id).toBeUndefined();
+    });
+
+    it("converts series archive to MusicTrack with albumId", () => {
+      const track = convertSeriesArchiveToMusicTrack(
+        {
+          bvid: "BV1xx411c7mD",
+          title: "晴天 - 周杰伦",
+          cover: "https://i0.hdslb.com/archive-cover.jpg",
+          owner: { name: "音乐UP", mid: 999 },
+        },
+        "bilibili_S_42"
+      );
+
+      expect(track.album_id).toBe("bilibili_S_42");
     });
 
     it("parses bilibili album id (old format and new format)", () => {
@@ -588,7 +603,7 @@ describe("bilibili music utilities", () => {
       expect(result.total).toBe(0);
     });
 
-    it("converts season archive to MusicTrack", () => {
+    it("converts season archive to MusicTrack without albumId", () => {
       const track = convertSeasonArchiveToMusicTrack({
         aid: 116640121363085,
         bvid: "BV1TYVA6sEhm",
@@ -607,6 +622,26 @@ describe("bilibili music utilities", () => {
         pic_id: "https://i0.hdslb.com/archive-cover.jpg",
         source: "bilibili",
       });
+      expect(track.album_id).toBe("bilibili_V_BV1TYVA6sEhm");
+    });
+
+    it("converts season archive to MusicTrack with albumId", () => {
+      const track = convertSeasonArchiveToMusicTrack(
+        {
+          aid: 116640121363085,
+          bvid: "BV1TYVA6sEhm",
+          ctime: 1779787425,
+          duration: 1604,
+          pic: "https://i0.hdslb.com/archive-cover.jpg",
+          pubdate: 1779789600,
+          stat: { view: 500, vt: 0 },
+          title: "不办婚礼去旅行结婚",
+        },
+        undefined,
+        "bilibili_S_42_999"
+      );
+
+      expect(track.album_id).toBe("bilibili_S_42_999");
     });
   });
 });

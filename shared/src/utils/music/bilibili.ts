@@ -478,7 +478,8 @@ export function convertSeriesToMusicTrack(
  * 将 B 站系列内视频转换为 MusicTrack。
  */
 export function convertSeriesArchiveToMusicTrack(
-  archive: BilibiliSeriesArchiveRaw
+  archive: BilibiliSeriesArchiveRaw,
+  albumId?: string
 ): MusicTrack {
   const bvid = archive.bvid || "";
   const coverUrl = normalizeResourceUrl(archive.cover || "");
@@ -488,6 +489,7 @@ export function convertSeriesArchiveToMusicTrack(
     name: normalizeBilibiliText(archive.title),
     artist: [normalizeBilibiliText(archive.owner?.name || "")],
     album: "",
+    album_id: albumId,
     pic_id: coverUrl,
     url_id: `bilibili_${bvid}`,
     lyric_id: "",
@@ -561,7 +563,8 @@ export function parseBilibiliSeasonsArchivesList(
  */
 export function convertSeasonArchiveToMusicTrack(
   archive: BilibiliSeasonArchiveRaw,
-  upName?: string
+  upName?: string,
+  albumId?: string
 ): MusicTrack {
   const bvid = archive.bvid || "";
   const coverUrl = normalizeResourceUrl(archive.pic || "");
@@ -571,7 +574,7 @@ export function convertSeasonArchiveToMusicTrack(
     name: normalizeBilibiliText(archive.title),
     artist: [upName || "UP主"],
     album: archive.title,
-    album_id: buildBilibiliMultiPAlbumId(bvid),
+    album_id: albumId ?? buildBilibiliMultiPAlbumId(bvid),
     pic_id: coverUrl,
     url_id: `bilibili_${bvid}`,
     lyric_id: "",

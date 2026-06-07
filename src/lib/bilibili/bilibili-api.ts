@@ -319,9 +319,7 @@ async function getBilibiliSongUrlNative(
   }
 }
 
-export async function getBilibiliSongUrl(
-  trackId: string
-): Promise<{
+export async function getBilibiliSongUrl(trackId: string): Promise<{
   url: string;
   format: import("@otter-music/shared").AudioFormat;
 } | null> {
@@ -392,7 +390,7 @@ export async function searchBilibiliCollections(
 export async function getBilibiliCollectionDetail(
   albumId: string,
   page = 1,
-  pageSize = 30
+  pageSize = 100
 ): Promise<{
   meta: BilibiliSeriesMetaRaw | null;
   tracks: MusicTrack[];
@@ -429,7 +427,7 @@ export async function getBilibiliCollectionDetail(
           return {
             meta: metaWithCreator,
             tracks: seasonsResult.archives.map((archive) =>
-              convertSeasonArchiveToMusicTrack(archive, upName)
+              convertSeasonArchiveToMusicTrack(archive, upName, albumId)
             ),
             total: seasonsResult.total,
           };
@@ -467,7 +465,9 @@ export async function getBilibiliCollectionDetail(
 
       return {
         meta,
-        tracks: parsed.archives.map(convertSeriesArchiveToMusicTrack),
+        tracks: parsed.archives.map((archive) =>
+          convertSeriesArchiveToMusicTrack(archive, albumId)
+        ),
         total: parsed.total,
       };
     }
