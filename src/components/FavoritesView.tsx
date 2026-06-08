@@ -32,15 +32,18 @@ export function FavoritesView({
 }: FavoritesViewProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [isAddByUrlOpen, setIsAddByUrlOpen] = useState(false);
-  const [dedupeSelectedIds, setDedupeSelectedIds] = useState<Set<string> | undefined>();
+  const [dedupeSelectedIds, setDedupeSelectedIds] = useState<
+    Set<string> | undefined
+  >();
 
   const filteredTracks = useMemo(() => {
     if (!searchQuery.trim()) return tracks;
     const lower = searchQuery.toLowerCase();
-    return tracks.filter(t =>
-      t.name.toLowerCase().includes(lower) ||
-      t.artist?.some(a => a?.toLowerCase().includes(lower)) ||
-      t.album?.toLowerCase().includes(lower)
+    return tracks.filter(
+      (t) =>
+        t.name.toLowerCase().includes(lower) ||
+        t.artist?.some((a) => a?.toLowerCase().includes(lower)) ||
+        t.album?.toLowerCase().includes(lower)
     );
   }, [tracks, searchQuery]);
 
@@ -50,7 +53,8 @@ export function FavoritesView({
     const result = deduplicateTracks(
       tracks,
       () => true, // 在喜欢列表中，所有歌曲默认都是喜欢的
-      (track) => downloadStore.hasRecord(buildDownloadKey(track.source, track.id))
+      (track) =>
+        downloadStore.hasRecord(buildDownloadKey(track.source, track.id))
     );
 
     if (result.removedCount === 0) {
@@ -78,47 +82,49 @@ export function FavoritesView({
   };
 
   const handleBatchRemove = (tracks: MusicTrack[]) => {
-    useMusicStore.getState().removeBatchFromFavorites(tracks.map(t => t.id));
+    useMusicStore.getState().removeBatchFromFavorites(tracks.map((t) => t.id));
   };
 
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
-      <div className={cn(
-        "p-4 border-b flex items-end gap-4 bg-muted/10 relative",
-      )}>
+      <div
+        className={cn("p-4 border-b flex items-end gap-4 bg-muted/10 relative")}
+      >
         <div className="h-20 w-20 bg-primary/10 rounded-lg flex items-center justify-center shadow-sm border overflow-hidden shrink-0">
           <Heart className="h-8 w-8 text-primary/80 fill-current" />
         </div>
         <div className="flex-1 space-y-1">
-          <h2 className="text-base font-bold tracking-tight line-clamp-1">我的喜欢</h2>
+          <h2 className="text-base font-bold tracking-tight line-clamp-1">
+            我的喜欢
+          </h2>
           <div className="text-xs text-muted-foreground flex items-center gap-2">
             <span>{tracks.length} 首歌曲</span>
           </div>
           <div className="pt-1 flex gap-2 items-center">
-             <Button
-                onClick={() => onPlay(null)}
-                className="rounded-full px-3 h-8"
-                size="sm"
-             >
-                <Play className="h-3 w-3 fill-current" />
-             </Button>
+            <Button
+              onClick={() => onPlay(null)}
+              className="rounded-full px-3 h-8"
+              size="sm"
+            >
+              <Play className="h-3 w-3 fill-current" />
+            </Button>
 
-             <PlaylistOperations
-                onDeduplicate={handleDeduplicate}
-                onExport={() => exportPlaylist("我喜欢的音乐", tracks)}
-                onAddByUrl={() => setIsAddByUrlOpen(true)}
-             />
+            <PlaylistOperations
+              onDeduplicate={handleDeduplicate}
+              onExport={() => exportPlaylist("我喜欢的音乐", tracks)}
+              onAddByUrl={() => setIsAddByUrlOpen(true)}
+            />
 
-             <div className="relative ml-auto w-32">
-                <Search className="absolute left-2 top-2.5 h-3 w-3 text-muted-foreground" />
-                <Input
-                  placeholder="搜索..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-8 h-8 text-xs"
-                />
-             </div>
+            <div className="relative ml-auto w-32 md:w-48">
+              <Search className="absolute left-2 top-2.5 h-3 w-3 text-muted-foreground md:h-4 md:w-4 md:top-2" />
+              <Input
+                placeholder="搜索..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-8 h-8 text-xs md:w-48 md:h-9 md:text-sm"
+              />
+            </div>
           </div>
         </div>
       </div>
@@ -127,7 +133,12 @@ export function FavoritesView({
       <div className="flex-1 min-h-0 bg-background/50">
         <MusicTrackList
           tracks={filteredTracks}
-          onPlay={(track) => onPlay(track, tracks.findIndex(t => t.id === track.id))}
+          onPlay={(track) =>
+            onPlay(
+              track,
+              tracks.findIndex((t) => t.id === track.id)
+            )
+          }
           currentTrackId={currentTrackId}
           isPlaying={isPlaying}
           playlistId="favorites"
@@ -136,7 +147,9 @@ export function FavoritesView({
           onBatchRemove={handleBatchRemove}
           showItemRemove={false}
           preselectedIds={dedupeSelectedIds}
-          onSelectionModeChange={(active) => { if (!active) setDedupeSelectedIds(undefined); }}
+          onSelectionModeChange={(active) => {
+            if (!active) setDedupeSelectedIds(undefined);
+          }}
         />
       </div>
 

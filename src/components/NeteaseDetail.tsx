@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useMemo } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { MusicTrackList } from "@/components/MusicTrackList";
 import {
@@ -82,6 +82,7 @@ export function NeteaseDetail({
   const [offset, setOffset] = useState(0);
   const [hasMore, setHasMore] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
 
   const { createPlaylist, setPlaylistTracks } = useMusicStore();
   const isShuffle = useMusicStore((state) => state.isShuffle);
@@ -247,6 +248,17 @@ export function NeteaseDetail({
     }
   };
 
+  const filteredTracks = useMemo(() => {
+    if (!searchQuery.trim()) return tracks;
+    const lower = searchQuery.toLowerCase();
+    return tracks.filter(
+      (t) =>
+        t.name.toLowerCase().includes(lower) ||
+        t.artist?.some((a) => a?.toLowerCase().includes(lower)) ||
+        t.album?.toLowerCase().includes(lower)
+    );
+  }, [tracks, searchQuery]);
+
   const handleLoadMore = async () => {
     if (!id || loadingMore || !hasMore || type !== "artist") return;
     setLoadingMore(true);
@@ -357,10 +369,12 @@ export function NeteaseDetail({
       onPlayTrack={
         tracks.length > 0 ? (track) => onPlay(track, tracks) : undefined
       }
+      searchQuery={searchQuery}
+      onSearchChange={setSearchQuery}
     >
       <div className="flex-1 min-h-0">
         <MusicTrackList
-          tracks={tracks}
+          tracks={filteredTracks}
           scrollContainerRef={scrollRef}
           onPlay={(track) => onPlay(track, tracks)}
           currentTrackId={currentTrackId}

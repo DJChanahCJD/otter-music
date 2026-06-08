@@ -3,7 +3,8 @@ import { MusicCover } from "@/components/MusicCover";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { Play } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Play, Search } from "lucide-react";
 import type { MusicTrack } from "@/types/music";
 
 export interface CommonDetailHeaderProps {
@@ -19,6 +20,8 @@ export interface CommonDetailHeaderProps {
   onPlayTrack?: (track: MusicTrack) => void;
   isShuffle?: boolean;
   tracks?: MusicTrack[];
+  searchQuery?: string;
+  onSearchChange?: (value: string) => void;
 }
 
 export const CommonDetailHeader = memo(function CommonDetailHeader({
@@ -33,6 +36,8 @@ export const CommonDetailHeader = memo(function CommonDetailHeader({
   onPlayTrack,
   isShuffle,
   tracks,
+  searchQuery,
+  onSearchChange,
 }: CommonDetailHeaderProps) {
   const [isExpanded, setIsExpanded] = useState(false);
 
@@ -60,7 +65,10 @@ export const CommonDetailHeader = memo(function CommonDetailHeader({
       />
 
       <div className="flex-1 min-w-0 flex flex-col gap-1 py-0.5">
-        <h2 className="text-base font-bold text-foreground/90 line-clamp-2" title={title}>
+        <h2
+          className="text-base font-bold text-foreground/90 line-clamp-2"
+          title={title}
+        >
           {title}
         </h2>
 
@@ -81,12 +89,29 @@ export const CommonDetailHeader = memo(function CommonDetailHeader({
           >
             {description}
           </p>
-        ) : (onPlay || onPlayTrack) && (
-          <div className="mt-1">
-            <Button size="sm" className="rounded-full px-3 h-8" onClick={handlePlay}>
-              <Play className="h-3 w-3 fill-current" />
-            </Button>
-          </div>
+        ) : (
+          (onPlay || onPlayTrack) && (
+            <div className="mt-1 flex items-center gap-2">
+              <Button
+                size="sm"
+                className="rounded-full px-3 h-8"
+                onClick={handlePlay}
+              >
+                <Play className="h-3 w-3 fill-current" />
+              </Button>
+              {onSearchChange && (
+                <div className="relative ml-auto w-32 md:w-48">
+                  <Search className="absolute left-2 top-2.5 h-3 w-3 text-muted-foreground md:h-4 md:w-4 md:top-2" />
+                  <Input
+                    placeholder="搜索..."
+                    value={searchQuery || ""}
+                    onChange={(e) => onSearchChange(e.target.value)}
+                    className="pl-8 h-8 text-xs md:w-48 md:h-9 md:text-sm"
+                  />
+                </div>
+              )}
+            </div>
+          )
         )}
       </div>
     </div>

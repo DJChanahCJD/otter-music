@@ -27,6 +27,8 @@ interface GenericDetailPageProps {
   isShuffle?: boolean;
   tracks?: MusicTrack[];
   onPlayTrack?: (track: MusicTrack) => void;
+  searchQuery?: string;
+  onSearchChange?: (value: string) => void;
   children: ReactNode;
 }
 
@@ -42,6 +44,8 @@ export function GenericDetailPage({
   isShuffle,
   tracks,
   onPlayTrack,
+  searchQuery,
+  onSearchChange,
   children,
 }: GenericDetailPageProps) {
   if (loading) return <DetailSkeleton onBack={onBack} />;
@@ -70,6 +74,8 @@ export function GenericDetailPage({
               isShuffle={isShuffle}
               tracks={tracks}
               onPlayTrack={onPlayTrack}
+              searchQuery={searchQuery}
+              onSearchChange={onSearchChange}
             />
           )}
           {children}

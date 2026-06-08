@@ -275,13 +275,13 @@ export function MusicPlaylistView({
               />
             )}
 
-            <div className="relative ml-auto w-32">
-              <Search className="absolute left-2 top-2.5 h-3 w-3 text-muted-foreground" />
+            <div className="relative ml-auto w-32 md:w-48">
+              <Search className="absolute left-2 top-2.5 h-3 w-3 text-muted-foreground md:h-4 md:w-4 md:top-2" />
               <Input
                 placeholder="搜索..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-8 h-8 text-xs"
+                className="pl-8 h-8 text-xs md:w-48 md:h-9 md:text-sm"
               />
             </div>
           </div>
