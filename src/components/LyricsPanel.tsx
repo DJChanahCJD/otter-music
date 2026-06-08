@@ -284,11 +284,15 @@ export function LyricsPanel({ track, active = true }: LyricsPanelProps) {
       behavior: "smooth",
     });
 
-    const timer = setTimeout(() => {
+    const onScrollEnd = () => {
       isAutoScrollingRef.current = false;
-    }, 300);
-
-    return () => clearTimeout(timer);
+      container.removeEventListener("scrollend", onScrollEnd);
+    };
+    container.addEventListener("scrollend", onScrollEnd, { once: true });
+    return () => {
+      isAutoScrollingRef.current = false;
+      container.removeEventListener("scrollend", onScrollEnd);
+    };
   }, [activeIndex, isUserScrolling]);
 
   // 监听 seek 操作，重置用户滚动状态，使歌词立即跳转到对应位置
