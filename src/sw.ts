@@ -56,8 +56,5 @@ registerRoute(
         },
       },
     ],
-    matchOptions: {
-      ignoreSearch: true,
-    },
   })
 );
