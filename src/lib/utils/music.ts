@@ -1,6 +1,6 @@
-import { MusicTrack, MergedMusicTrack, MusicSource } from "@/types/music";
+import { MusicTrack, MergedMusicTrack } from "@/types/music";
 import { getExactKey } from "./music-key";
-import { SOURCE_WEIGHT } from "./search-helper";
+import { useMusicStore } from "@/store";
 import { v4 as uuidv4 } from "uuid";
 
 // 格式化音视频时间为分秒格式
@@ -61,7 +61,7 @@ export function deduplicateTracks(
     if (group.length <= 1) return;
 
     // Check if any track in the group is liked
-    const hasLiked = group.some(item => isFavorite(item.track.id));
+    const hasLiked = group.some((item) => isFavorite(item.track.id));
 
     // Sort to find the winner
     group.sort((a, b) => {
@@ -75,10 +75,15 @@ export function deduplicateTracks(
       // Priority 2: Downloaded (True > False)
       if (aDown !== bDown) return aDown ? -1 : 1;
 
-      // Priority 3: Source weight (higher wins)
-      const aWeight = SOURCE_WEIGHT[a.track.source as MusicSource] ?? 0;
-      const bWeight = SOURCE_WEIGHT[b.track.source as MusicSource] ?? 0;
-      if (aWeight !== bWeight) return bWeight - aWeight;
+      // Priority 3: Source order (lower index = higher priority)
+      const configs = useMusicStore.getState().sourceConfigs;
+      const aOrder = configs.findIndex((c) => c.source === a.track.source);
+      const bOrder = configs.findIndex((c) => c.source === b.track.source);
+      if (aOrder !== bOrder) {
+        if (aOrder === -1) return 1;
+        if (bOrder === -1) return -1;
+        return aOrder - bOrder;
+      }
 
       // Priority 4: Earlier index wins (ascending) — 新加入可信度更高
       return a.index - b.index;
@@ -106,11 +111,17 @@ export function deduplicateTracks(
   };
 }
 
-export function createTrackFromUrl(title: string, url: string, artist?: string): MusicTrack {
-  const artists =
-    artist?.trim()
-      ? artist.split(/[，,]/).map(a => a.trim()).filter(Boolean)  //  中英文逗号都可以分割
-      : ["Unknown Artist"];
+export function createTrackFromUrl(
+  title: string,
+  url: string,
+  artist?: string
+): MusicTrack {
+  const artists = artist?.trim()
+    ? artist
+        .split(/[，,]/)
+        .map((a) => a.trim())
+        .filter(Boolean) //  中英文逗号都可以分割
+    : ["Unknown Artist"];
 
   return {
     id: uuidv4(),

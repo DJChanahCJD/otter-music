@@ -1,5 +1,6 @@
 import {
   useEffect,
+  useMemo,
   useRef,
   useState,
   type ChangeEvent,
@@ -66,6 +67,7 @@ export function MusicSearchView({
     setSearchPage,
     searchIntent,
     setSearchIntent,
+    sourceConfigs,
   } = useMusicStore(
     useShallow((s) => ({
       source: s.searchSource,
@@ -82,6 +84,7 @@ export function MusicSearchView({
       setSearchPage: s.setSearchPage,
       searchIntent: s.searchIntent,
       setSearchIntent: s.setSearchIntent,
+      sourceConfigs: s.sourceConfigs,
     }))
   );
 
@@ -91,6 +94,17 @@ export function MusicSearchView({
   const searchInputRef = useRef<HTMLInputElement>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
+
+  const visibleSourceOptions = useMemo(() => {
+    const visible = sourceConfigs.filter((c) => c.visible);
+    return [
+      { value: "all", label: "聚合搜索" },
+      ...visible.map((c) => {
+        const opt = searchOptions[c.source];
+        return { value: c.source, label: opt || c.source };
+      }),
+    ];
+  }, [sourceConfigs]);
 
   /* ---------------- 搜索建议 ---------------- */
   const [suggestions, setSuggestions] = useState<SearchSuggestionItem[]>([]);
@@ -316,9 +330,9 @@ export function MusicSearchView({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent align="end">
-                {Object.entries(searchOptions).map(([k, v]) => (
-                  <SelectItem key={k} value={k}>
-                    {v}
+                {visibleSourceOptions.map((opt) => (
+                  <SelectItem key={opt.value} value={opt.value}>
+                    {opt.label}
                   </SelectItem>
                 ))}
               </SelectContent>

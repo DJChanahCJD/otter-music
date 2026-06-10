@@ -116,7 +116,11 @@ describe("handleAutoMatch", () => {
       queue: [],
       originalQueue: [],
       currentIndex: 0,
-      aggregatedSources: ["joox", "netease", "kuwo"],
+      sourceConfigs: [
+        { source: "joox", enabled: true, visible: true },
+        { source: "netease", enabled: true, visible: true },
+        { source: "kuwo", enabled: true, visible: true },
+      ],
     });
   });
 

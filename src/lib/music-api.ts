@@ -8,7 +8,6 @@ import type {
   SearchSuggestionItem,
 } from "@/types/music";
 import { cachedFetch } from "@/lib/utils/cache";
-import { SOURCE_RANK } from "@/lib/utils/search-helper";
 import { searchSuggest } from "@/lib/netease/netease-api";
 import { MusicProviderFactory, isAbort } from "./music-provider";
 import { logger } from "@/lib/logger";
@@ -65,13 +64,7 @@ export const musicApi = {
     signal?: AbortSignal,
     ranker?: (track: MusicTrack, originalIndex: number) => number
   ): Promise<MusicTrack | null> {
-    const sortedSources = [...sources].sort((a, b) => {
-      const rankA = SOURCE_RANK[a] ?? 999;
-      const rankB = SOURCE_RANK[b] ?? 999;
-      return rankA - rankB;
-    });
-
-    for (const source of sortedSources) {
+    for (const source of sources) {
       if (signal?.aborted) return null;
       try {
         const res = await MusicProviderFactory.getProvider(source).search(

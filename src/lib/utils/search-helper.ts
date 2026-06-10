@@ -13,25 +13,13 @@ import {
   isNameContainsMatch,
   isArtistContainsMatch,
 } from "./music-key";
-import { useSourceQualityStore } from "@/store";
+import { useSourceQualityStore, useMusicStore } from "@/store";
 
-/* ================= 常量定义 ================= */
-export const SOURCE_WEIGHT: Partial<Record<MusicSource, number>> = {
-  joox: 30,
-  netease: 28,
-  kuwo: 20,
-  _netease: 20,
-  migu: 20,
-  qq: 20,
-  bilibili: 15,
-};
-
-export const SOURCE_RANK: Partial<Record<MusicSource, number>> =
-  Object.fromEntries(
-    Object.entries(SOURCE_WEIGHT)
-      .sort(([, a], [, b]) => b - a)
-      .map(([source], i) => [source, i])
-  ) as Partial<Record<MusicSource, number>>;
+export function getSourceRankScore(source: MusicSource): number {
+  const configs = useMusicStore.getState().sourceConfigs;
+  const idx = configs.findIndex((c) => c.source === source);
+  return idx >= 0 ? Math.max(0, 30 - idx * 2) : 0;
+}
 
 type PreparedTrack = MusicTrack & {
   normalizedName: string;
@@ -120,7 +108,7 @@ function mergeAndCluster(
 
 /* 3. 极简综合评分 */
 function score(t: MergedMusicTrack & PreparedTrack, q: string): number {
-  let s = SOURCE_WEIGHT[t.source] || 0; // 基础评分
+  let s = getSourceRankScore(t.source);
   if (!q) return s;
 
   // a. 原始排名指数衰减 (保护首位，平滑长尾)

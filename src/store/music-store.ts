@@ -3,11 +3,13 @@ import { persist, createJSONStorage } from "zustand/middleware";
 import { v4 as uuidv4 } from "uuid";
 import { storeKey } from "./store-keys";
 import { idbStorage } from "@/lib/storage-adapter";
-import type {
-  MusicTrack,
-  MusicSource,
-  Playlist,
-  SearchIntent,
+import {
+  DEFAULT_SOURCE_CONFIGS,
+  type MusicTrack,
+  type MusicSource,
+  type Playlist,
+  type SearchIntent,
+  type SourceConfig,
 } from "@/types/music";
 import { cleanTrack } from "@/lib/utils/music";
 import { toastUtils } from "@/lib/utils/toast";
@@ -81,7 +83,7 @@ export interface MusicState {
 
   quality: string;
   searchSource: MusicSource;
-  aggregatedSources: MusicSource[];
+  sourceConfigs: SourceConfig[];
   lastPlaylistCategory: string;
   lastMineTab: "recommend" | "created" | "subscribed" | "albums";
   lastFeaturedTab: string;
@@ -98,7 +100,7 @@ export interface MusicState {
   setSleepTimerEndTime: (endTime: number) => void;
   setQuality: (quality: string) => void;
   setSearchSource: (source: MusicSource) => void;
-  setAggregatedSources: (sources: MusicSource[]) => void;
+  setSourceConfigs: (configs: SourceConfig[]) => void;
   setLastPlaylistCategory: (category: string) => void;
   setLastMineTab: (
     tab: "recommend" | "created" | "subscribed" | "albums"
@@ -347,7 +349,7 @@ export const useMusicStore = create<MusicState>()(
       // --- Settings ---
       quality: "192",
       searchSource: "all",
-      aggregatedSources: ["joox", "netease"],
+      sourceConfigs: DEFAULT_SOURCE_CONFIGS,
       lastPlaylistCategory: "全部",
       lastMineTab: "recommend",
       lastFeaturedTab: "",
@@ -367,7 +369,7 @@ export const useMusicStore = create<MusicState>()(
       setSleepTimerEndTime: (sleepTimerEndTime) => set({ sleepTimerEndTime }),
       setQuality: (quality) => set({ quality }),
       setSearchSource: (searchSource) => set({ searchSource }),
-      setAggregatedSources: (aggregatedSources) => set({ aggregatedSources }),
+      setSourceConfigs: (sourceConfigs) => set({ sourceConfigs }),
       setLastPlaylistCategory: (lastPlaylistCategory) =>
         set({ lastPlaylistCategory }),
       setLastMineTab: (lastMineTab) => set({ lastMineTab }),
@@ -716,7 +718,7 @@ export const useMusicStore = create<MusicState>()(
         duration: state.duration,
         quality: state.quality,
         searchSource: state.searchSource,
-        aggregatedSources: state.aggregatedSources,
+        sourceConfigs: state.sourceConfigs,
         lastPlaylistCategory: state.lastPlaylistCategory,
         lastMineTab: state.lastMineTab,
         lastFeaturedTab: state.lastFeaturedTab,

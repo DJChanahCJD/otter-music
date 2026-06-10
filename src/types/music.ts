@@ -3,6 +3,7 @@ export {
   searchOptions,
   sourceBadgeStyles,
   sourceLabels,
+  DEFAULT_SOURCE_CONFIGS,
 } from "@otter-music/shared";
 
 export type {
@@ -16,4 +17,5 @@ export type {
   SearchSuggestionItem,
   SongLyric,
   SongUrl,
+  SourceConfig,
 } from "@otter-music/shared";

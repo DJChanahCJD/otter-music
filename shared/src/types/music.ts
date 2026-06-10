@@ -36,11 +36,11 @@ export const searchOptions: Record<string, string> = {
   all: "聚合搜索",
   joox: "Joox",
   netease: "网易云音乐",
+  _netease: "Netease",
   kuwo: "酷我音乐",
   migu: "Migu",
   bilibili: "B站",
   qq: "QQ音乐",
-  _netease: "Netease",
 };
 
 export const sourceLabels: Record<string, string> = {
@@ -79,7 +79,7 @@ export const aggregatedSourceOptions: {
   {
     value: "qq",
     label: "QQ音乐",
-    description: "来自小秋音源，国内资源最齐全",
+    description: "来自洛雪音乐的小秋音源",
   },
 ];
 
@@ -108,6 +108,22 @@ export const sourceBadgeStyles: Record<string, string> = {
   default:
     "text-muted-foreground/70 border-border bg-muted/30 hover:bg-muted/50",
 };
+
+export interface SourceConfig {
+  source: MusicSource;
+  enabled: boolean;
+  visible: boolean;
+}
+
+export const DEFAULT_SOURCE_CONFIGS: SourceConfig[] = [
+  { source: "netease", enabled: true, visible: true },
+  { source: "qq", enabled: true, visible: true },
+  { source: "bilibili", enabled: true, visible: true },
+  { source: "_netease", enabled: false, visible: true },
+  { source: "joox", enabled: false, visible: true },
+  { source: "kuwo", enabled: false, visible: true },
+  { source: "migu", enabled: false, visible: true },
+];
 
 export type SourceCategory = "gd" | "official" | "lx";
 

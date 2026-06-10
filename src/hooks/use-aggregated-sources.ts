@@ -1,43 +1,43 @@
 import { useMusicStore } from "@/store/music-store";
 import { useShallow } from "zustand/react/shallow";
+import type { MusicSource } from "@/types/music";
 
 export const EXCLUDED_FOR_SEARCH = ["local", "podcast"];
-export const EXCLUDED_FOR_AUTO_MATCH = ["local", "podcast", "_netease", "migu", "bilibili"];
+export const EXCLUDED_FOR_AUTO_MATCH = ["local", "podcast"];
 
-/**
- * 用于【搜索】的聚合数据源
- */
+const getEnabledSourcesInOrder = (): MusicSource[] => {
+  const { sourceConfigs } = useMusicStore.getState();
+  return sourceConfigs.filter((c) => c.enabled).map((c) => c.source);
+};
+
 export function useAggregatedSourcesForSearch() {
   return useMusicStore(
     useShallow((state) =>
-      state.aggregatedSources.filter((p) => !EXCLUDED_FOR_SEARCH.includes(p))
+      state.sourceConfigs
+        .filter((c) => c.enabled && !EXCLUDED_FOR_SEARCH.includes(c.source))
+        .map((c) => c.source)
     )
   );
 }
 
-/**
- * 用于【自动匹配】的聚合数据源
- */
 export function useAggregatedSourcesForMatch() {
   return useMusicStore(
     useShallow((state) =>
-      state.aggregatedSources.filter((p) => !EXCLUDED_FOR_AUTO_MATCH.includes(p))
+      state.sourceConfigs
+        .filter((c) => c.enabled && !EXCLUDED_FOR_AUTO_MATCH.includes(c.source))
+        .map((c) => c.source)
     )
   );
 }
 
-/**
- * 获取【搜索】的聚合数据源（非 Hook 环境）
- */
 export function getAggregatedSourcesForSearch() {
-  const { aggregatedSources } = useMusicStore.getState();
-  return aggregatedSources.filter((p) => !EXCLUDED_FOR_SEARCH.includes(p));
+  return getEnabledSourcesInOrder().filter(
+    (s) => !EXCLUDED_FOR_SEARCH.includes(s)
+  );
 }
 
-/**
- * 获取【自动匹配】的聚合数据源（非 Hook 环境）
- */
 export function getAggregatedSourcesForMatch() {
-  const { aggregatedSources } = useMusicStore.getState();
-  return aggregatedSources.filter((p) => !EXCLUDED_FOR_AUTO_MATCH.includes(p));
+  return getEnabledSourcesInOrder().filter(
+    (s) => !EXCLUDED_FOR_AUTO_MATCH.includes(s)
+  );
 }
