@@ -1,0 +1,45 @@
+name: Bug Report
+description: 报告问题以帮助改进 Otter Music
+labels: ["bug"]
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: 问题描述
+      description: 清晰描述遇到的问题
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: 复现步骤
+      placeholder: |
+        1. 打开...
+        2. 点击...
+        3. 看到...
+    validations:
+      required: true
+
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: 截图
+    validations:
+      required: false
+
+  - type: input
+    id: env
+    attributes:
+      label: 环境
+      description: 平台/设备/系统版本/App版本
+      placeholder: Android / Pixel 7 / Android 14 / v2.4.3
+    validations:
+      required: true
+
+  - type: input
+    id: source
+    attributes:
+      label: 音源
+    validations:
+      required: false
