@@ -25,13 +25,35 @@ export interface ListSnapshot {
   hasMore: boolean;
 }
 
+export interface SearchCache {
+  query: string;
+  items: MarketPlaylist[];
+  offset: number;
+  hasMore: boolean;
+}
+
 interface MarketSessionState {
   mineData: MineDataState;
   listSnapshots: Record<string, ListSnapshot>;
-  setMineData: (data: Partial<MineDataState> | ((prev: MineDataState) => MineDataState)) => void;
+  searchCache: SearchCache | null;
+  setMineData: (
+    data: Partial<MineDataState> | ((prev: MineDataState) => MineDataState)
+  ) => void;
   saveListSnapshot: (key: string, snapshot: ListSnapshot) => void;
-  toggleAlbumInSession: (album: { id: string | number; name: string; picUrl: string; artistName?: string }, isSub: boolean) => void;
-  togglePlaylistInSession: (playlist: MarketPlaylist, shouldSub: boolean) => void;
+  saveSearchCache: (cache: SearchCache | null) => void;
+  toggleAlbumInSession: (
+    album: {
+      id: string | number;
+      name: string;
+      picUrl: string;
+      artistName?: string;
+    },
+    isSub: boolean
+  ) => void;
+  togglePlaylistInSession: (
+    playlist: MarketPlaylist,
+    shouldSub: boolean
+  ) => void;
   clearSession: () => void;
 }
 
@@ -40,18 +62,22 @@ export const useMarketSession = create<MarketSessionState>()(
     (set) => ({
       mineData: INITIAL_MINE_DATA,
       listSnapshots: {},
+      searchCache: null,
 
       setMineData: (data) =>
         set((state) => ({
-          mineData: typeof data === "function" 
-            ? data(state.mineData) 
-            : { ...state.mineData, ...data },
+          mineData:
+            typeof data === "function"
+              ? data(state.mineData)
+              : { ...state.mineData, ...data },
         })),
 
       saveListSnapshot: (key, snapshot) =>
         set((state) => ({
           listSnapshots: { ...state.listSnapshots, [key]: snapshot },
         })),
+
+      saveSearchCache: (cache) => set({ searchCache: cache }),
 
       toggleAlbumInSession: (album, shouldSub) =>
         set((state) => {
@@ -89,7 +115,12 @@ export const useMarketSession = create<MarketSessionState>()(
           };
         }),
 
-      clearSession: () => set({ mineData: INITIAL_MINE_DATA, listSnapshots: {} }),
+      clearSession: () =>
+        set({
+          mineData: INITIAL_MINE_DATA,
+          listSnapshots: {},
+          searchCache: null,
+        }),
     }),
     {
       name: "market-session-storage",
@@ -97,6 +128,7 @@ export const useMarketSession = create<MarketSessionState>()(
       partialize: (state) => ({
         mineData: state.mineData,
         listSnapshots: state.listSnapshots,
+        searchCache: state.searchCache,
       }),
     }
   )

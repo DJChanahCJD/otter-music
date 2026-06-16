@@ -582,6 +582,36 @@ export async function search(
   };
 }
 
+export async function searchPlaylists(
+  keyword: string,
+  page: number = 1,
+  limit: number = 30,
+  cookie: string = ""
+): Promise<MarketPlaylist[]> {
+  const finalCookie = resolveRequestCookie(cookie);
+  if (IS_WEB_PROD) {
+    const res = await fetchNeteaseProxy<{
+      data: {
+        result: {
+          playlists?: UserPlaylist[];
+          playlistCount?: number;
+          hasMore?: boolean;
+        };
+        code: number;
+      };
+    }>("/search", { keyword, type: 1000, page, limit, cookie: finalCookie });
+    return (res.data?.result?.playlists || []).map(
+      toMarketPlaylistFromUserPlaylist
+    );
+  }
+
+  const res = await search(keyword, 1000, page, limit, finalCookie);
+  return (
+    (res.data?.result as { playlists?: UserPlaylist[] } | undefined)
+      ?.playlists || []
+  ).map(toMarketPlaylistFromUserPlaylist);
+}
+
 export const getLyric = (id: string, cookie: string = "") =>
   cachedFetch(
     `netease:lyric:${id.replace(/^(netrack_|ne_track_)/, "")}`,

@@ -1,18 +1,21 @@
 import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { SPECIAL_CATS, RECOMMEND_CATS } from "@/lib/netease/netease-cats";
 import {
   getPlaylists,
   getToplist,
+  searchPlaylists,
 } from "@/lib/netease/netease-api";
 import type { MarketPlaylist } from "@/lib/netease/netease-types";
 import { cachedFetch } from "@/lib/utils/cache";
-import { Loader2, LayoutGrid, Plus } from "lucide-react";
+import { Loader2, LayoutGrid, Plus, Search, X } from "lucide-react";
 import { PlaylistCategorySelector } from "./PlaylistCategorySelector";
 import { cn } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
 import { useMusicStore } from "@/store/music-store";
 import { useScrollSave } from "@/hooks/use-scroll-save";
+import { usePagination } from "@/hooks/use-pagination";
 import { useMarketSession } from "@/store/session/market-session";
 import { MineSection } from "./MineSection";
 import { PlaylistGrid } from "./PlaylistGrid";
@@ -24,160 +27,234 @@ import { logger } from "@/lib/logger";
 const PAGE_SIZE = 30;
 const SUB_TAB_HEIGHT = "h-8";
 
-// 构造唯一的快照 Key
-const getSnapshotKey = (category: string, tab: string) => 
-  `market-snapshot:${category}:${category === 'featured' ? tab : 'default'}`;
+const getSnapshotKey = (category: string, tab: string) =>
+  `market-snapshot:${category}:${category === "featured" ? tab : "default"}`;
 
 export function PlaylistMarket() {
   const navigate = useNavigate();
   const activeCategory = useMusicStore((s) => s.lastPlaylistCategory);
   const setActiveCategory = useMusicStore((s) => s.setLastPlaylistCategory);
-  
   const rssSources = usePodcastStore((s) => s.rssSources);
-
-  const featuredTab = useMusicStore((s) => s.lastFeaturedTab || SPECIAL_CATS[0].id);
+  const featuredTab = useMusicStore(
+    (s) => s.lastFeaturedTab || SPECIAL_CATS[0].id
+  );
   const setFeaturedTab = useMusicStore((s) => s.setLastFeaturedTab);
-
   const [isAddPodcastOpen, setIsAddPodcastOpen] = useState(false);
-
-  const [items, setItems] = useState<MarketPlaylist[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [offset, setOffset] = useState(0);
-  const [hasMore, setHasMore] = useState(true);
-  const [isFetching, setIsFetching] = useState(false);
-  const observerTarget = useRef<HTMLDivElement>(null);
+  const [searchInputValue, setSearchInputValue] = useState("");
+  const [searchQuery, setSearchQuery] = useState<string | null>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   const saveListSnapshot = useMarketSession((s) => s.saveListSnapshot);
+  const searchCache = useMarketSession((s) => s.searchCache);
+  const saveSearchCache = useMarketSession((s) => s.saveSearchCache);
 
-  // 动态生成对应的缓存 Key
-  const snapshotKey = useMemo(() => getSnapshotKey(activeCategory, featuredTab), [activeCategory, featuredTab]);
-  
-  // 绑定滚动 Hook：当 items 准备好或处于 mine 标签时触发恢复
-  const { scrollRef } = useScrollSave(`scroll-${snapshotKey}`, items.length > 0 || activeCategory === "mine" || activeCategory === "播客");
+  const searchKeywordRef = useRef<string>("");
 
-  const displayFilters = useMemo(() => {
-    const baseFilters = RECOMMEND_CATS
-    if (!activeCategory || baseFilters.some((f) => f.id === activeCategory)) return baseFilters;
-    return [...baseFilters, { id: activeCategory, name: activeCategory }];
-  }, [activeCategory]);
+  const snapshotKey = useMemo(
+    () => getSnapshotKey(activeCategory, featuredTab),
+    [activeCategory, featuredTab]
+  );
 
-  const fetchItems = useCallback(async (category: string, subTab: string, currentOffset: number) => {
-    if (category === "mine" || category === "播客") return;
-    const requestCategory = category === "featured" ? subTab : category;
-    
-    if (currentOffset === 0) {
-      setLoading(true);
-      setItems([]);
+  const isBrowseEnabled =
+    activeCategory !== "mine" &&
+    activeCategory !== "播客" &&
+    !(activeCategory === "全部" && !!searchQuery);
+
+  const isSearchEnabled = activeCategory === "全部" && !!searchQuery;
+
+  const browseAdapter = useMemo(
+    () => ({
+      fetch: async (offset: number) => {
+        const category =
+          activeCategory === "featured" ? featuredTab : activeCategory;
+        if (category === "mine" || category === "播客") return null;
+        const isToplist = category === "toplist";
+        const cacheKey = `market-playlist:v2:${category || "all"}:${isToplist ? 0 : offset}`;
+
+        const res = await cachedFetch<MarketPlaylist[]>(
+          cacheKey,
+          () =>
+            isToplist
+              ? getToplist("")
+              : getPlaylists(category || "全部", "hot", PAGE_SIZE, offset, ""),
+          1 * 24 * 60 * 60 * 1000
+        );
+
+        if (!res) return null;
+        return {
+          items: res,
+          hasMore: isToplist ? false : res.length >= PAGE_SIZE,
+        };
+      },
+    }),
+    [activeCategory, featuredTab]
+  );
+
+  const browse = usePagination<MarketPlaylist>({
+    adapter: browseAdapter,
+    getId: (p) => p.id,
+    pageSize: PAGE_SIZE,
+    enabled: isBrowseEnabled,
+    onError: (err, offset) =>
+      logger.error("PlaylistMarket", "Market load failed", err, {
+        category: activeCategory,
+        featuredTab,
+        offset,
+      }),
+  });
+
+  const searchAdapter = useMemo(
+    () => ({
+      fetch: async (offset: number) => {
+        const keyword = searchKeywordRef.current;
+        if (!keyword) return null;
+        const page = offset / PAGE_SIZE + 1;
+        const res = await searchPlaylists(keyword, page, PAGE_SIZE);
+        if (!res) return null;
+        return { items: res, hasMore: res.length >= PAGE_SIZE };
+      },
+    }),
+    []
+  );
+
+  const search = usePagination<MarketPlaylist>({
+    adapter: searchAdapter,
+    getId: (p) => p.id,
+    pageSize: PAGE_SIZE,
+    enabled: isSearchEnabled,
+    onError: (err, offset) =>
+      logger.error("PlaylistMarket", "Playlist search failed", err, {
+        keyword: searchKeywordRef.current,
+        offset,
+      }),
+  });
+
+  // Save browse snapshots
+  useEffect(() => {
+    if (!isBrowseEnabled || browse.items.length === 0) return;
+    const key = getSnapshotKey(activeCategory, featuredTab);
+    saveListSnapshot(key, {
+      items: browse.items,
+      offset: browse.offset,
+      hasMore: browse.hasMore,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [browse.items, browse.offset, browse.hasMore]);
+
+  // Save search cache
+  useEffect(() => {
+    if (searchQuery && search.items.length >= 0) {
+      saveSearchCache({
+        query: searchQuery,
+        items: search.items,
+        offset: search.offset,
+        hasMore: search.hasMore,
+      });
     }
-    setIsFetching(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchQuery, search.items, search.offset, search.hasMore]);
 
-    try {
-      const isToplist = requestCategory === "toplist";
-      const cacheKey = `market-playlist:v2:${requestCategory || "all"}:${isToplist ? 0 : currentOffset}`;
-      
-      const res = await cachedFetch<MarketPlaylist[]>(
-        cacheKey,
-        () => isToplist ? getToplist("") : getPlaylists(requestCategory || "全部", "hot", PAGE_SIZE, currentOffset, ""),
-        1 * 24 * 60 * 60 * 1000
-      );
-
-      if (res) {
-        setItems((prev) => {
-          let nextItems = res;
-          if (!isToplist) {
-            const existingIds = new Set(prev.map((p) => p.id));
-            const uniqueRes = res.filter((p) => !existingIds.has(p.id));
-            nextItems = currentOffset === 0 ? res : [...prev, ...uniqueRes];
-          }
-          
-          // 更新并写入 Store 快照
-          const hasMoreData = isToplist ? false : res.length >= PAGE_SIZE;
-
-          // 使用 Promise.resolve() 将副作用推迟到渲染阶段之后
-          Promise.resolve().then(() => {
-            setHasMore(hasMoreData);
-
-            const key = getSnapshotKey(category, subTab);
-            saveListSnapshot(key, {
-              items: nextItems,
-              offset: currentOffset,
-              hasMore: hasMoreData
-            });
-          });
-
-          return nextItems;
+  // Category switch
+  useEffect(() => {
+    if (activeCategory === "全部") {
+      if (searchCache) {
+        setSearchInputValue(searchCache.query);
+        setSearchQuery(searchCache.query);
+        searchKeywordRef.current = searchCache.query;
+        search.restore({
+          items: searchCache.items,
+          offset: searchCache.offset,
+          hasMore: searchCache.hasMore,
         });
       } else {
-        setHasMore(false);
+        setSearchInputValue("");
+        setSearchQuery(null);
+        searchKeywordRef.current = "";
       }
-    } catch (err) {
-      logger.error("PlaylistMarket", "Market load failed", err, {
-        category,
-        subTab,
-        currentOffset,
-      });
-      setHasMore(false);
-    } finally {
-      setLoading(false);
-      setIsFetching(false);
+    } else {
+      setSearchInputValue("");
+      setSearchQuery(null);
     }
-  }, [saveListSnapshot]);
 
-  // 初始挂载与分类切换监听
-  useEffect(() => {
     if (activeCategory === "mine" || activeCategory === "播客") return;
 
-    // 1. 尝试从 Store 快照极速恢复
     const snapshot = useMarketSession.getState().listSnapshots[snapshotKey];
     if (snapshot) {
-      setItems(snapshot.items);
-      setOffset(snapshot.offset);
-      setHasMore(snapshot.hasMore);
-      setLoading(false);
-      return; // 命中快照，跳过 Fetch
+      browse.restore({
+        items: snapshot.items,
+        offset: snapshot.offset,
+        hasMore: snapshot.hasMore,
+      });
+      return;
     }
 
-    // 2. 未命中，正常加载
-    setOffset(0);
-    setHasMore(true);
-    fetchItems(activeCategory, featuredTab, 0);
-  }, [activeCategory, featuredTab, snapshotKey, fetchItems]);
+    browse.reset();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeCategory, featuredTab, snapshotKey]);
 
-  // 无限下拉触发器
-  useEffect(() => {
-    const element = observerTarget.current;
-    if (!element || loading || isFetching || !hasMore || activeCategory === "mine" || activeCategory === "播客") return;
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting) {
-          const nextOffset = offset + PAGE_SIZE;
-          setOffset(nextOffset);
-          fetchItems(activeCategory, featuredTab, nextOffset);
+  const handleSearchSubmit = useCallback(
+    (keyword: string) => {
+      const trimmed = keyword.trim();
+      if (!trimmed) {
+        if (searchQuery) {
+          setSearchQuery(null);
+          searchKeywordRef.current = "";
+          saveSearchCache(null);
         }
-      },
-      { threshold: 0.1 }
-    );
+        return;
+      }
+      searchKeywordRef.current = trimmed;
+      setSearchQuery(trimmed);
+      search.reset();
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [searchQuery, saveSearchCache]
+  );
 
-    observer.observe(element);
-    return () => observer.disconnect();
-  }, [offset, hasMore, isFetching, loading, activeCategory, featuredTab, fetchItems]);
+  const clearSearch = useCallback(() => {
+    setSearchInputValue("");
+    setSearchQuery(null);
+    searchKeywordRef.current = "";
+    saveSearchCache(null);
+  }, [saveSearchCache]);
 
-  // 滚动选中分类到可视区域中心
+  const { scrollRef } = useScrollSave(
+    `scroll-${snapshotKey}`,
+    !searchQuery &&
+      (browse.items.length > 0 ||
+        activeCategory === "mine" ||
+        activeCategory === "播客")
+  );
+
+  const displayFilters = useMemo(() => {
+    if (!activeCategory || RECOMMEND_CATS.some((f) => f.id === activeCategory))
+      return RECOMMEND_CATS;
+    return [...RECOMMEND_CATS, { id: activeCategory, name: activeCategory }];
+  }, [activeCategory]);
+
+  // Scroll active category into view
   useEffect(() => {
-    const activeBtn = scrollContainerRef.current?.querySelector(`[data-category-id="${activeCategory}"]`);
+    const activeBtn = scrollContainerRef.current?.querySelector(
+      `[data-category-id="${activeCategory}"]`
+    );
     if (activeBtn) {
-      activeBtn.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
+      activeBtn.scrollIntoView({
+        behavior: "smooth",
+        block: "nearest",
+        inline: "center",
+      });
     }
   }, [activeCategory]);
+
+  const isSearchActive = activeCategory === "全部" && !!searchQuery;
+  const active = isSearchActive ? search : browse;
 
   return (
     <div className="flex flex-col h-full bg-background/50 animate-in fade-in duration-500">
       <header className="sticky top-0 z-20 bg-background/90 backdrop-blur-xl border-b border-white/5 shadow-sm">
         <div className="flex items-center justify-between px-3 py-1.5 gap-2">
           <div className="flex-1 overflow-hidden relative">
-            <div 
+            <div
               ref={scrollContainerRef}
               className="flex items-center gap-1.5 overflow-x-auto no-scrollbar mask-[linear-gradient(to_right,black_calc(100%-32px),transparent_100%)]"
             >
@@ -205,7 +282,11 @@ export function PlaylistMarket() {
             activeCategory={activeCategory}
             onSelect={setActiveCategory}
             trigger={
-              <Button variant="ghost" size="sm" className="h-8 w-8 p-0 rounded-full shrink-0 bg-secondary/50 hover:bg-secondary">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 w-8 p-0 rounded-full shrink-0 bg-secondary/50 hover:bg-secondary"
+              >
                 <LayoutGrid className="h-4 w-4 text-muted-foreground" />
               </Button>
             }
@@ -238,19 +319,73 @@ export function PlaylistMarket() {
                   <PodcastCard key={rss.id} rssSource={rss} />
                 ))}
             </div>
-            <PodcastAdd open={isAddPodcastOpen} onOpenChange={setIsAddPodcastOpen} />
+            <PodcastAdd
+              open={isAddPodcastOpen}
+              onOpenChange={setIsAddPodcastOpen}
+            />
           </div>
         ) : (
           <div className="p-4 pb-24">
-            {activeCategory === "featured" && (
-              <div className={cn("flex items-center gap-6 mb-4 px-1", SUB_TAB_HEIGHT)}>
+            {activeCategory === "全部" && (
+              <div
+                className={cn(
+                  "flex items-center justify-between mb-4 px-1",
+                  SUB_TAB_HEIGHT
+                )}
+              >
+                <div className="relative flex-1 max-w-40">
+                  <Input
+                    value={searchInputValue}
+                    onChange={(e) => setSearchInputValue(e.target.value)}
+                    onKeyDown={(e) =>
+                      e.key === "Enter" && handleSearchSubmit(searchInputValue)
+                    }
+                    placeholder="搜索歌单..."
+                    className="pr-7 h-8 text-xs"
+                  />
+                  {searchQuery ? (
+                    <button
+                      type="button"
+                      onClick={clearSearch}
+                      className="absolute right-1.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                      aria-label="清除搜索"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => handleSearchSubmit(searchInputValue)}
+                      disabled={!searchInputValue.trim()}
+                      className="absolute right-1.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground disabled:opacity-50 disabled:pointer-events-none"
+                      aria-label="搜索"
+                    >
+                      <Search className="h-3.5 w-3.5" />
+                    </button>
+                  )}
+                </div>
+                <span className="text-xs text-muted-foreground whitespace-nowrap ml-3">
+                  共 {active.items.length} 个歌单
+                </span>
+              </div>
+            )}
+
+            {activeCategory === "featured" && !isSearchActive && (
+              <div
+                className={cn(
+                  "flex items-center gap-6 mb-4 px-1",
+                  SUB_TAB_HEIGHT
+                )}
+              >
                 {SPECIAL_CATS.map((tab) => (
                   <button
                     key={tab.id}
                     onClick={() => setFeaturedTab(tab.id)}
                     className={cn(
                       "text-[15px] transition-all",
-                      featuredTab === tab.id ? "font-bold text-foreground tracking-wide" : "font-medium text-muted-foreground hover:text-foreground"
+                      featuredTab === tab.id
+                        ? "font-bold text-foreground tracking-wide"
+                        : "font-medium text-muted-foreground hover:text-foreground"
                     )}
                   >
                     {tab.name}
@@ -259,28 +394,36 @@ export function PlaylistMarket() {
               </div>
             )}
 
-            {loading ? (
+            {active.loading ? (
               <div className="h-60 flex flex-col items-center justify-center gap-3 text-muted-foreground">
                 <Loader2 className="h-6 w-6 animate-spin text-primary" />
-                <span className="text-xs tracking-widest uppercase opacity-50">加载中...</span>
+                <span className="text-xs tracking-widest uppercase opacity-50">
+                  加载中...
+                </span>
               </div>
             ) : (
-              <>
-                <PlaylistGrid list={items} onClick={(id) => navigate(`/netease-playlist/${id}`)} />
-                
-                <div ref={observerTarget} className="h-12 w-full mt-6 flex items-center justify-center opacity-80">
-                  {isFetching && (
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      <span>加载中...</span>
-                    </div>
-                  )}
-                  {!hasMore && items.length > 0 && (
-                    <span className="text-xs text-muted-foreground/50 tracking-wide uppercase">没有更多了-_-</span>
-                  )}
-                </div>
-              </>
+              <PlaylistGrid
+                list={active.items}
+                onClick={(id) => navigate(`/netease-playlist/${id}`)}
+              />
             )}
+
+            <div
+              ref={active.observerTargetRef}
+              className="h-12 w-full mt-6 flex items-center justify-center opacity-80"
+            >
+              {active.fetching && (
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span>加载中...</span>
+                </div>
+              )}
+              {!active.hasMore && active.items.length > 0 && (
+                <span className="text-xs text-muted-foreground/50 tracking-wide uppercase">
+                  没有更多了-_-
+                </span>
+              )}
+            </div>
           </div>
         )}
       </main>
