@@ -337,9 +337,12 @@ export function PlaylistMarket() {
                   <Input
                     value={searchInputValue}
                     onChange={(e) => setSearchInputValue(e.target.value)}
-                    onKeyDown={(e) =>
-                      e.key === "Enter" && handleSearchSubmit(searchInputValue)
-                    }
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        handleSearchSubmit(searchInputValue);
+                        (e.target as HTMLInputElement).blur();
+                      }
+                    }}
                     placeholder="全部歌单"
                     className={cn(
                       "h-8 px-0 bg-transparent! shadow-none rounded-none transition-all duration-300",
