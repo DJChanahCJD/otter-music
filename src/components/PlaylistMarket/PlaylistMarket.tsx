@@ -333,7 +333,7 @@ export function PlaylistMarket() {
                   SUB_TAB_HEIGHT
                 )}
               >
-                <div className="relative flex-1 group max-w-40">
+                <div className="relative flex-1 group max-w-32">
                   <Input
                     value={searchInputValue}
                     onChange={(e) => setSearchInputValue(e.target.value)}
@@ -343,7 +343,7 @@ export function PlaylistMarket() {
                         (e.target as HTMLInputElement).blur();
                       }
                     }}
-                    placeholder="全部歌单"
+                    placeholder="歌单广场"
                     className={cn(
                       "h-8 px-0 bg-transparent! shadow-none rounded-none transition-all duration-300",
                       "border-0 border-b border-dashed border-muted-foreground/20 focus-visible:border-solid",
