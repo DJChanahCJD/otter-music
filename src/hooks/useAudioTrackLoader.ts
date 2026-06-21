@@ -7,6 +7,11 @@ import { useMusicStore } from "@/store/music-store";
 import { useSourceQualityStore } from "@/store/source-quality-store";
 import { useDownloadStore } from "@/store/download-store";
 import { useOfflineStore } from "@/store/offline-store";
+import {
+  AUDIO_STREAM_CACHE_NAME,
+  hasCacheEntry,
+  deleteCacheEntry,
+} from "@/lib/sw-cache";
 import { Capacitor } from "@capacitor/core";
 import { buildDownloadKey } from "@/lib/utils/download";
 import type { MusicSource } from "@/types/music";
@@ -86,8 +91,7 @@ function isTrackPlayable(
       return useDownloadStore.getState().hasRecord(downloadKey);
     }
     // Web 端：检查 offlineStore 是否有成功播放时记录的真实 URL
-    const offlineRecord = useOfflineStore.getState().records[track.id];
-    return Boolean(offlineRecord);
+    return useOfflineStore.getState().isRecordValid(track.id);
   }
 
   return true;
@@ -258,13 +262,32 @@ export function useAudioTrackLoader(
             return finalUrl;
           }
           const offlineRecord = currentTrackId
-            ? useOfflineStore.getState().records[currentTrackId]
+            ? useOfflineStore.getState().getRecord(currentTrackId)
             : null;
-          if (offlineRecord?.url) {
-            const finalUrl = normalizeAudioUrlForPlayback(offlineRecord.url);
-            urlMemoryCache.set(trackKey, finalUrl);
-            remoteUrlRef.current = finalUrl;
-            return finalUrl;
+          if (offlineRecord) {
+            const cacheKey =
+              offlineRecord.cacheKey ||
+              normalizeAudioUrlForPlayback(offlineRecord.url);
+            const isCached = await hasCacheEntry(
+              AUDIO_STREAM_CACHE_NAME,
+              cacheKey
+            );
+            if (isCached) {
+              urlMemoryCache.set(trackKey, cacheKey);
+              remoteUrlRef.current = cacheKey;
+              return cacheKey;
+            }
+            // 缓存条目已失效/被淘汰，清理离线记录与 SW 缓存条目
+            useOfflineStore.getState().removeRecord(currentTrackId);
+            await deleteCacheEntry(AUDIO_STREAM_CACHE_NAME, cacheKey);
+            logger.warn(
+              "useAudioTrackLoader",
+              "Offline cache entry missing, removed stale record",
+              {
+                trackId: currentTrackId,
+                cacheKey,
+              }
+            );
           }
         }
         const urlId =
@@ -277,6 +300,32 @@ export function useAudioTrackLoader(
           source: currentTrackSource,
           quality: parseInt(quality, 10),
         });
+
+        // 新 URL 与旧缓存 key 不一致时，清理旧 SW 缓存条目与旧离线记录
+        if (currentTrackId) {
+          const offlineRecord = useOfflineStore
+            .getState()
+            .getRecord(currentTrackId);
+          if (offlineRecord) {
+            const oldCacheKey =
+              offlineRecord.cacheKey ||
+              normalizeAudioUrlForPlayback(offlineRecord.url);
+            if (oldCacheKey !== remoteUrl) {
+              await deleteCacheEntry(AUDIO_STREAM_CACHE_NAME, oldCacheKey);
+              useOfflineStore.getState().removeRecord(currentTrackId);
+              logger.info(
+                "useAudioTrackLoader",
+                "URL changed, cleaned old offline record",
+                {
+                  trackId: currentTrackId,
+                  oldCacheKey,
+                  newUrl: remoteUrl,
+                }
+              );
+            }
+          }
+        }
+
         urlMemoryCache.set(trackKey, remoteUrl);
         remoteUrlRef.current = remoteUrl;
         return remoteUrl;
@@ -455,6 +504,29 @@ export function useAudioTrackLoader(
             urlId: currentTrackUrlId,
           }
         );
+
+        // 播放失败时清理当前曲目的离线记录与 SW 缓存条目，避免反复使用失效缓存
+        if (currentTrackId) {
+          const offlineRecord = useOfflineStore
+            .getState()
+            .getRecord(currentTrackId);
+          if (offlineRecord) {
+            const cacheKey =
+              offlineRecord.cacheKey ||
+              normalizeAudioUrlForPlayback(offlineRecord.url);
+            useOfflineStore.getState().removeRecord(currentTrackId);
+            await deleteCacheEntry(AUDIO_STREAM_CACHE_NAME, cacheKey);
+            logger.warn(
+              "useAudioTrackLoader",
+              "Cleaned stale offline record on playback failure",
+              {
+                trackId: currentTrackId,
+                cacheKey,
+              }
+            );
+          }
+          urlMemoryCache.delete(trackKey);
+        }
 
         if (useMusicStore.getState().enableAutoMatch) {
           try {

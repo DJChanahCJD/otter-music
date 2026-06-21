@@ -8,7 +8,9 @@ export interface OfflineTrackRecord {
   trackId: string;
   source: "stream-cache";
   url: string;
+  cacheKey?: string;
   cachedAt: number;
+  verifiedAt?: number;
   name: string;
   artist: string[];
   album: string;
@@ -23,12 +25,14 @@ interface OfflineStoreState {
 
   addRecord: (record: OfflineTrackRecord) => void;
   removeRecord: (trackId: string) => void;
+  getRecord: (trackId: string) => OfflineTrackRecord | undefined;
+  isRecordValid: (trackId: string) => boolean;
   clear: () => void;
 }
 
 export const useOfflineStore = create<OfflineStoreState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       records: {},
 
       addRecord: (record) =>
@@ -39,6 +43,15 @@ export const useOfflineStore = create<OfflineStoreState>()(
           const { [trackId]: _, ...rest } = s.records;
           return { records: rest };
         }),
+
+      getRecord: (trackId) => get().records[trackId],
+
+      isRecordValid: (trackId) => {
+        const record = get().records[trackId];
+        if (!record) return false;
+        // 新记录必须有 cacheKey；旧记录兼容 url 字段，但需外部进一步校验 SW 缓存
+        return Boolean(record.cacheKey || record.url);
+      },
 
       clear: () => set({ records: {} }),
     }),

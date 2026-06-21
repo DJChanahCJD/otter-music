@@ -4,6 +4,7 @@ import { act } from "react";
 import { useAudioEventHandlers } from "./useAudioEventHandlers";
 import { useMusicStore } from "@/store/music-store";
 import { useOfflineStore } from "@/store/offline-store";
+import { hasCacheEntry, hasCacheEntryAfterDelay } from "@/lib/sw-cache";
 
 vi.mock("@/lib/storage-adapter", () => ({
   idbStorage: {
@@ -11,6 +12,12 @@ vi.mock("@/lib/storage-adapter", () => ({
     setItem: vi.fn(),
     removeItem: vi.fn(),
   },
+}));
+
+vi.mock("@/lib/sw-cache", () => ({
+  AUDIO_STREAM_CACHE_NAME: "audio-stream-cache",
+  hasCacheEntry: vi.fn().mockResolvedValue(true),
+  hasCacheEntryAfterDelay: vi.fn().mockResolvedValue(true),
 }));
 
 vi.mock("@jofr/capacitor-media-session", () => ({
@@ -210,11 +217,14 @@ describe("useAudioEventHandlers offline stream cache recording", () => {
     return { audio, cleanup };
   };
 
-  it("stores proxy url as-is when audio.src is a proxy url", () => {
+  it("stores proxy url as-is when audio.src is a proxy url", async () => {
     const { audio, cleanup } = setupRecording();
     audio.src =
       "https://otter-music.pages.dev/proxy?url=http%3A%2F%2Fbd-er.kuwo.cn%2Fa.mp3&bvid=BV123";
-    audio.dispatchEvent(new Event("play"));
+    audio.dispatchEvent(new Event("canplaythrough"));
+    await act(async () => {
+      await Promise.resolve();
+    });
     cleanup();
 
     const record = useOfflineStore.getState().records["track-1"];
@@ -222,45 +232,118 @@ describe("useAudioEventHandlers offline stream cache recording", () => {
     expect(record.url).toBe(
       "https://otter-music.pages.dev/proxy?url=http%3A%2F%2Fbd-er.kuwo.cn%2Fa.mp3&bvid=BV123"
     );
+    expect(record.cacheKey).toBe(
+      "https://otter-music.pages.dev/proxy?url=http%3A%2F%2Fbd-er.kuwo.cn%2Fa.mp3&bvid=BV123"
+    );
+    expect(record.verifiedAt).toBeGreaterThan(0);
   });
 
-  it("stores original http url as-is", () => {
+  it("stores original http url as-is", async () => {
     const { audio, cleanup } = setupRecording();
     audio.src = "http://bd-er.kuwo.cn/a.mp3";
-    audio.dispatchEvent(new Event("play"));
+    audio.dispatchEvent(new Event("canplaythrough"));
+    await act(async () => {
+      await Promise.resolve();
+    });
     cleanup();
 
     const record = useOfflineStore.getState().records["track-1"];
     expect(record).toBeDefined();
     expect(record.url).toBe("http://bd-er.kuwo.cn/a.mp3");
+    expect(record.cacheKey).toBe("http://bd-er.kuwo.cn/a.mp3");
   });
 
-  it("stores https direct url as-is", () => {
+  it("stores https direct url as-is", async () => {
     const { audio, cleanup } = setupRecording();
     audio.src = "https://example.com/a.mp3";
-    audio.dispatchEvent(new Event("play"));
+    audio.dispatchEvent(new Event("canplaythrough"));
+    await act(async () => {
+      await Promise.resolve();
+    });
     cleanup();
 
     const record = useOfflineStore.getState().records["track-1"];
     expect(record).toBeDefined();
     expect(record.url).toBe("https://example.com/a.mp3");
+    expect(record.cacheKey).toBe("https://example.com/a.mp3");
   });
 
-  it("does not store blob url", () => {
+  it("does not store blob url", async () => {
     const { audio, cleanup } = setupRecording();
     audio.src = "blob:abc123";
-    audio.dispatchEvent(new Event("play"));
+    audio.dispatchEvent(new Event("canplaythrough"));
+    await act(async () => {
+      await Promise.resolve();
+    });
     cleanup();
 
     expect(useOfflineStore.getState().records["track-1"]).toBeUndefined();
   });
 
-  it("does not store capacitor url", () => {
+  it("does not store capacitor url", async () => {
     const { audio, cleanup } = setupRecording();
     audio.src = "capacitor://file";
-    audio.dispatchEvent(new Event("play"));
+    audio.dispatchEvent(new Event("canplaythrough"));
+    await act(async () => {
+      await Promise.resolve();
+    });
     cleanup();
 
     expect(useOfflineStore.getState().records["track-1"]).toBeUndefined();
+  });
+
+  it("does not store record when SW cache entry is missing", async () => {
+    vi.mocked(hasCacheEntry).mockResolvedValue(false);
+    vi.mocked(hasCacheEntryAfterDelay).mockResolvedValue(false);
+
+    const { audio, cleanup } = setupRecording();
+    audio.src = "https://example.com/a.mp3";
+    audio.dispatchEvent(new Event("canplaythrough"));
+    await act(async () => {
+      await Promise.resolve();
+    });
+    cleanup();
+
+    expect(useOfflineStore.getState().records["track-1"]).toBeUndefined();
+  });
+
+  it("retries cache check when first attempt fails", async () => {
+    vi.mocked(hasCacheEntry).mockResolvedValue(false);
+    vi.mocked(hasCacheEntryAfterDelay).mockResolvedValue(true);
+
+    const { audio, cleanup } = setupRecording();
+    audio.src = "https://example.com/a.mp3";
+    audio.dispatchEvent(new Event("canplaythrough"));
+    await act(async () => {
+      await Promise.resolve();
+    });
+    cleanup();
+
+    expect(useOfflineStore.getState().records["track-1"]).toBeDefined();
+    expect(hasCacheEntryAfterDelay).toHaveBeenCalledWith(
+      "audio-stream-cache",
+      "https://example.com/a.mp3"
+    );
+  });
+
+  it("writes record only once per playback session", async () => {
+    const { audio, cleanup } = setupRecording();
+    audio.src = "https://example.com/a.mp3";
+
+    audio.dispatchEvent(new Event("canplaythrough"));
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    // 模拟同一首歌再次 canplaythrough（如循环播放）
+    audio.dispatchEvent(new Event("canplaythrough"));
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    cleanup();
+
+    expect(useOfflineStore.getState().records["track-1"]).toBeDefined();
+    expect(hasCacheEntry).toHaveBeenCalledTimes(1);
   });
 });

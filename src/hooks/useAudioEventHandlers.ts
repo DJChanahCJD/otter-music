@@ -4,6 +4,11 @@ import { useMusicStore } from "@/store/music-store";
 import { useSourceQualityStore } from "@/store/source-quality-store";
 import { useHistoryStore } from "@/store/history-store";
 import { useOfflineStore } from "@/store/offline-store";
+import {
+  AUDIO_STREAM_CACHE_NAME,
+  hasCacheEntry,
+  hasCacheEntryAfterDelay,
+} from "@/lib/sw-cache";
 import { MediaSession } from "@jofr/capacitor-media-session";
 import toast from "react-hot-toast";
 import { handleAutoMatch } from "@/lib/audio-match";
@@ -20,6 +25,8 @@ export function useAudioEventHandlers(
   const autoMatchRef = useRef({ index: -1, count: 0 });
   const recoveryAttemptedRef = useRef(false);
   const pauseTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const hasSessionRecordedRef = useRef(false);
+  const prevTrackIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     const audio = audioRef.current;
@@ -45,6 +52,55 @@ export function useAudioEventHandlers(
 
     const clearPauseTimer = () => {
       if (pauseTimerRef.current) clearTimeout(pauseTimerRef.current);
+    };
+
+    /**
+     * 在音频可以持续播放且 SW 已缓存对应响应后，写入离线记录。
+     * 使用 hasRecordedRef 防止同一次播放会话重复写入。
+     */
+    const writeOfflineRecord = async () => {
+      if (hasRecordedRef.current) return;
+
+      const state = getMusicState();
+      const track = state.queue[state.currentIndex];
+      if (!track || track.source === "local") return;
+      if (!audio.src || /^(blob|capacitor):/.test(audio.src)) return;
+
+      let hasCache = await hasCacheEntry(AUDIO_STREAM_CACHE_NAME, audio.src);
+      if (!hasCache) {
+        hasCache = await hasCacheEntryAfterDelay(
+          AUDIO_STREAM_CACHE_NAME,
+          audio.src
+        );
+      }
+
+      if (!hasCache) {
+        logger.warn(
+          "useAudioEventHandlers",
+          "SW cache entry not found, skip offline record",
+          {
+            trackId: track.id,
+            src: audio.src,
+          }
+        );
+        return;
+      }
+
+      hasRecordedRef.current = true;
+      useOfflineStore.getState().addRecord({
+        ...track,
+        trackId: track.id,
+        source: "stream-cache",
+        url: audio.src,
+        cacheKey: audio.src,
+        cachedAt: Date.now(),
+        verifiedAt: Date.now(),
+        trackSource: track.source,
+      });
+      logger.info("useAudioEventHandlers", "Offline record created", {
+        trackId: track.id,
+        cacheKey: audio.src,
+      });
     };
 
     const handlers: Record<string, EventListener> = {
@@ -124,30 +180,24 @@ export function useAudioEventHandlers(
         const state = getMusicState();
         const track = state.queue[state.currentIndex];
 
+        if (track && track.id !== prevTrackIdRef.current) {
+          prevTrackIdRef.current = track.id;
+          hasSessionRecordedRef.current = false;
+        }
+
         if (!state.isPlaying) state.setIsPlaying(true);
         state.resetFailures();
 
-        if (!hasRecordedRef.current && track) {
-          hasRecordedRef.current = true;
+        if (!hasSessionRecordedRef.current && track) {
+          hasSessionRecordedRef.current = true;
           useSourceQualityStore.getState().recordSuccess(track.source);
           useHistoryStore.getState().addToHistory(track);
-
-          // 记录远程流媒体缓存
-          if (
-            track.source !== "local" &&
-            audio.src &&
-            !/^(blob|capacitor):/.test(audio.src)
-          ) {
-            useOfflineStore.getState().addRecord({
-              ...track,
-              trackId: track.id,
-              source: "stream-cache",
-              url: audio.src,
-              cachedAt: Date.now(),
-              trackSource: track.source,
-            });
-          }
         }
+      },
+
+      canplaythrough: () => {
+        toggleLoading(false);
+        void writeOfflineRecord();
       },
 
       error: () => {
