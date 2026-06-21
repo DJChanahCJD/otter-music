@@ -1,6 +1,6 @@
 # Repository Guidelines
 
-Otter Music 是一款 Capacitor 混合架构音乐播放器——同一套 React 代码库同时服务于 Web 端和 Android 原生端。
+Otter Music 是一款 Capacitor 混合架构音乐播放器——同一套 React 代码库同时服务于 Web 端和 Android 原生端。移动端优先。
 
 ## 架构概览
 
