@@ -1,11 +1,9 @@
 # Otter Music
 
-[网页端](https://github.com/DJChanahCJD/otter-music-web)
-
 <p align="center">
   <img width="100" alt="Otter Music icon" src="public/favicon.svg">
 </p>
-<p align="center"><strong>Stream your music like an otter</strong></p>
+<p align="center"><strong>水獭音乐</strong></p>
 
 <p align="center">
   基于 <a href="https://music-api.gdstudio.xyz/api.php">GD Studio's API</a> 的多音源聚合音乐播放器
@@ -42,10 +40,10 @@
 | ---------------- | :--: | :--: | :--: | :------: | ---------------------------------- |
 | 网易云音乐🌟     |  ✅  |  ✅  |  ✅  |    ✅    | GD Studio API                      |
 | Netease          |  ✅  |  ✅  |  ✅  |    ✅    | 网易云官方，搜索建议/专辑/歌手详情 |
-| Joox             |  ✅  |  ✅  |  ✅  |    ❌    | GD Studio API                      |
+| Joox🌟           |  ✅  |  ✅  |  ✅  |    ❌    | GD Studio API                      |
+| B站🌟            |  ✅  |  ✅  |  ❌  |    ❌    | 仅移动端，支持视频分P/合集         |
 | 酷我音乐         |  ✅  |  ✅  |  ✅  |    ✅    | GD Studio API                      |
 | 咪咕音乐         |  ✅  |  ✅  |  ✅  |    ✅    | 仅移动端                           |
-| B站🌟            |  ✅  |  ✅  |  ❌  |    ❌    | 仅移动端，支持视频分P/合集         |
 | QQ音乐           |  ✅  |  ✅  |  ✅  |    ✅    | QQ音乐官方                         |
 | 酷狗音乐         |  ❌  |  ❌  |  ❌  |    ✅    |                                    |
 | 小蜗音乐         |  ✅  |  ✅  |  ✅  |    ❌    | 酷我音源（洛雪），URL 走 LX API    |
@@ -176,7 +174,7 @@ shared/                     # 跨端共享类型
 
 ## 免责声明
 
-本项目不存储任何音频资源，接口均来自互联网公开技术资料，仅供技术交流。
+本项目不存储任何音频资源，接口均来自互联网公开资料，仅供技术交流。
 
 严禁商业用途，由此产生的版权风险由使用者自行承担。
 

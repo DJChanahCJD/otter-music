@@ -65,15 +65,19 @@ export const aggregatedSourceOptions: {
   {
     value: "joox",
     label: "Joox",
-    description: "QQ音乐海外版",
+    description: "QQ音乐海外版（GD Studio）",
   },
   {
     value: "netease",
     label: "网易云音乐",
-    description: "音源稳定，小众资源多",
+    description: "音源稳定，小众资源多（GD Studio）",
   },
   { value: "_netease", label: "Netease", description: "网易云官方，稳定高速" },
-  { value: "kuwo", label: "酷我音乐", description: "版权丰富，但稳定性一般" },
+  {
+    value: "kuwo",
+    label: "酷我音乐",
+    description: "版权丰富，但稳定性一般（GD Studio）",
+  },
   {
     value: "bilibili",
     label: "B站",
@@ -125,12 +129,12 @@ export interface SourceConfig {
 
 export const DEFAULT_SOURCE_CONFIGS: SourceConfig[] = [
   { source: "netease", enabled: true, visible: true },
-  { source: "bilibili", enabled: true, visible: true },
   { source: "_netease", enabled: false, visible: true },
+  { source: "joox", enabled: false, visible: true },
+  { source: "bilibili", enabled: true, visible: true },
+  { source: "kuwo", enabled: false, visible: true },
   { source: "migu", enabled: false, visible: true },
   { source: "qq", enabled: false, visible: true },
-  { source: "joox", enabled: false, visible: true },
-  { source: "kuwo", enabled: false, visible: true },
   { source: "lx_kuwo", enabled: false, visible: true },
   { source: "lx_qq", enabled: false, visible: true },
 ];
