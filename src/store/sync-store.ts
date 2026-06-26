@@ -1,26 +1,34 @@
-import { create } from 'zustand';
-import { persist, type StorageValue } from 'zustand/middleware';
-import { storeKey } from './store-keys';
-import { idbStorage } from '@/lib/storage-adapter';
-import { encryptString, decryptString } from '@/lib/crypto-storage';
+import { create } from "zustand";
+import { persist, type StorageValue } from "zustand/middleware";
+import { storeKey } from "./store-keys";
+import { idbStorage } from "@/lib/storage-adapter";
+import { encryptString, decryptString } from "@/lib/crypto-storage";
 
 interface SyncState {
   syncKey: string | null;
   lastSyncTime: number;
+  version: number;
 
   setSyncKey: (key: string) => void;
   clearSyncConfig: () => void;
   setLastSyncTime: (time: number) => void;
+  setVersion: (v: number) => void;
 }
 
-type PersistedState = { syncKey: string | null; lastSyncTime: number };
+type PersistedState = {
+  syncKey: string | null;
+  lastSyncTime: number;
+  version: number;
+};
 
 /**
  * 在 idbStorage 基础上透明加密 syncKey 字段。
  * 其余字段（lastSyncTime）明文存储，只有敏感密钥密文落盘。
  */
 const encryptedSyncStorage = {
-  getItem: async (name: string): Promise<StorageValue<PersistedState> | null> => {
+  getItem: async (
+    name: string
+  ): Promise<StorageValue<PersistedState> | null> => {
     const raw = await idbStorage.getItem(name);
     if (!raw) return null;
     const parsed: StorageValue<PersistedState> = JSON.parse(raw);
@@ -34,7 +42,10 @@ const encryptedSyncStorage = {
     }
     return parsed;
   },
-  setItem: async (name: string, value: StorageValue<PersistedState>): Promise<void> => {
+  setItem: async (
+    name: string,
+    value: StorageValue<PersistedState>
+  ): Promise<void> => {
     const toStore = structuredClone(value);
     if (toStore.state.syncKey) {
       toStore.state.syncKey = await encryptString(toStore.state.syncKey);
@@ -51,10 +62,13 @@ export const useSyncStore = create<SyncState>()(
     (set) => ({
       syncKey: null,
       lastSyncTime: 0,
+      version: 0,
 
       setSyncKey: (key) => set({ syncKey: key }),
-      clearSyncConfig: () => set({ syncKey: null, lastSyncTime: 0 }),
+      clearSyncConfig: () =>
+        set({ syncKey: null, lastSyncTime: 0, version: 0 }),
       setLastSyncTime: (time) => set({ lastSyncTime: time }),
+      setVersion: (v) => set({ version: v }),
     }),
     {
       name: storeKey.SyncStore,
@@ -62,6 +76,7 @@ export const useSyncStore = create<SyncState>()(
       partialize: (state) => ({
         syncKey: state.syncKey,
         lastSyncTime: state.lastSyncTime,
+        version: state.version,
       }),
     }
   )

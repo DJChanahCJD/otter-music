@@ -52,6 +52,7 @@ const setupBaseState = () => {
   useSyncStore.setState({
     syncKey: "sync-key",
     lastSyncTime: 12345,
+    version: 0,
   });
 
   useMusicStore.setState({
@@ -59,6 +60,13 @@ const setupBaseState = () => {
     playlists: [],
   });
 };
+
+const successResponse = (data: unknown, overrides = {}) => ({
+  data,
+  lastSyncTime: 99999,
+  version: 1,
+  ...overrides,
+});
 
 /* ---------------- tests ---------------- */
 
@@ -86,9 +94,7 @@ describe("checkAndSync", () => {
   });
 
   it("clears sync config on 404", async () => {
-    vi.mocked(syncPushAndPull).mockRejectedValue(
-      new ApiError("missing", 404)
-    );
+    vi.mocked(syncPushAndPull).mockRejectedValue(new ApiError("missing", 404));
 
     await expect(checkAndSync()).resolves.toEqual({
       success: false,
@@ -100,28 +106,110 @@ describe("checkAndSync", () => {
       lastSyncTime: 0,
     });
 
-    expect(toast.error).toHaveBeenCalledWith(
-      "同步密钥不存在或已失效"
-    );
+    expect(toast.error).toHaveBeenCalledWith("同步密钥不存在或已失效");
   });
 
-  it("applies snapshot on success", async () => {
+  it("applies snapshot on success (with version)", async () => {
     const data = {
       favorites: [{ id: "t1" }],
       playlists: [],
     };
 
-    vi.mocked(syncPushAndPull).mockResolvedValue({
-      data,
-      lastSyncTime: 99999,
-    });
+    vi.mocked(syncPushAndPull).mockResolvedValue(successResponse(data));
 
     await expect(checkAndSync()).resolves.toEqual({
       success: true,
     });
 
     expect(useMusicStore.getState().favorites).toEqual(data.favorites);
+    expect(useSyncStore.getState().version).toBe(1);
     expect(toast.success).toHaveBeenCalled();
+  });
+
+  it("sends clientVersion on push", async () => {
+    vi.mocked(syncPushAndPull).mockResolvedValue(
+      successResponse({ favorites: [], playlists: [] })
+    );
+
+    useSyncStore.setState({ version: 3 });
+    await checkAndSync();
+
+    expect(syncPushAndPull).toHaveBeenCalledWith(
+      "sync-key",
+      expect.anything(),
+      3 // clientVersion
+    );
+  });
+
+  it("does NOT fallback to pull on non-404 error", async () => {
+    vi.mocked(syncPushAndPull).mockRejectedValue(
+      new ApiError("server error", 500)
+    );
+
+    await expect(checkAndSync()).resolves.toEqual({
+      success: false,
+      error: "网络超时",
+    });
+
+    // 关键断言：不调用 pull
+    expect(syncPull).not.toHaveBeenCalled();
+
+    // 本地数据不变
+    expect(useMusicStore.getState().favorites).toEqual([]);
+    expect(toast.error).toHaveBeenCalledWith("网络超时，请稍后重试");
+  });
+
+  it("recovers from 409 by pull + merge + retry", async () => {
+    // 本地有数据
+    useMusicStore.setState({
+      favorites: [createTrack("local-1")],
+      playlists: [],
+    });
+
+    // 第一次 POST 返回 409
+    vi.mocked(syncPushAndPull)
+      .mockRejectedValueOnce(new ApiError("version conflict", 409))
+      // 重试成功
+      .mockResolvedValueOnce(
+        successResponse(
+          {
+            favorites: [createTrack("local-1"), createTrack("remote-1")],
+            playlists: [],
+          },
+          { version: 2 }
+        )
+      );
+
+    // Pull 返回远程数据
+    vi.mocked(syncPull).mockResolvedValue(
+      successResponse(
+        { favorites: [createTrack("remote-1")], playlists: [] },
+        { version: 1 }
+      )
+    );
+
+    await expect(checkAndSync()).resolves.toEqual({
+      success: true,
+    });
+
+    // Pull 被调用一次
+    expect(syncPull).toHaveBeenCalledTimes(1);
+
+    // 重试的 POST 使用合并后的数据
+    expect(syncPushAndPull).toHaveBeenCalledTimes(2);
+    expect(syncPushAndPull).toHaveBeenLastCalledWith(
+      "sync-key",
+      expect.objectContaining({
+        favorites: expect.arrayContaining([
+          expect.objectContaining({ id: "local-1" }),
+          expect.objectContaining({ id: "remote-1" }),
+        ]),
+      }),
+      expect.anything()
+    );
+
+    // 本地 state 更新
+    expect(useSyncStore.getState().version).toBe(2);
   });
 
   it("keeps deleted markers in pushed snapshot", async () => {
@@ -133,16 +221,13 @@ describe("checkAndSync", () => {
           name: "Test",
           createdAt: 1,
           is_deleted: false,
-          tracks: [
-            createTrack("track-1", true),
-            createTrack("track-2"),
-          ],
+          tracks: [createTrack("track-1", true), createTrack("track-2")],
         },
       ],
     });
 
     const data = { favorites: [createTrack("fav-1", true)], playlists: [] };
-    vi.mocked(syncPushAndPull).mockResolvedValue({ data, lastSyncTime: 99999 });
+    vi.mocked(syncPushAndPull).mockResolvedValue(successResponse(data));
 
     await expect(checkAndSync(true)).resolves.toEqual({ success: true });
 
@@ -160,6 +245,7 @@ describe("checkAndSync", () => {
           }),
         ],
       }),
+      expect.anything()
     );
   });
 
@@ -177,10 +263,7 @@ describe("checkAndSync", () => {
       ],
     };
 
-    vi.mocked(syncPushAndPull).mockResolvedValue({
-      data,
-      lastSyncTime: 99999,
-    });
+    vi.mocked(syncPushAndPull).mockResolvedValue(successResponse(data));
 
     await expect(checkAndSync()).resolves.toEqual({
       success: true,
@@ -190,25 +273,26 @@ describe("checkAndSync", () => {
     expect(useMusicStore.getState().playlists).toEqual(data.playlists);
   });
 
-  it("fallbacks to syncPull on non-404 error", async () => {
-    const data = {
-      favorites: [{ id: "t2" }],
+  it("shows retry toast when 409 recovery fails", async () => {
+    useMusicStore.setState({
+      favorites: [createTrack("local-1")],
       playlists: [],
-    };
-
-    vi.mocked(syncPushAndPull).mockRejectedValue(
-      new ApiError("server error", 500)
-    );
-
-    vi.mocked(syncPull).mockResolvedValue({
-      data,
-      lastSyncTime: 77777,
     });
+
+    // POST 返回 409
+    vi.mocked(syncPushAndPull).mockRejectedValue(
+      new ApiError("version conflict", 409)
+    );
+    // Pull 也失败
+    vi.mocked(syncPull).mockRejectedValue(new Error("pull failed"));
 
     await expect(checkAndSync()).resolves.toEqual({
-      success: true,
+      success: false,
+      error: "网络超时",
     });
 
-    expect(useMusicStore.getState().favorites).toEqual(data.favorites);
+    // 本地数据保留
+    expect(useMusicStore.getState().favorites).toHaveLength(1);
+    expect(toast.error).toHaveBeenCalledWith("网络超时，请稍后重试");
   });
 });

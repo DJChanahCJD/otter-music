@@ -184,7 +184,10 @@ syncRoutesV2.get("/check", async (c) => {
   );
   return metadata === null
     ? fail(c, "Sync key not found", 404)
-    : ok(c, { lastSyncTime: metadata.lastSyncTime || 0 });
+    : ok(c, {
+        lastSyncTime: metadata.lastSyncTime || 0,
+        version: metadata.version ?? 0,
+      });
 });
 
 // GET /pull — 拉取数据（自动 GC 墓碑，有变化时异步写回）
@@ -210,27 +213,44 @@ syncRoutesV2.get("/pull", async (c) => {
           metadata: {
             lastSyncTime: metadata?.lastSyncTime || 0,
             sizeBytes: buf.byteLength,
+            version: metadata?.version ?? 0,
           } satisfies SyncKeyMetadata,
         })
       )
     );
   }
 
-  return ok(c, { data, lastSyncTime: metadata?.lastSyncTime || 0 });
+  return ok(c, {
+    data,
+    lastSyncTime: metadata?.lastSyncTime || 0,
+    version: metadata?.version ?? 0,
+  });
 });
 
-// POST / — 推送并合并（LWW），返回合并结果
+// POST / — 推送并合并（LWW + 乐观锁），返回合并结果
 syncRoutesV2.post(
   "/",
-  zValidator("json", z.object({ data: z.any() })),
+  zValidator(
+    "json",
+    z.object({ data: z.any(), clientVersion: z.number().optional() })
+  ),
   async (c) => {
     const kv = c.env.oh_file_url;
     const kvKey = c.get("kvKey");
-    const stored = await kv.get(kvKey, "arrayBuffer");
+    const { value: stored, metadata } =
+      await kv.getWithMetadata<SyncKeyMetadata>(kvKey, { type: "arrayBuffer" });
     if (stored === null) return fail(c, "Sync key not found", 404);
 
-    const { data: clientData } = c.req.valid("json");
+    const { data: clientData, clientVersion } = c.req.valid("json");
     const now = Date.now();
+
+    // 乐观锁：客户端已知版本与服务端当前版本不匹配时拒绝写入
+    if (
+      clientVersion !== undefined &&
+      clientVersion !== (metadata?.version ?? 0)
+    ) {
+      return fail(c, "Version conflict", 409);
+    }
 
     const serverData = gcData(formatData(await deserializeFromKV(stored)), now);
     const client = gcData(formatData(clientData), now);
@@ -241,15 +261,21 @@ syncRoutesV2.post(
       playlists: mergeLWW(serverData.playlists, client.playlists),
     };
 
+    const newVersion = (metadata?.version ?? 0) + 1;
     const serialized = await serializeForKV(merged);
     await kv.put(kvKey, serialized, {
       metadata: {
         lastSyncTime: now,
         sizeBytes: serialized.byteLength,
+        version: newVersion,
       } satisfies SyncKeyMetadata,
     });
 
-    return ok(c, { data: merged, lastSyncTime: now }, "Sync successful");
+    return ok(
+      c,
+      { data: merged, lastSyncTime: now, version: newVersion },
+      "Sync successful"
+    );
   }
 );
 
@@ -277,7 +303,7 @@ syncRoutesV2.post(
       const kvKey = `${SYNC_KEY_PREFIX}${syncKey}`;
       if (!(await kv.get(kvKey, "arrayBuffer"))) {
         await kv.put(kvKey, new ArrayBuffer(0), {
-          metadata: { lastSyncTime: 0, sizeBytes: 0 },
+          metadata: { lastSyncTime: 0, sizeBytes: 0, version: 0 },
         });
         return ok(c, { syncKey }, "Sync key created");
       }
