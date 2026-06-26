@@ -23,9 +23,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "./ui/select";
-import { DownloadQualitySelect } from "./settings/DownloadQualitySelect";
-import { DownloadSettingToggles } from "./settings/DownloadSettingToggles";
-import { DownloadDirectorySelect } from "./settings/DownloadDirectorySelect";
+import { DownloadSetting } from "./settings/DownloadSetting";
 import { SettingItem } from "./settings/SettingItem";
 import { UpdateCheck } from "./settings/UpdateCheck";
 import { IssueLogs } from "./settings/IssueLogs";
@@ -122,6 +120,7 @@ export function SettingsPage({ onBack }: SettingsPageProps) {
           <StreamCacheSetting />
           <SleepTimerSetting />
           <PlaybackSpeedSetting />
+          <DownloadSetting />
         </SettingsSection>
 
         <SettingsSection title="界面设置">
@@ -162,12 +161,6 @@ export function SettingsPage({ onBack }: SettingsPageProps) {
               </Select>
             }
           />
-        </SettingsSection>
-
-        <SettingsSection title="下载设置">
-          <DownloadQualitySelect />
-          <DownloadSettingToggles />
-          <DownloadDirectorySelect />
         </SettingsSection>
 
         <SettingsSection title="账号数据">
