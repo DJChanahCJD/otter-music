@@ -263,7 +263,6 @@ export function MinePage({ onSelectPlaylist }: MinePageProps) {
                       {playlist.name}
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      {/* TODO: 是否简化同步流程, 不再需要is_deleted，仅歌单级别is_deleted, 以最新版本的歌单为主  */}
                       {
                         playlist.tracks.filter(
                           (track) => track.is_deleted !== true

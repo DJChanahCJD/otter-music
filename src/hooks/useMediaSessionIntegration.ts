@@ -147,7 +147,6 @@ export function useMediaSessionIntegration(
       [
         "play",
         () => {
-          // TODO: play 和 pause 直接操纵 audio 是否有问题？
           useMusicStore.getState().setUserGesture();
           const audio = audioRef.current;
           if (!audio) return;

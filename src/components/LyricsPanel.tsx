@@ -324,7 +324,6 @@ export function LyricsPanel({ track, active = true }: LyricsPanelProps) {
     );
   }
 
-  // TODO: 为什么 B 站音源应该返回的是 null 还显示加载中？
   if (loading) {
     return (
       <div className="h-full flex items-center justify-center text-sm text-white/40 tracking-widest">

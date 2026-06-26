@@ -1,7 +1,7 @@
 /**
- * 把秒数格式化为 mm:ss
+ * 把秒数格式化为 mm:ss（分钟补零，适合倒计时显示）
+ * 注意：与 formatMediaTime (m:ss) 格式不同，不可直接替换
  */
-// TODO: 清理该文件，已经有formatMediaTime了
 export function formatTime(seconds: number): string {
   const mins = Math.floor(seconds / 60);
   const secs = seconds % 60;
