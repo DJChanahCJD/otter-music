@@ -15,39 +15,7 @@ import toast from "react-hot-toast";
 import { handleAutoMatch } from "@/lib/audio-match";
 import { logger } from "@/lib/logger";
 
-const AUDIO_READY_TIMEOUT = 8000;
-
-/**
- * 快速检测音频 URL 是否可达
- * @param url 音频链接
- * @param timeout 超时时间 (毫秒)
- */
-async function checkUrlReachable(
-  url: string,
-  timeout = 1500
-): Promise<boolean> {
-  return new Promise((resolve) => {
-    const controller = new AbortController();
-    let isTimeout = false;
-
-    const timer = setTimeout(() => {
-      isTimeout = true;
-      controller.abort();
-      resolve(false); // 超时判定为不可达
-    }, timeout);
-
-    fetch(url, { method: "HEAD", mode: "no-cors", signal: controller.signal })
-      .then(() => {
-        clearTimeout(timer);
-        resolve(true); // 只要有响应（即使是 403 等 HTTP 错误，由 audio 标签后续兜底）就认为网络连通
-      })
-      .catch((err) => {
-        clearTimeout(timer);
-        // 如果不是因为超时导致的 abort，说明是真实的网络不通/DNS污染
-        resolve(!isTimeout && err.name === "AbortError");
-      });
-  });
-}
+const AUDIO_READY_TIMEOUT = 5000;
 
 /**
  * 持久化 URL 缓存：跨会话保持已解析的音频 URL，离线时复用
@@ -111,6 +79,7 @@ function waitForAudioReady(
       audio.removeEventListener("canplay", onReady);
       audio.removeEventListener("loadedmetadata", onReady);
       audio.removeEventListener("error", onError);
+      audio.removeEventListener("stalled", onStalled);
       clearTimeout(timer);
     };
 
@@ -123,6 +92,7 @@ function waitForAudioReady(
 
     const onReady = () => finish(resolve);
     const onError = () => finish(() => reject(new Error("AUDIO_NOT_READY")));
+    const onStalled = () => finish(() => reject(new Error("AUDIO_STALLED")));
     const timer = setTimeout(
       () => finish(() => reject(new Error("AUDIO_READY_TIMEOUT"))),
       timeout
@@ -131,6 +101,7 @@ function waitForAudioReady(
     audio.addEventListener("canplay", onReady, { once: true });
     audio.addEventListener("loadedmetadata", onReady, { once: true });
     audio.addEventListener("error", onError, { once: true });
+    audio.addEventListener("stalled", onStalled, { once: true });
   });
 }
 
@@ -387,15 +358,6 @@ export function useAudioTrackLoader(
 
         try {
           const primaryUrl = localDownloadUrl || (await getRemoteUrl());
-
-          // 新增：如果是在线 HTTP 链接，执行 1.5 秒快速探测
-          if (!localDownloadUrl && primaryUrl.startsWith("http")) {
-            const isReachable = await checkUrlReachable(primaryUrl, 1500);
-            if (!isReachable) {
-              // 抛出特定错误，直接跳过 8 秒等待，进入 catch 触发代理
-              throw new Error("PRECHECK_UNREACHABLE");
-            }
-          }
 
           await setSourceAndPlay(primaryUrl, resumeTime);
         } catch (primaryError) {

@@ -52,7 +52,11 @@
 | 播客（歌单广场） |  ✅  |  ✅  |  ❌  |    ❌    | RSS 播客订阅                       |
 
 > [!NOTE]
+> **兼容性说明**
+>
 > 最低支持版本：minSdkVersion = 24 (Android 7.0)
+>
+> 若出现界面排版错乱、图标异常等问题，请先更新 Android System WebView 至较新版本（建议 WebView 100+ 的版本）。
 
 > [!IMPORTANT]
 > 在线体验：[Otter Music](https://otter-music.pages.dev/)
