@@ -31,6 +31,7 @@ import { StreamCacheSetting } from "./settings/StreamCacheSetting";
 import { SleepTimerSetting } from "./settings/SleepTimerSetting";
 import { PlaybackSpeedSetting } from "./settings/PlaybackSpeedSetting";
 import { AutoMatchSuffixSetting } from "./settings/AutoMatchSuffixSetting";
+import { AutoMatchSetting } from "./settings/AutoMatchSetting";
 
 interface SettingsPageProps {
   onBack?: () => void;
@@ -59,7 +60,6 @@ export function SettingsPage({ onBack }: SettingsPageProps) {
     volume,
     setVolume,
     enableAutoMatch,
-    setEnableAutoMatch,
     bilibiliKeepOriginalMeta,
     setBilibiliKeepOriginalMeta,
     showSourceBadge,
@@ -71,7 +71,6 @@ export function SettingsPage({ onBack }: SettingsPageProps) {
       volume: state.volume,
       setVolume: state.setVolume,
       enableAutoMatch: state.enableAutoMatch,
-      setEnableAutoMatch: state.setEnableAutoMatch,
       bilibiliKeepOriginalMeta: state.bilibiliKeepOriginalMeta,
       setBilibiliKeepOriginalMeta: state.setBilibiliKeepOriginalMeta,
       showSourceBadge: state.showSourceBadge,
@@ -85,17 +84,6 @@ export function SettingsPage({ onBack }: SettingsPageProps) {
     <PageLayout title="系统设置" onBack={onBack}>
       <div className="flex-1 p-4 pb-28 overflow-y-auto">
         <SettingsSection title="常用设置">
-          <SettingItem
-            icon={Wand2}
-            title="智能音源"
-            subtitle="🧙‍♀️自动切换到可用的免费音源"
-            action={
-              <Switch
-                checked={enableAutoMatch}
-                onCheckedChange={setEnableAutoMatch}
-              />
-            }
-          />
           <AggregatedSourceSelect />
           <SettingItem
             icon={Volume2}
@@ -192,6 +180,7 @@ export function SettingsPage({ onBack }: SettingsPageProps) {
 
         <SettingsSection title="高级设置">
           <ApiUrlConfig />
+          <AutoMatchSetting />
           <StreamCacheSetting />
         </SettingsSection>
 

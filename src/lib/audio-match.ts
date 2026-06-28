@@ -5,7 +5,7 @@ import {
   getAggregatedSourcesForMatch,
 } from "@/hooks/use-aggregated-sources";
 import { musicApi } from "@/lib/music-api";
-import { sourceLabels, type MusicTrack } from "@/types/music";
+import { sourceLabels, type MusicSource, type MusicTrack } from "@/types/music";
 import {
   isNameMatch,
   isArtistMatch,
@@ -68,10 +68,27 @@ export async function handleAutoMatch(track: MusicTrack): Promise<boolean> {
   });
 
   try {
-    const { updateTrackInQueue, updateTrackInPlaylists, contextId } =
-      useMusicStore.getState();
+    const {
+      currentIndex,
+      autoMatchContext,
+      setAutoMatchContext,
+      updateTrackInQueue,
+      updateTrackInPlaylists,
+      contextId,
+      autoMatchFavorites,
+      autoMatchPlaylists,
+      isFavorite,
+      favorites,
+      setFavorites,
+    } = useMusicStore.getState();
+
+    // 切歌检测 & 已尝试音源排除
+    const ctx =
+      currentIndex !== autoMatchContext?.index
+        ? { index: currentIndex, tried: new Set<MusicSource>() }
+        : autoMatchContext;
     const aggregatedSources = getAggregatedSourcesForMatch().filter(
-      (source) => source !== track.source
+      (source) => source !== track.source && !ctx.tried.has(source)
     );
     if (aggregatedSources.length === 0) {
       return false;
@@ -100,15 +117,23 @@ export async function handleAutoMatch(track: MusicTrack): Promise<boolean> {
         ? { ...match, name: track.name, artist: track.artist }
         : match;
 
+    // 记录已尝试的音源
+    const nextTried = new Set(ctx.tried);
+    nextTried.add(track.source);
+    setAutoMatchContext({ index: currentIndex, tried: nextTried });
+
     updateTrackInQueue(track.id, finalTrack);
 
-    if (contextId?.startsWith("playlist-")) {
+    if (autoMatchPlaylists && contextId?.startsWith("playlist-")) {
       updateTrackInPlaylists(track.id, finalTrack);
     }
-    // contextId === "favorites" 时启用（需恢复 isFavorite, favorites, setFavorites 析构）：
-    // if (contextId === "favorites" && isFavorite(track.id)) {
-    //   setFavorites(favorites.map((t) => (t.id === track.id ? finalTrack : t)));
-    // }
+    if (
+      autoMatchFavorites &&
+      contextId === "favorites" &&
+      isFavorite(track.id)
+    ) {
+      setFavorites(favorites.map((t) => (t.id === track.id ? finalTrack : t)));
+    }
 
     const sourceLabel = sourceLabels[match.source] || match.source;
     toast.success(`已自动切换至: ${sourceLabel}`, { id: toastId });
