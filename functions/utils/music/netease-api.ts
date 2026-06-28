@@ -36,24 +36,24 @@ export async function getSongUrl(
 ) {
   const realId = id.replace(/^(netrack_|ne_track_)/, "");
 
-  // 方案 1: 尝试 EAPI (获取无损/高解析度音频)
-  try {
-    const eapiRes = await requestEapi<{
-      data: { url: string; br: number; size: number }[];
-    }>(
-      `${EAPI_BASE_URL}/eapi/song/enhance/player/url`,
-      "/api/song/enhance/player/url",
-      { ids: `[${realId}]`, br, header: { os: "pc", appver: "2.9.7" } },
-      cookie
-    );
+  // // 方案 1: 尝试 EAPI (获取无损/高解析度音频)
+  // try {
+  //   const eapiRes = await requestEapi<{
+  //     data: { url: string; br: number; size: number }[];
+  //   }>(
+  //     `${EAPI_BASE_URL}/eapi/song/enhance/player/url`,
+  //     "/api/song/enhance/player/url",
+  //     { ids: `[${realId}]`, br, header: { os: "pc", appver: "2.9.7" } },
+  //     cookie
+  //   );
 
-    if (eapiRes.data?.data?.[0]?.url) return eapiRes;
-    console.warn(
-      `[NetEase] EAPI empty URL for ${realId}, falling back to WEAPI...`
-    );
-  } catch (e) {
-    console.warn(`[NetEase] EAPI failed for ${realId}:`, e);
-  }
+  //   if (eapiRes.data?.data?.[0]?.url) return eapiRes;
+  //   console.warn(
+  //     `[NetEase] EAPI empty URL for ${realId}, falling back to WEAPI...`
+  //   );
+  // } catch (e) {
+  //   console.warn(`[NetEase] EAPI failed for ${realId}:`, e);
+  // }
 
   // 方案 2: 降级 WEAPI (Web 端接口风控极松，确保能播)
   const weapiData = {

@@ -302,32 +302,32 @@ export async function getSongUrl(
 
   const level = LEVEL_MAP[br] || "standard";
 
-  try {
-    const eapiRes = await requestEapi<{
-      data: {
-        url: string;
-        br: number;
-        size: number;
-        freeTrialInfo?: unknown;
-      }[];
-    }>(
-      `${EAPI_BASE_URL}/eapi/song/enhance/player/url/v1`,
-      "/api/song/enhance/player/url/v1",
-      {
-        ids: `[${realId}]`,
-        level,
-        encodeType: "flac",
-        header: { os: "ios", appver: "8.9.70" },
-      },
-      finalCookie
-    );
-    const trackData = eapiRes.data?.data?.[0];
-    if (trackData?.url && !trackData.freeTrialInfo) return eapiRes;
-  } catch {
-    logger.warn(
-      `[NetEase] EAPI failed for ${realId}, falling back to WEAPI...`
-    );
-  }
+  // try {
+  //   const eapiRes = await requestEapi<{
+  //     data: {
+  //       url: string;
+  //       br: number;
+  //       size: number;
+  //       freeTrialInfo?: unknown;
+  //     }[];
+  //   }>(
+  //     `${EAPI_BASE_URL}/eapi/song/enhance/player/url/v1`,
+  //     "/api/song/enhance/player/url/v1",
+  //     {
+  //       ids: `[${realId}]`,
+  //       level,
+  //       encodeType: "flac",
+  //       header: { os: "ios", appver: "8.9.70" },
+  //     },
+  //     finalCookie
+  //   );
+  //   const trackData = eapiRes.data?.data?.[0];
+  //   if (trackData?.url && !trackData.freeTrialInfo) return eapiRes;
+  // } catch {
+  //   logger.warn(
+  //     `[NetEase] EAPI failed for ${realId}, falling back to WEAPI...`
+  //   );
+  // }
 
   return requestWeapi<{ data: { url: string; br: number; size: number }[] }>(
     `${BASE_URL}/weapi/song/enhance/player/url/v1`,
