@@ -5,7 +5,9 @@ export type HSL = [h: number, s: number, l: number];
 /**
  * 从颜色候选列表中选择并优化最适合暗色模式播放器的颜色
  */
-export function pickBestColor(candidates: (string | { hex: string })[]): HSL | null {
+export function pickBestColor(
+  candidates: (string | { hex: string })[]
+): HSL | null {
   if (!candidates?.length) return null;
 
   let bestScore = -Infinity;
@@ -25,14 +27,20 @@ export function pickBestColor(candidates: (string | { hex: string })[]): HSL | n
 
     // 2. 计算评分
     let score = 0;
-    score += (s >= 35 && s <= 80) ? 16 : (s >= 20 ? 8 : -10);
-    score += (l >= 25 && l <= 65) ? 12 : -6;
+    score += s >= 35 && s <= 80 ? 16 : s >= 20 ? 8 : -10;
+    score += l >= 25 && l <= 65 ? 12 : -6;
 
-    // 色相偏好
-    if ((h >= 200 && h <= 280) || (h >= 300 && h <= 345)) score += 20; // 蓝紫
-    else if (h >= 160 && h <= 199) score += 12; // 青
-    else if (h <= 20 || h >= 345) score += 8;  // 红
+    // 统一色相偏好加分
+    const isPreferredHue =
+      (h >= 200 && h <= 280) || // 蓝紫
+      (h >= 300 && h <= 345) || // 偏粉紫
+      (h >= 160 && h <= 199) || // 青
+      h <= 20 ||
+      h >= 345; // 红
 
+    if (isPreferredHue) {
+      score += 10;
+    }
     // 脏色惩罚 (35-95度区间)
     const isMud = h >= 35 && h <= 75;
     if ((isMud || (h > 75 && h <= 95)) && s >= 18 && l >= 20 && l <= 70) {
@@ -42,15 +50,15 @@ export function pickBestColor(candidates: (string | { hex: string })[]): HSL | n
     // 3. 更新最优解并进行归一化
     if (score > bestScore) {
       bestScore = score;
-      
+
       // 针对“泥土色”偏移色相并压制饱和度，强制低亮度适配暗色模式
       const finalH = isMud ? Math.max(18, h - 18) : h;
       const limitS = isMud ? Math.max(28, Math.min(s, 55)) : s;
-      
+
       bestHsl = [
         Math.round(finalH),
         Math.round(Math.max(24, Math.min(limitS, 68))),
-        Math.round(Math.max(18, Math.min(33, l)))
+        Math.round(Math.max(18, Math.min(33, l))),
       ];
     }
   }
