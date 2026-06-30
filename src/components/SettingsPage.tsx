@@ -14,7 +14,15 @@ import {
 } from "@/store/music-store";
 import { useShallow } from "zustand/react/shallow";
 import { Slider } from "./ui/slider";
-import { Image, Palette, Volume2, Wand2, Trash2, Tag } from "lucide-react";
+import {
+  Image,
+  Palette,
+  Volume2,
+  Wand2,
+  Trash2,
+  Tag,
+  Database,
+} from "lucide-react";
 import { Switch } from "./ui/switch";
 import {
   Select,
@@ -32,6 +40,8 @@ import { SleepTimerSetting } from "./settings/SleepTimerSetting";
 import { PlaybackSpeedSetting } from "./settings/PlaybackSpeedSetting";
 import { AutoMatchSuffixSetting } from "./settings/AutoMatchSuffixSetting";
 import { AutoMatchSetting } from "./settings/AutoMatchSetting";
+import { DataBackup } from "./settings/DataBackup";
+import { useState } from "react";
 
 interface SettingsPageProps {
   onBack?: () => void;
@@ -56,6 +66,7 @@ function SettingsSection({
 
 export function SettingsPage({ onBack }: SettingsPageProps) {
   const navigate = useNavigate();
+  const [dataBackupOpen, setDataBackupOpen] = useState(false);
   const {
     volume,
     setVolume,
@@ -154,6 +165,13 @@ export function SettingsPage({ onBack }: SettingsPageProps) {
           <NeteaseLogin />
           <SyncConfig />
           <SettingItem
+            icon={Database}
+            title="数据备份"
+            subtitle="导出或导入全部收藏、歌单与设置"
+            onClick={() => setDataBackupOpen(true)}
+            showChevron
+          />
+          <SettingItem
             icon={Trash2}
             title="回收站"
             subtitle="恢复误删的歌曲和歌单"
@@ -189,6 +207,7 @@ export function SettingsPage({ onBack }: SettingsPageProps) {
           <IssueLogs />
         </SettingsSection>
       </div>
+      <DataBackup open={dataBackupOpen} onOpenChange={setDataBackupOpen} />
     </PageLayout>
   );
 }
