@@ -6,36 +6,22 @@ body:
     id: description
     attributes:
       label: 问题描述
-      description: 清晰描述遇到的问题
-    validations:
-      required: true
-
-  - type: textarea
-    id: steps
-    attributes:
-      label: 复现步骤
+      description: 请描述遇到的问题、复现步骤以及相关截图
       placeholder: |
+        问题描述：
+
+        复现步骤：
         1. 打开...
         2. 点击...
         3. 看到...
 
-  - type: textarea
-    id: screenshots
-    attributes:
-      label: 截图
+        截图：
     validations:
-      required: false
+      required: true
 
   - type: input
     id: env
     attributes:
       label: 环境
-      description: 平台/设备/系统版本/App版本
-      placeholder: Android / 红米K50 / Android 13 / v2.4.3
-
-  - type: input
-    id: source
-    attributes:
-      label: 音源
-    validations:
-      required: false
+      description: 平台/设备/系统版本/App版本/音源
+      placeholder: Android / 红米K50 / Android 13 / v2.4.3 / Joox
