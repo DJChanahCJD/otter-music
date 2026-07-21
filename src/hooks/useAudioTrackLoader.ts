@@ -472,6 +472,20 @@ export function useAudioTrackLoader(
           useSourceQualityStore.getState().recordFail(currentTrackSource);
         }
 
+        // 离线场景下清理已失效的缓存元数据
+        // SW audio-stream-cache 条目可能被 ExpirationPlugin 淘汰（maxEntries/maxAge）
+        // 但 offlineStore 和 urlCacheStore 中仍保留元数据，导致离线歌单反复尝试失效曲目
+        if (!navigator.onLine && currentTrackId && currentTrackSource) {
+          useOfflineStore.getState().removeRecord(currentTrackId);
+          const staleKey = buildUrlCacheKey(
+            currentTrackSource,
+            currentTrackId,
+            currentTrackUrlId,
+            quality
+          );
+          urlCache.delete(staleKey);
+        }
+
         fallbackStageRef.current.stage = "final";
         audio.src = "";
         setCurrentAudioUrl(null);
