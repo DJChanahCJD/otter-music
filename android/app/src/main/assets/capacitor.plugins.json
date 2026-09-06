@@ -20,6 +20,10 @@
     "classpath": "com.capacitorjs.plugins.network.NetworkPlugin"
   },
   {
+    "pkg": "@capacitor/share",
+    "classpath": "com.capacitorjs.plugins.share.SharePlugin"
+  },
+  {
     "pkg": "@jofr/capacitor-media-session",
     "classpath": "io.github.jofr.capacitor.mediasessionplugin.MediaSessionPlugin"
   }

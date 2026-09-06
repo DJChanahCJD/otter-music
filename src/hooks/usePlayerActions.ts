@@ -1,6 +1,6 @@
 import { useRef, useCallback } from "react";
 import { useMusicStore } from "@/store/music-store";
-import { getCanonicalShareUrl } from "@/lib/share-url";
+import { shareTrack } from "@/lib/share-service";
 import { writeClipboardText } from "@/lib/clipboard";
 import { toastUtils } from "@/lib/utils/toast";
 import type { MusicTrack } from "@/types/music";
@@ -21,21 +21,16 @@ export function usePlayerActions(
     ? favorites.some((t) => t.id === currentTrack.id && !t.is_deleted)
     : false;
 
+  const coverUrl = useMusicStore((s) => s.coverUrl);
+
   const handleShare = useCallback(async () => {
     if (!currentTrack) return toast.error("暂无歌曲信息");
-
-    const shareUrl = getCanonicalShareUrl(currentTrack) || currentAudioUrl;
-    if (!shareUrl) return toast.error("该音源暂不支持分享");
-
-    const ok = await writeClipboardText(
-      `【OtterMusic】${currentTrack.name} - ${currentTrack.artist.join(", ")}\n${shareUrl}`
-    );
-    if (ok) {
-      toast.success("已复制到剪贴板");
-    } else {
-      toast.error("复制失败，请重试");
-    }
-  }, [currentTrack, currentAudioUrl]);
+    await shareTrack({
+      track: currentTrack,
+      audioUrl: currentAudioUrl,
+      coverUrl,
+    });
+  }, [currentTrack, currentAudioUrl, coverUrl]);
 
   const handleToggleLike = useCallback(() => {
     if (!currentTrack) return;

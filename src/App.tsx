@@ -10,6 +10,7 @@ import { revokeAll } from "@/lib/utils/blob-registry";
 import { stopBilibiliProxyServer } from "@/lib/bilibili/bilibili-native-player";
 import { App as CapacitorApp } from "@capacitor/app";
 import { IS_NATIVE } from "@/lib/api/config";
+import { handleShareDeepLink } from "@/lib/share-service";
 export default function App() {
   // Sync Logic
   const { syncKey } = useSyncStore();
@@ -68,6 +69,11 @@ export default function App() {
     const handleResume = async () => {
       // 应用恢复时，代理服务器会在下次播放时自动启动
     };
+
+    // 分享深链：ottermusic://share?... 插入并播放分享歌曲
+    CapacitorApp.addListener("appUrlOpen", ({ url }) => {
+      if (url) handleShareDeepLink(url);
+    });
 
     CapacitorApp.addListener("appStateChange", handleAppStateChange);
     CapacitorApp.addListener("pause", handlePause);

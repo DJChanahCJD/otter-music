@@ -28,6 +28,10 @@ const AdminPage = lazy(() =>
   import("@/components/admin/AdminPage").then((m) => ({ default: m.AdminPage }))
 );
 
+const SharePage = lazy(() =>
+  import("@/components/SharePage").then((m) => ({ default: m.SharePage }))
+);
+
 // --- Router Config ---
 
 export const router = createBrowserRouter([
@@ -119,6 +123,14 @@ export const router = createBrowserRouter([
     element: (
       <Suspense fallback={<PageLoader />}>
         <AdminPage />
+      </Suspense>
+    ),
+  },
+  {
+    path: "/share",
+    element: (
+      <Suspense fallback={<PageLoader />}>
+        <SharePage />
       </Suspense>
     ),
   },
