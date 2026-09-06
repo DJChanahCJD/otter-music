@@ -178,9 +178,9 @@ export async function search(
     body: params.toString(),
   });
 
-  if (!response.ok)
-    throw new Error(`NetEase Search API Error: ${response.status}`);
   const json = await response.json();
+  if (!response.ok || json.code !== 200)
+    throw new Error(`NetEase Search API Error: ${response.status}`);
   return { data: json as { result: SearchResult; code: number } };
 }
 

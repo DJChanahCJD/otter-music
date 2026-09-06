@@ -47,12 +47,14 @@ export class ApiError extends Error {
 /**
  * 统一处理后端响应
  */
-export async function unwrap<T>(resOrPromise: Response | Promise<Response>): Promise<T> {
+export async function unwrap<T>(
+  resOrPromise: Response | Promise<Response>
+): Promise<T> {
   const res = await resOrPromise;
   if (!res.ok) throw new ApiError(await res.text(), res.status);
 
   const { success, message, data } = (await res.json()) as ApiResponse<T>;
-  if (!success) throw new Error(message || '请求失败');
+  if (!success) throw new Error(message || "请求失败");
 
   return data as T;
 }
@@ -68,16 +70,15 @@ const getStorage = <T>(key: string, fallback: T): T => {
     return fallback;
   }
 };
-const setStorage = (key: string, val: unknown) => localStorage.setItem(key, JSON.stringify(val));
+const setStorage = (key: string, val: unknown) =>
+  localStorage.setItem(key, JSON.stringify(val));
 
 /**
  * 获取 GD 音乐台 API 默认访问顺序
  */
-function getDefaultMusicApiUrls(isNative = IS_NATIVE): string[] {
+function getDefaultMusicApiUrls(): string[] {
   const proxiedApiUrl = `${getApiUrl()}/music-api`;
-  return isNative
-    ? [DEFAULT_MUSIC_API_URL, proxiedApiUrl]
-    : [proxiedApiUrl, DEFAULT_MUSIC_API_URL];
+  return [DEFAULT_MUSIC_API_URL, proxiedApiUrl];
 }
 
 export const getMusicApiUrls = () => {
@@ -85,15 +86,19 @@ export const getMusicApiUrls = () => {
   return stored ?? getDefaultMusicApiUrls();
 };
 
-export const setMusicApiUrls = (urls: string[]) => setStorage(STORAGE_KEY_MUSIC_URLS, urls);
+export const setMusicApiUrls = (urls: string[]) =>
+  setStorage(STORAGE_KEY_MUSIC_URLS, urls);
 
 /**
  * 失效节点管理
  */
 const getActiveFailures = (now = Date.now()) => {
-  const map = getStorage<Record<string, number>>(STORAGE_KEY_MUSIC_URL_FAILURES, {});
+  const map = getStorage<Record<string, number>>(
+    STORAGE_KEY_MUSIC_URL_FAILURES,
+    {}
+  );
   // 清理已过期的记录
-  Object.keys(map).forEach(url => map[url] <= now && delete map[url]);
+  Object.keys(map).forEach((url) => map[url] <= now && delete map[url]);
   return map;
 };
 
@@ -103,15 +108,15 @@ export function getOrderedMusicApiUrls(now = Date.now()): string[] {
   setStorage(STORAGE_KEY_MUSIC_URL_FAILURES, fails); // 同步清理后的状态
 
   return [
-    ...urls.filter(url => !fails[url]), // 正常的优先
-    ...urls.filter(url => fails[url])   // 冷却中的垫底
+    ...urls.filter((url) => !fails[url]), // 正常的优先
+    ...urls.filter((url) => fails[url]), // 冷却中的垫底
   ];
 }
 
-export const markMusicApiUrlFailure = (url: string, now = Date.now()) => 
-  setStorage(STORAGE_KEY_MUSIC_URL_FAILURES, { 
-    ...getActiveFailures(now), 
-    [url]: now + MUSIC_API_FAILURE_COOLDOWN_MS 
+export const markMusicApiUrlFailure = (url: string, now = Date.now()) =>
+  setStorage(STORAGE_KEY_MUSIC_URL_FAILURES, {
+    ...getActiveFailures(now),
+    [url]: now + MUSIC_API_FAILURE_COOLDOWN_MS,
   });
 
 export const markMusicApiUrlSuccess = (url: string, now = Date.now()) => {
@@ -125,11 +130,16 @@ export const markMusicApiUrlSuccess = (url: string, now = Date.now()) => {
 /**
  * 带超时的 Fetch
  */
-export function fetchWithTimeout(input: RequestInfo | URL, init: RequestInit = {}, timeout = API_TIMEOUT_MS) {
+export function fetchWithTimeout(
+  input: RequestInfo | URL,
+  init: RequestInit = {},
+  timeout = API_TIMEOUT_MS
+) {
   const controller = new AbortController();
   const timer = window.setTimeout(() => controller.abort(), timeout);
-  return fetch(input, { ...init, signal: controller.signal })
-    .finally(() => window.clearTimeout(timer));
+  return fetch(input, { ...init, signal: controller.signal }).finally(() =>
+    window.clearTimeout(timer)
+  );
 }
 
 export function getProxyUrl(url: string) {
