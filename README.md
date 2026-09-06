@@ -172,7 +172,6 @@ shared/                     # 跨端共享类型
 ## 参考资料
 
 - [GD Studio](https://music-api.gdstudio.xyz/api.php)：免费音源 API 服务支持
-- [洛雪音乐音源](https://github.com/Huibq/keep-alive)
 - [Listen1](https://github.com/listen1/listen1_chrome_extension/blob/master/js/provider)：网易云/咪咕/B站官方接口实现参考
 - [Chartly API](https://github.com/DJChanahCJD/Chartly)：金曲奖/格莱美奖 API
 
