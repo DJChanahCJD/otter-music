@@ -83,6 +83,7 @@ interface BackupPayload {
   lastMineTab: "recommend" | "created" | "subscribed" | "albums";
   lastFeaturedTab: string;
   lastBillboardGroup: "songs" | "albums" | "artists";
+  playlistCategoryOrder: string[] | null;
   enableAutoMatch: boolean;
   autoMatchFavorites: boolean;
   autoMatchPlaylists: boolean;
@@ -91,6 +92,7 @@ interface BackupPayload {
   bilibiliAutoMatchSuffix: string;
   fullScreenBackgroundMode: FullScreenBackgroundMode;
   coverSize: number;
+  coverRadius: number;
   showSourceBadge: boolean;
   lyricAlign: LyricAlign;
   lyricFontSize: number;
@@ -102,6 +104,7 @@ interface BackupPayload {
   sleepTimerDuration: number;
   playbackSpeed: number;
   enableUpdateNotify: boolean;
+  allowSimultaneousPlayback: boolean;
   rssSources: PodcastRssSource[];
   servers: AlistServer[];
 }
@@ -152,6 +155,7 @@ export function serializeStoreData(): string {
     lastMineTab: state.lastMineTab,
     lastFeaturedTab: state.lastFeaturedTab,
     lastBillboardGroup: state.lastBillboardGroup,
+    playlistCategoryOrder: state.playlistCategoryOrder,
     enableAutoMatch: state.enableAutoMatch,
     autoMatchFavorites: state.autoMatchFavorites,
     autoMatchPlaylists: state.autoMatchPlaylists,
@@ -160,6 +164,7 @@ export function serializeStoreData(): string {
     bilibiliAutoMatchSuffix: state.bilibiliAutoMatchSuffix,
     fullScreenBackgroundMode: state.fullScreenBackgroundMode,
     coverSize: state.coverSize,
+    coverRadius: state.coverRadius,
     showSourceBadge: state.showSourceBadge,
     lyricAlign: state.lyricAlign,
     lyricFontSize: state.lyricFontSize,
@@ -171,6 +176,7 @@ export function serializeStoreData(): string {
     sleepTimerDuration: state.sleepTimerDuration,
     playbackSpeed: state.playbackSpeed,
     enableUpdateNotify: useAppStore.getState().enableUpdateNotify,
+    allowSimultaneousPlayback: useAppStore.getState().allowSimultaneousPlayback,
     rssSources: usePodcastStore.getState().rssSources,
     servers: useAlistStore.getState().servers,
   };
@@ -344,6 +350,7 @@ export function importStoreData(payload: BackupPayload): void {
     lastMineTab: payload.lastMineTab ?? "recommend",
     lastFeaturedTab: payload.lastFeaturedTab ?? "",
     lastBillboardGroup: payload.lastBillboardGroup ?? "songs",
+    playlistCategoryOrder: payload.playlistCategoryOrder ?? null,
     enableAutoMatch: payload.enableAutoMatch ?? true,
     autoMatchFavorites: payload.autoMatchFavorites ?? false,
     autoMatchPlaylists: payload.autoMatchPlaylists ?? true,
@@ -351,6 +358,7 @@ export function importStoreData(payload: BackupPayload): void {
     bilibiliAutoMatchSuffix: payload.bilibiliAutoMatchSuffix ?? "高音质 原曲",
     fullScreenBackgroundMode: payload.fullScreenBackgroundMode ?? "theme",
     coverSize: payload.coverSize ?? 288,
+    coverRadius: payload.coverRadius ?? 24,
     showSourceBadge: payload.showSourceBadge ?? true,
     lyricAlign: payload.lyricAlign ?? "center",
     lyricFontSize: payload.lyricFontSize ?? 18,
@@ -366,6 +374,7 @@ export function importStoreData(payload: BackupPayload): void {
 
   useAppStore.setState({
     enableUpdateNotify: payload.enableUpdateNotify ?? true,
+    allowSimultaneousPlayback: payload.allowSimultaneousPlayback ?? false,
   });
   if (payload.rssSources) {
     usePodcastStore.getState().setRssSources(payload.rssSources);
