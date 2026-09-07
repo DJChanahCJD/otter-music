@@ -1,9 +1,4 @@
-import {
-  fetchWithTimeout,
-  getApiUrl,
-  IS_NATIVE,
-  IS_WEB_PROD,
-} from "@/lib/api/config";
+import { fetchWithTimeout, IS_NATIVE } from "@/lib/api/config";
 import {
   convertKuwoSongToMusicTrack,
   fetchKuwoPlaylistDetail,
@@ -11,7 +6,6 @@ import {
   type KuwoPlaylistDetail,
 } from "@otter-music/shared";
 
-const KUWO_PROXY_PREFIX = "/music-api/kuwo";
 const NETWORK_TIMEOUT = 12000;
 
 export { convertKuwoSongToMusicTrack, KUWO_PAGE_SIZE };
@@ -45,25 +39,6 @@ export function parseKuwoPlaylistUrl(urlStr: string): string | null {
 export async function getKuwoPlaylistDetail(
   playlistId: string
 ): Promise<KuwoPlaylistDetail> {
-  if (IS_WEB_PROD) {
-    const res = await fetchWithTimeout(
-      `${getApiUrl()}${KUWO_PROXY_PREFIX}/playlist`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ playlistId }),
-      },
-      NETWORK_TIMEOUT
-    );
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      throw new Error(
-        (err as { error?: string }).error || `API error: ${res.status}`
-      );
-    }
-    return res.json();
-  }
-
   if (IS_NATIVE) {
     const { CapacitorHttp } = await import("@capacitor/core");
     return fetchKuwoPlaylistDetail(playlistId, async (path) => {

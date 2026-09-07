@@ -92,7 +92,7 @@ function ensureBlob(data: unknown, mimeType: string): Blob | null {
 
 function buildBilibiliAudioProxyUrl(bvid: string, audioUrl: string): string {
   const params = new URLSearchParams({ bvid, url: audioUrl });
-  if (!config.IS_NATIVE && !config.IS_WEB_PROD) {
+  if (!config.IS_NATIVE) {
     return `${BILIBILI_DEV_AUDIO_PROXY}?${params.toString()}`;
   }
   return `${config.getApiUrl()}${BILIBILI_PROXY_PREFIX}/audio?${params.toString()}`;
@@ -170,7 +170,7 @@ export async function getBilibiliCoverUrl(
   }
 
   const params = new URLSearchParams({ url: coverUrl });
-  if (!config.IS_WEB_PROD)
+  if (!config.IS_NATIVE)
     return `${BILIBILI_DEV_COVER_PROXY}?${params.toString()}`;
   return `${config.getApiUrl()}${BILIBILI_PROXY_PREFIX}/cover?${params.toString()}`;
 }
@@ -209,20 +209,6 @@ export async function searchBilibiliVideos(
   page: number,
   rows = 20
 ): Promise<SearchPageResult<MusicTrack>> {
-  if (config.IS_WEB_PROD) {
-    const res = await config.fetchWithTimeout(
-      `${config.getApiUrl()}${BILIBILI_PROXY_PREFIX}/search`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ keyword, page, rows }),
-      },
-      NETWORK_TIMEOUT
-    );
-    if (!res.ok) return { items: [], hasMore: false };
-    return res.json();
-  }
-
   // 单次搜索尝试。B 站会间歇性返回 412/HTML 风控页：
   // HTTP >= 400 时 fetchBilibiliJson 返回 null，200 + HTML 时 JSON 解析抛异常
   const attempt = async (): Promise<BilibiliSearchResponse | null> => {
@@ -265,28 +251,6 @@ async function getBilibiliSongUrlWeb(
   url: string;
   format: import("@otter-music/shared").AudioFormat;
 } | null> {
-  if (config.IS_WEB_PROD) {
-    const res = await config.fetchWithTimeout(
-      `${config.getApiUrl()}${BILIBILI_PROXY_PREFIX}/song-url`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ bvid, cid: cidOverride }),
-      },
-      NETWORK_TIMEOUT
-    );
-    if (!res.ok) return null;
-    const data = (await res.json()) as {
-      url?: string | null;
-      format?: import("@otter-music/shared").AudioFormat;
-    };
-    if (!data.url) return null;
-    return {
-      url: buildBilibiliAudioProxyUrl(bvid, data.url),
-      format: data.format ?? "m4s",
-    };
-  }
-
   try {
     const referer = `https://www.bilibili.com/video/${bvid}`;
     let cid = cidOverride;
@@ -403,20 +367,6 @@ export async function searchBilibiliCollections(
   page: number,
   rows = 20
 ): Promise<SearchPageResult<MusicTrack>> {
-  if (config.IS_WEB_PROD) {
-    const res = await config.fetchWithTimeout(
-      `${config.getApiUrl()}${BILIBILI_PROXY_PREFIX}/search-collections`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ keyword, page, rows }),
-      },
-      NETWORK_TIMEOUT
-    );
-    if (!res.ok) return { items: [], hasMore: false };
-    return res.json();
-  }
-
   // 搜索视频，从结果中提取合集信息
   try {
     const data = await fetchBilibiliJson<BilibiliSearchResponse>(

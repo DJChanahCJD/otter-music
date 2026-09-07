@@ -3,7 +3,6 @@ import {
   getApiUrl,
   getProxyUrl,
   IS_NATIVE,
-  IS_WEB_PROD,
 } from "@/lib/api/config";
 import {
   buildMiguHeaders,
@@ -63,10 +62,9 @@ export async function resolveMiguPlaylistId(
     const url = new URL(urlStr);
     if (url.protocol !== "https:" || url.hostname !== "c.migu.cn") return null;
 
-    const endpoint =
-      !IS_WEB_PROD && !IS_NATIVE
-        ? "/api/migu-resolve"
-        : `${getApiUrl()}${MIGU_PROXY_PREFIX}/resolve-playlist`;
+    const endpoint = !IS_NATIVE
+      ? "/api/migu-resolve"
+      : `${getApiUrl()}${MIGU_PROXY_PREFIX}/resolve-playlist`;
 
     const res = await fetchWithTimeout(
       endpoint,
@@ -95,32 +93,6 @@ export async function resolveMiguPlaylistId(
 export async function getMiguPlaylistDetail(
   playlistId: string
 ): Promise<MiguPlaylistDetail> {
-  if (IS_WEB_PROD) {
-    try {
-      const res = await fetchWithTimeout(
-        `${getApiUrl()}${MIGU_PROXY_PREFIX}/playlist`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ playlistId }),
-        },
-        NETWORK_TIMEOUT
-      );
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(
-          (err as { error?: string }).error || `API error: ${res.status}`
-        );
-      }
-      return res.json();
-    } catch (e) {
-      if (e instanceof Error && !e.message.startsWith("API error:")) {
-        throw new Error("Migu playlist request timed out");
-      }
-      throw e;
-    }
-  }
-
   if (IS_NATIVE) {
     const { CapacitorHttp } = await import("@capacitor/core");
     return fetchMiguPlaylistDetail(playlistId, async (path) => {
@@ -150,29 +122,6 @@ export async function getMiguSongUrl(
 ): Promise<string | null> {
   const ids = parseMiguTrackId(trackId);
   if (!ids) return null;
-
-  if (IS_WEB_PROD) {
-    try {
-      const res = await fetchWithTimeout(
-        `${getApiUrl()}${MIGU_PROXY_PREFIX}/song-url`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            copyrightId: ids.copyrightId,
-            contentId: ids.contentId,
-            br,
-          }),
-        },
-        NETWORK_TIMEOUT
-      );
-      if (!res.ok) return null;
-      const data = (await res.json()) as { url?: string | null };
-      return data.url || null;
-    } catch {
-      return null;
-    }
-  }
 
   const path = buildMiguSongUrlPath(ids.copyrightId, ids.contentId, br);
   const fetchJson = async (): Promise<MiguSongUrlResponse> => {
@@ -248,20 +197,6 @@ export async function searchMiguSongs(
   page: number,
   rows = 20
 ): Promise<{ items: MusicTrack[]; hasMore: boolean }> {
-  if (IS_WEB_PROD) {
-    const res = await fetchWithTimeout(
-      `${getApiUrl()}${MIGU_PROXY_PREFIX}/search`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ keyword, page, rows }),
-      },
-      NETWORK_TIMEOUT
-    );
-    if (!res.ok) return { items: [], hasMore: false };
-    return res.json();
-  }
-
   // V3 搜索接口（app.u.nf.migu.cn）不兼容 channel/uid 请求头，携带会返回 860002
   const path = buildMiguV3SearchPath(keyword, page, rows);
 

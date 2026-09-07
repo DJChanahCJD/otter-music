@@ -1,4 +1,4 @@
-import { getApiUrl, IS_NATIVE, IS_WEB_PROD } from "@/lib/api/config";
+import { getApiUrl, IS_NATIVE } from "@/lib/api/config";
 import {
   buildKugouAndroidHeaders,
   convertKugouSongToMusicTrack,
@@ -133,12 +133,11 @@ export async function resolveKugouPlaylistId(
       urlStr.startsWith("http") ? urlStr : `https://${urlStr}`
     );
     if (/^t\d+\.kugou\.com$/.test(url.hostname)) {
-      const endpoint =
-        !IS_WEB_PROD && !IS_NATIVE
-          ? `/api/kugou-resolve${url.pathname}${url.search}`
-          : `${getApiUrl()}${KUGOU_PROXY_PREFIX}/resolve-shortlink`;
+      const endpoint = !IS_NATIVE
+        ? `/api/kugou-resolve${url.pathname}${url.search}`
+        : `${getApiUrl()}${KUGOU_PROXY_PREFIX}/resolve-shortlink`;
 
-      const isDevProxy = !IS_WEB_PROD && !IS_NATIVE;
+      const isDevProxy = !IS_NATIVE;
       const res = isDevProxy
         ? await fetch(endpoint)
         : await fetch(endpoint, {
@@ -164,24 +163,6 @@ export async function resolveKugouPlaylistId(
 export async function getKugouPlaylistDetail(
   playlistId: string
 ): Promise<KugouPlaylistDetail> {
-  if (IS_WEB_PROD) {
-    const res = await fetchWithTimeout(
-      `${getApiUrl()}${KUGOU_PROXY_PREFIX}/playlist`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ playlistId }),
-      }
-    );
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      throw new Error(
-        (err as { error?: string }).error || `API error: ${res.status}`
-      );
-    }
-    return res.json();
-  }
-
   if (isKugouGlobalCollectionId(playlistId)) {
     return getKugouGlobalPlaylistDetail(playlistId);
   }

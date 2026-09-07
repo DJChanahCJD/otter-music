@@ -1,10 +1,5 @@
 import type { BillboardChartEntry } from "@otter-music/shared";
-import {
-  fetchWithTimeout,
-  IS_WEB_PROD,
-  getApiUrl,
-  unwrap,
-} from "@/lib/api/config";
+import { fetchWithTimeout, getApiUrl, unwrap } from "@/lib/api/config";
 import { cachedFetch } from "@/lib/utils/cache";
 import { logger } from "@/lib/logger";
 
@@ -14,14 +9,14 @@ const BILLBOARD_CHART_TTL = 6 * 60 * 60 * 1000; // 6 小时
 /**
  * 拉取指定 Billboard 榜单（走后端 /music-api/billboard?chart=<slug> 代理）。
  * date 为历史周榜日期（YYYY-MM-DD），缺省为最新一期。
- * Web 生产同源省略前缀，其余平台拼 getApiUrl()，与 netease fetchLocalApi 的平台判断一致。
+ * 统一拼 getApiUrl() 前缀。
  * 走 cachedFetch：缓存优先；网络失败（无缓存时）照常抛出，交由页面错误态处理。
  */
 export async function fetchBillboardChart(
   chartId: string,
   date?: string
 ): Promise<BillboardChartEntry[]> {
-  const base = IS_WEB_PROD ? "" : getApiUrl();
+  const base = getApiUrl();
   const params = new URLSearchParams({ chart: chartId });
   if (date) params.set("date", date);
   const url = `${base}/music-api/billboard?${params.toString()}`;

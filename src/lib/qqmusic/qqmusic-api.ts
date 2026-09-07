@@ -18,11 +18,10 @@ import {
   parseQqSosoSearchResponse,
   qqBrToQualityKey,
 } from "@otter-music/shared";
-import { IS_NATIVE, IS_WEB_PROD, getApiUrl } from "@/lib/api/config";
+import { IS_NATIVE } from "@/lib/api/config";
 import { useQqStore } from "@/store/qq-store";
 import { logger } from "@/lib/logger";
 
-const QQ_PROXY_PREFIX = "/music-api/qqmusic";
 const NETWORK_TIMEOUT = 12000;
 
 /**
@@ -86,29 +85,11 @@ async function fetchWithTimeout(
 /**
  * 获取 QQ 音乐歌单详情。
  * - 开发环境 (Web): 通过 Vite 代理 /api/qqmusic → i.y.qq.com
- * - 生产环境 (Web): 通过 Cloudflare Worker /music-api/qqmusic/playlist
  * - 原生环境 (Capacitor): 直接调用 i.y.qq.com (原生无 CORS 限制)
  */
 export async function getQqPlaylistDetail(
   playlistId: string
 ): Promise<QqPlaylistDetail> {
-  if (IS_WEB_PROD) {
-    // 生产环境走 Worker 代理
-    const apiUrl = getApiUrl();
-    const res = await fetchWithTimeout(`${apiUrl}${QQ_PROXY_PREFIX}/playlist`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ playlistId }),
-    });
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      throw new Error(
-        (err as { error?: string }).error || `API error: ${res.status}`
-      );
-    }
-    return res.json();
-  }
-
   if (IS_NATIVE) {
     // 原生环境直接请求
     const url = `https://i.y.qq.com${buildQqPlaylistApiPath(playlistId)}`;
@@ -171,24 +152,6 @@ export async function searchQqMusic(
   page: number,
   signal?: AbortSignal
 ): Promise<SearchPageResult<MusicTrack>> {
-  if (IS_WEB_PROD) {
-    const apiUrl = getApiUrl();
-    const res = await fetchWithTimeout(`${apiUrl}${QQ_PROXY_PREFIX}/proxy`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ type: "search", query, page }),
-      signal,
-    });
-    if (!res.ok) {
-      logger.error("qqmusic", `QQ 搜索代理请求失败: HTTP ${res.status}`, {
-        query,
-        page,
-      });
-      return { items: [], hasMore: false };
-    }
-    return res.json();
-  }
-
   if (IS_NATIVE) {
     const { CapacitorHttp } = await import("@capacitor/core");
     const res = await CapacitorHttp.request({
@@ -246,7 +209,6 @@ export async function searchQqMusic(
  * 通过 QQ 音乐 vkey API 获取音频直链。
  * 根据目标码率 br 选择首选质量（QQ 无 192 档，就近降级；320k 封顶），
  * 请求内按优先级降级，不可播放时返回 null。
- * - Web 生产: 走 Worker 代理
  * - 原生: 直连 u.y.qq.com
  * - 开发: 走 Vite 代理
  */
@@ -255,18 +217,6 @@ export async function getQqMusicUrl(
   br = 320
 ): Promise<string | null> {
   const qualityKeys = orderQqQualityKeys(qqBrToQualityKey(br));
-
-  if (IS_WEB_PROD) {
-    const apiUrl = getApiUrl();
-    const res = await fetchWithTimeout(`${apiUrl}${QQ_PROXY_PREFIX}/proxy`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ type: "url", songmid, quality: qualityKeys[0] }),
-    });
-    if (!res.ok) return null;
-    const data = (await res.json()) as { url?: string };
-    return data.url ?? null;
-  }
 
   if (IS_NATIVE) {
     const { CapacitorHttp } = await import("@capacitor/core");
@@ -346,17 +296,6 @@ function parseJsonpLyric(
 export async function getQqMusicLyric(
   songmid: string
 ): Promise<SongLyric | null> {
-  if (IS_WEB_PROD) {
-    const apiUrl = getApiUrl();
-    const res = await fetchWithTimeout(`${apiUrl}${QQ_PROXY_PREFIX}/proxy`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ type: "lyric", songmid }),
-    });
-    if (!res.ok) return null;
-    return res.json();
-  }
-
   if (IS_NATIVE) {
     const { CapacitorHttp } = await import("@capacitor/core");
     const res = await CapacitorHttp.request({

@@ -9,7 +9,6 @@ beforeEach(() => {
     fetchWithTimeout: vi.fn(),
     getApiUrl: vi.fn().mockReturnValue("https://otter-music.pages.dev"),
     IS_NATIVE: false,
-    IS_WEB_PROD: false,
   };
   mockCapacitor = {
     Capacitor: { isNativePlatform: vi.fn() },
@@ -50,31 +49,34 @@ function makeSearchResponse() {
 }
 
 describe("searchBilibiliVideos", () => {
-  it("loads dev search results through the Vite Bilibili proxy", async () => {
-    mockConfig.IS_WEB_PROD = false;
-    mockConfig.IS_NATIVE = false;
-    mockConfig.getApiUrl.mockReturnValue("https://otter-music.pages.dev");
-    mockConfig.fetchWithTimeout.mockResolvedValue(
-      new Response(JSON.stringify(makeSearchResponse()), {
-        status: 200,
-      })
-    );
+  // 全量并行运行时模块首次加载可能超过默认 5s，放宽超时
+  it(
+    "loads dev search results through the Vite Bilibili proxy",
+    { timeout: 15000 },
+    async () => {
+      mockConfig.IS_NATIVE = false;
+      mockConfig.getApiUrl.mockReturnValue("https://otter-music.pages.dev");
+      mockConfig.fetchWithTimeout.mockResolvedValue(
+        new Response(JSON.stringify(makeSearchResponse()), {
+          status: 200,
+        })
+      );
 
-    const { searchBilibiliVideos } = await import("./bilibili-api");
-    const result = await searchBilibiliVideos("周杰伦", 1, 20);
+      const { searchBilibiliVideos } = await import("./bilibili-api");
+      const result = await searchBilibiliVideos("周杰伦", 1, 20);
 
-    expect(result.items).toHaveLength(1);
-    expect(result.items[0]).toMatchObject({
-      id: "bilibili_BV1xx411c7mD",
-      source: "bilibili",
-    });
-    expect(String(mockConfig.fetchWithTimeout.mock.calls[0][0])).toContain(
-      "/api/bilibili/x/web-interface/search/type"
-    );
-  });
+      expect(result.items).toHaveLength(1);
+      expect(result.items[0]).toMatchObject({
+        id: "bilibili_BV1xx411c7mD",
+        source: "bilibili",
+      });
+      expect(String(mockConfig.fetchWithTimeout.mock.calls[0][0])).toContain(
+        "/api/bilibili/x/web-interface/search/type"
+      );
+    }
+  );
 
   it("returns empty collections in dev search results", async () => {
-    mockConfig.IS_WEB_PROD = false;
     mockConfig.IS_NATIVE = false;
     mockConfig.getApiUrl.mockReturnValue("https://otter-music.pages.dev");
     mockConfig.fetchWithTimeout.mockResolvedValue(
@@ -104,29 +106,6 @@ describe("searchBilibiliVideos", () => {
     expect(result.items).toHaveLength(2);
     expect(result.items[0]).toMatchObject({ id: "bilibili_BV1xx" });
     expect(result.items[1]).toMatchObject({ id: "bilibili_BV1yy" });
-  });
-
-  it("posts prod search requests to the worker route", async () => {
-    mockConfig.IS_WEB_PROD = true;
-    mockConfig.IS_NATIVE = false;
-    mockConfig.getApiUrl.mockReturnValue("https://api.example.com");
-    mockConfig.fetchWithTimeout.mockResolvedValue(
-      new Response(JSON.stringify({ items: [], hasMore: false }), {
-        status: 200,
-      })
-    );
-
-    const { searchBilibiliVideos } = await import("./bilibili-api");
-    await searchBilibiliVideos("周杰伦", 2, 30);
-
-    const [url, init] = mockConfig.fetchWithTimeout.mock.calls[0];
-    expect(url).toBe("https://api.example.com/music-api/bilibili/search");
-    expect(init.method).toBe("POST");
-    expect(JSON.parse(init.body)).toEqual({
-      keyword: "周杰伦",
-      page: 2,
-      rows: 30,
-    });
   });
 });
 
@@ -161,7 +140,6 @@ describe("getBilibiliSongUrl", () => {
         }),
       });
     mockConfig.IS_NATIVE = true;
-    mockConfig.IS_WEB_PROD = false;
     mockCapacitor.Capacitor.isNativePlatform.mockReturnValue(true);
     mockConfig.getApiUrl.mockReturnValue("https://otter-music.pages.dev");
     mockConfig.fetchWithTimeout.mockReset();
@@ -204,7 +182,6 @@ describe("getBilibiliSongUrl", () => {
         }),
       });
     mockConfig.IS_NATIVE = true;
-    mockConfig.IS_WEB_PROD = false;
     mockCapacitor.Capacitor.isNativePlatform.mockReturnValue(true);
     mockConfig.getApiUrl.mockReturnValue("https://otter-music.pages.dev");
     mockConfig.fetchWithTimeout.mockReset();
@@ -217,7 +194,6 @@ describe("getBilibiliSongUrl", () => {
   });
 
   it("resolves dev song urls through view and playurl", async () => {
-    mockConfig.IS_WEB_PROD = false;
     mockConfig.IS_NATIVE = false;
     mockConfig.getApiUrl.mockReturnValue("https://otter-music.pages.dev");
     mockConfig.fetchWithTimeout
@@ -267,7 +243,6 @@ describe("getBilibiliSongUrl", () => {
 describe("getBilibiliCoverUrl", () => {
   it("wraps dev cover urls through the Vite Bilibili cover proxy", async () => {
     mockConfig.IS_NATIVE = false;
-    mockConfig.IS_WEB_PROD = false;
     mockConfig.getApiUrl.mockReturnValue("https://otter-music.pages.dev");
     mockConfig.fetchWithTimeout.mockReset();
 
@@ -280,21 +255,6 @@ describe("getBilibiliCoverUrl", () => {
     );
   });
 
-  it("wraps prod cover urls through the worker Bilibili cover proxy", async () => {
-    mockConfig.IS_NATIVE = false;
-    mockConfig.IS_WEB_PROD = true;
-    mockConfig.getApiUrl.mockReturnValue("https://api.example.com");
-    mockConfig.fetchWithTimeout.mockReset();
-
-    const { getBilibiliCoverUrl } = await import("./bilibili-api");
-
-    await expect(
-      getBilibiliCoverUrl("https://i0.hdslb.com/bfs/archive/cover.jpg")
-    ).resolves.toBe(
-      "https://api.example.com/music-api/bilibili/cover?url=https%3A%2F%2Fi0.hdslb.com%2Fbfs%2Farchive%2Fcover.jpg"
-    );
-  });
-
   it("downloads native cover as blob via CapacitorHttp with Bilibili headers", async () => {
     mockCapacitor.CapacitorHttp.request.mockResolvedValue({
       status: 200,
@@ -302,7 +262,6 @@ describe("getBilibiliCoverUrl", () => {
       headers: { "Content-Type": "image/jpeg" },
     });
     mockConfig.IS_NATIVE = true;
-    mockConfig.IS_WEB_PROD = false;
     mockConfig.getApiUrl.mockReturnValue("https://otter-music.pages.dev");
     mockConfig.fetchWithTimeout.mockReset();
     vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:native-cover");
@@ -328,7 +287,6 @@ describe("getBilibiliCoverUrl", () => {
       headers: { "Content-Type": "image/jpeg" },
     });
     mockConfig.IS_NATIVE = true;
-    mockConfig.IS_WEB_PROD = false;
     mockConfig.getApiUrl.mockReturnValue("https://otter-music.pages.dev");
     mockConfig.fetchWithTimeout.mockReset();
     vi.spyOn(URL, "createObjectURL").mockReturnValue(
@@ -351,7 +309,6 @@ describe("getBilibiliCoverUrl", () => {
 
 describe("searchBilibiliCollections", () => {
   it("returns empty collections in dev search results", async () => {
-    mockConfig.IS_WEB_PROD = false;
     mockConfig.IS_NATIVE = false;
     mockConfig.getApiUrl.mockReturnValue("https://otter-music.pages.dev");
     mockConfig.fetchWithTimeout.mockResolvedValue(
@@ -376,32 +333,11 @@ describe("searchBilibiliCollections", () => {
     expect(result.items).toHaveLength(0);
     expect(result.hasMore).toBe(false);
   });
-
-  it("sends prod collection search to worker route", async () => {
-    mockConfig.IS_WEB_PROD = true;
-    mockConfig.IS_NATIVE = false;
-    mockConfig.getApiUrl.mockReturnValue("https://api.example.com");
-    mockConfig.fetchWithTimeout.mockResolvedValue(
-      new Response(JSON.stringify({ items: [], hasMore: false }), {
-        status: 200,
-      })
-    );
-
-    const { searchBilibiliCollections } = await import("./bilibili-api");
-    await searchBilibiliCollections("合集", 1, 20);
-
-    const [url, init] = mockConfig.fetchWithTimeout.mock.calls[0];
-    expect(url).toBe(
-      "https://api.example.com/music-api/bilibili/search-collections"
-    );
-    expect(init.method).toBe("POST");
-  });
 });
 
 describe("getBilibiliCollectionDetail", () => {
   it("returns null for non-series album id", async () => {
     mockConfig.IS_NATIVE = false;
-    mockConfig.IS_WEB_PROD = false;
     mockConfig.getApiUrl.mockReturnValue("https://otter-music.pages.dev");
     mockConfig.fetchWithTimeout.mockReset();
 
@@ -413,7 +349,6 @@ describe("getBilibiliCollectionDetail", () => {
 
   it("returns null for non-bilibili album id", async () => {
     mockConfig.IS_NATIVE = false;
-    mockConfig.IS_WEB_PROD = false;
     mockConfig.getApiUrl.mockReturnValue("https://otter-music.pages.dev");
     mockConfig.fetchWithTimeout.mockReset();
 
@@ -447,7 +382,6 @@ describe("getBilibiliLyric", () => {
 
   it("loads lyric subtitle from player/wbi/v2 via POST proxy (web)", async () => {
     mockConfig.IS_NATIVE = false;
-    mockConfig.IS_WEB_PROD = false;
     mockConfig.getApiUrl.mockReturnValue("https://otter-music.pages.dev");
 
     mockConfig.fetchWithTimeout.mockReset();
@@ -503,7 +437,6 @@ describe("getBilibiliLyric", () => {
 
   it("uses explicit cid from track id and returns null when player has no subtitle", async () => {
     mockConfig.IS_NATIVE = false;
-    mockConfig.IS_WEB_PROD = false;
     mockConfig.getApiUrl.mockReturnValue("https://otter-music.pages.dev");
 
     mockConfig.fetchWithTimeout.mockReset();
@@ -520,7 +453,6 @@ describe("getBilibiliLyric", () => {
 
   it("returns null when subtitle body exceeds current page duration (anti cross-talk)", async () => {
     mockConfig.IS_NATIVE = false;
-    mockConfig.IS_WEB_PROD = false;
     mockConfig.getApiUrl.mockReturnValue("https://otter-music.pages.dev");
 
     mockConfig.fetchWithTimeout.mockReset();
@@ -565,7 +497,6 @@ describe("getBilibiliLyric", () => {
 
   it("falls back to page0 when track id cid not in pages", async () => {
     mockConfig.IS_NATIVE = false;
-    mockConfig.IS_WEB_PROD = true;
     mockConfig.getApiUrl.mockReturnValue("https://otter-music.pages.dev");
 
     mockConfig.fetchWithTimeout.mockReset();

@@ -186,7 +186,6 @@ describe("getMiguLyric", () => {
       getApiUrl: vi.fn(),
       getProxyUrl: vi.fn(),
       IS_NATIVE: true,
-      IS_WEB_PROD: false,
     }));
     vi.doMock("../music-provider", () => ({
       forceHttps: (url: string) => url.replace(/^http:\/\//i, "https://"),
@@ -370,7 +369,6 @@ describe("searchMiguSongs (dev)", () => {
       getApiUrl: vi.fn(),
       getProxyUrl: vi.fn(),
       IS_NATIVE: false,
-      IS_WEB_PROD: false,
     }));
 
     const { searchMiguSongs } = await import("./migu-api");
@@ -400,7 +398,6 @@ describe("searchMiguSongs (dev)", () => {
       getApiUrl: vi.fn(),
       getProxyUrl: vi.fn(),
       IS_NATIVE: false,
-      IS_WEB_PROD: false,
     }));
 
     const { searchMiguSongs } = await import("./migu-api");
@@ -416,7 +413,6 @@ describe("searchMiguSongs (dev)", () => {
       getApiUrl: vi.fn(),
       getProxyUrl: vi.fn(),
       IS_NATIVE: false,
-      IS_WEB_PROD: false,
     }));
 
     const { searchMiguSongs } = await import("./migu-api");
@@ -433,7 +429,6 @@ describe("searchMiguSongs (dev)", () => {
       getApiUrl: vi.fn(),
       getProxyUrl: vi.fn(),
       IS_NATIVE: false,
-      IS_WEB_PROD: false,
     }));
 
     const { searchMiguSongs } = await import("./migu-api");
@@ -455,7 +450,6 @@ describe("searchMiguSongs (native)", () => {
       getApiUrl: vi.fn(),
       getProxyUrl: vi.fn(),
       IS_NATIVE: true,
-      IS_WEB_PROD: false,
     }));
     vi.doMock("@capacitor/core", () => ({ CapacitorHttp: { request } }));
 
@@ -478,7 +472,6 @@ describe("searchMiguSongs (native)", () => {
       getApiUrl: vi.fn(),
       getProxyUrl: vi.fn(),
       IS_NATIVE: true,
-      IS_WEB_PROD: false,
     }));
     vi.doMock("@capacitor/core", () => ({
       CapacitorHttp: {
@@ -490,35 +483,5 @@ describe("searchMiguSongs (native)", () => {
     const result = await searchMiguSongs("test", 1);
 
     expect(result.items).toHaveLength(0);
-  });
-});
-
-describe("searchMiguSongs (web prod)", () => {
-  it("POSTs to the backend worker", async () => {
-    const fetchWithTimeout = vi.fn().mockResolvedValue(
-      new Response(JSON.stringify({ items: [], hasMore: false }), {
-        status: 200,
-      })
-    );
-    vi.doMock("@/lib/api/config", () => ({
-      fetchWithTimeout,
-      getApiUrl: () => "https://api.example.com",
-      getProxyUrl: vi.fn(),
-      IS_NATIVE: false,
-      IS_WEB_PROD: true,
-    }));
-
-    const { searchMiguSongs } = await import("./migu-api");
-    const result = await searchMiguSongs("周杰伦", 1, 30);
-
-    expect(result.items).toHaveLength(0);
-    const [url, init] = fetchWithTimeout.mock.calls[0];
-    expect(url).toBe("https://api.example.com/music-api/migu/search");
-    expect(init.method).toBe("POST");
-    expect(JSON.parse(init.body)).toEqual({
-      keyword: "周杰伦",
-      page: 1,
-      rows: 30,
-    });
   });
 });
