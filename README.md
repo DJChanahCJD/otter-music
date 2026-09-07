@@ -111,7 +111,7 @@ Debug APK 输出路径：
 ```text
 src/
 ├── components/                 # 页面与业务组件
-├── hooks/                      # 音频加载相关 Hook
+├── hooks/                      # 播放控制与应用行为 Hook
 ├── lib/                        # 核心能力（重点）
 │   ├── music-api.ts            # 统一音乐能力入口（搜索/URL/歌词/封面）
 │   ├── audio-match.ts          # 自动换源与匹配结果回写
@@ -125,6 +125,7 @@ src/
 │   ├── migu/                   # 咪咕 API 客户端
 │   ├── netease/                # 网易云 API 适配层
 │   ├── qqmusic/                # QQ音乐 API 客户端
+│   ├── webdav/                 # WebDAV 备份客户端
 │   ├── music-provider/         # Provider 抽象与实现
 │   ├── sync.ts                 # 数据同步核心逻辑
 │   ├── storage-*.ts            # 存储适配与统一存储管理
