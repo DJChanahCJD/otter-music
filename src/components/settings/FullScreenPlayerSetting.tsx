@@ -88,7 +88,7 @@ export function FullScreenPlayerSetting() {
               value={[coverSize]}
               onValueChange={([value]) => setCoverSize(value)}
               min={240}
-              max={360}
+              max={432}
               step={8}
             />
           </div>

@@ -51,13 +51,13 @@ export const CommonDetailHeader = memo(function CommonDetailHeader({
   const styles = {
     bar: hasDesc
       ? "mt-3 pb-5 grid grid-cols-3 gap-2 w-full"
-      : "mt-1 flex items-center gap-2",
+      : "mt-auto flex items-center gap-2",
     btn: hasDesc
-      ? "rounded-full px-3 h-9 col-span-1"
-      : "rounded-full px-3 h-8 gap-1.5",
+      ? "rounded-full px-3 h-9 col-span-1 min-w-0"
+      : "rounded-full px-3 h-8 md:h-9 gap-1.5 min-w-0 shrink",
     searchWrapper: hasDesc
       ? "relative col-span-2"
-      : "relative w-40 sm:w-48 ml-auto",
+      : "relative flex-1 min-w-0",
     searchIcon: hasDesc
       ? "absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/60"
       : "absolute left-2 top-2.5 h-3 w-3 text-muted-foreground md:h-4 md:w-4 md:top-2",
@@ -91,7 +91,7 @@ export const CommonDetailHeader = memo(function CommonDetailHeader({
     <div
       className={cn(
         "w-full shrink-0 p-5 flex items-start",
-        hasDesc ? "flex-col pb-0" : "flex-row"
+        hasDesc ? "flex-col pb-0" : "flex-row items-stretch"
       )}
     >
       <div className="flex gap-4 items-start w-full">

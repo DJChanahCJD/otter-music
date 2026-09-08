@@ -33,7 +33,7 @@ vi.mock("@/store/alist-store", () => ({
 type BackupPayload = Parameters<typeof importStoreData>[0];
 
 const DEFAULTS = {
-  coverSize: 288,
+  coverSize: 328,
   lyricAlign: "center" as const,
   lyricFontSize: 18,
   lyricOffset: -0.5,

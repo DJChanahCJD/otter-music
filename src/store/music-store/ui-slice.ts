@@ -87,7 +87,7 @@ export const createUiSlice: StateCreator<MusicState, [], [], UiSlice> = (
   bilibiliKeepOriginalMeta: false,
   bilibiliAutoMatchSuffix: "高音质 原曲",
   fullScreenBackgroundMode: "theme",
-  coverSize: 288,
+  coverSize: 328,
   coverRadius: 24,
   showSourceBadge: true,
   lyricAlign: "center",
