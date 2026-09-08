@@ -24,11 +24,11 @@ export const PARAMS = {
   sigma: 55,
   lScale: 1.01,
   lBias: -9.2,
-  lMin: 22, // 原算法:24.55
-  lMax: 34, // 原：69.34
+  lMin: 12, // 原算法:24.55
+  lMax: 28, // 原：69.34
   cGain: 1.13,
   cMax: 70,
-  gradientDL: -12,  // 原：-15
+  gradientDL: -10,  // 原：-15
 } as const;
 
 /** 固定种子的伪随机数发生器，保证取色结果可复现。 */
