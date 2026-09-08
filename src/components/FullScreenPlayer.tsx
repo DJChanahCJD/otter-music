@@ -2,6 +2,8 @@
 
 import { createPortal } from "react-dom";
 import { memo, useMemo, useState } from "react";
+import type { SodaColors } from "@/lib/utils/soda-color";
+import { srgbToLab, labToSrgb } from "@/lib/utils/soda-color";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { LyricsPanel } from "./LyricsPanel";
@@ -42,7 +44,6 @@ import {
 import { useShallow } from "zustand/react/shallow";
 import toast from "react-hot-toast";
 import { useCoverColors } from "@/hooks/useCoverColors";
-import { pickBestColor, createBackgroundColor } from "@/lib/utils/color";
 
 interface ModeIconProps {
   isRepeat: boolean;
@@ -57,28 +58,26 @@ function ModeIcon({ isRepeat, isShuffle }: ModeIconProps) {
 
 const BackgroundLayer = memo(
   ({
-    hslColor,
+    colors,
     coverUrl,
     mode,
   }: {
-    hslColor: [number, number, number] | null;
+    colors: SodaColors | null;
     coverUrl: string | null;
     mode: FullScreenBackgroundMode;
   }) => {
-    const showThemeColor = mode === "theme" && hslColor;
+    const showThemeColor = mode === "theme" && !!colors;
     const showCoverMask = mode === "cover" && coverUrl;
     const dynamicStyle = useMemo(() => {
-      if (!showThemeColor) return undefined;
-      const [h, s, l] = hslColor;
+      if (!showThemeColor || !colors) return undefined;
+      const [tr, tg, tb] = colors.top;
+      const [br, bg, bb] = colors.bottom;
       return {
-        "--bg-h": h,
-        "--bg-s": `${s}%`,
-        "--bg-l": `${l}%`,
         background: `linear-gradient(to bottom,
-        hsl(var(--bg-h), var(--bg-s), var(--bg-l)),
-        hsl(var(--bg-h), var(--bg-s), calc(var(--bg-l) - 8%)))`,
+        rgb(${tr}, ${tg}, ${tb}),
+        rgb(${br}, ${bg}, ${bb}))`,
       } as React.CSSProperties;
-    }, [hslColor, showThemeColor]);
+    }, [colors, showThemeColor]);
 
     return (
       <div className="absolute inset-0 z-[-1] overflow-hidden bg-zinc-950">
@@ -233,15 +232,16 @@ export function FullScreenPlayer({
     coverPressHandlers,
   } = usePlayerActions(currentTrack, currentAudioUrl, handleCoverLongPress);
 
-  const { swatches } = useCoverColors(
+  const { colors: backgroundColors } = useCoverColors(
     coverUrl && fullScreenBackgroundMode === "theme" ? coverUrl : null
   );
 
-  const hslColor = useMemo(() => {
-    if (!swatches) return null;
-    const dominant = pickBestColor(swatches);
-    return dominant ? createBackgroundColor(dominant) : null;
-  }, [swatches]);
+  /** 封面投影色：背景基色 Lab 亮度 -20，与背景渐变同色相，避免高饱和主色形成突兀彩色光晕 */
+  const shadowColor = useMemo(() => {
+    if (!backgroundColors) return null;
+    const lab = srgbToLab(backgroundColors.top);
+    return labToSrgb([Math.max(0, lab[0] - 20), lab[1], lab[2]]);
+  }, [backgroundColors]);
 
   const playTrack = (index: number) => setCurrentIndexAndPlay(index);
 
@@ -286,7 +286,7 @@ export function FullScreenPlayer({
     >
       {/* 背景渲染层 */}
       <BackgroundLayer
-        hslColor={hslColor}
+        colors={backgroundColors}
         coverUrl={coverUrl}
         mode={fullScreenBackgroundMode}
       />
@@ -337,17 +337,15 @@ export function FullScreenPlayer({
             {...coverPressHandlers}
             title="长按预览图片"
             className={cn(
-              "relative aspect-square max-w-[calc(100vw-16px)] overflow-hidden transition-transform duration-500 ring-1 ring-white/5",
+              "relative aspect-square overflow-hidden transition-transform duration-500 ring-1 ring-white/5",
               isPlaying ? "scale-100" : "scale-[0.95]"
             )}
             style={{
-              width: coverSize,
+              width: `min(${coverSize}px, calc(100vw - 16px), 70svh)`,
               borderRadius: coverRadius,
               boxShadow:
-                fullScreenBackgroundMode === "theme" && hslColor
-                  ? `0 30px 60px -12px hsla(${hslColor[0]}, ${
-                      hslColor[1]
-                    }%, ${Math.max(0, hslColor[2] - 20)}%, 0.4)`
+                fullScreenBackgroundMode === "theme" && shadowColor
+                  ? `0 30px 60px -12px rgba(${shadowColor.join(", ")}, 0.4)`
                   : "0 25px 50px -12px rgba(0, 0, 0, 0.5)",
             }}
           >
