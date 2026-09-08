@@ -235,7 +235,7 @@ export function LyricsPanel({ track, active = true }: LyricsPanelProps) {
     if (!container || lyrics.length === 0) return;
 
     const containerRect = container.getBoundingClientRect();
-    const containerAnchor = containerRect.top + containerRect.height / 3;
+    const containerCenter = containerRect.top + containerRect.height / 2;
 
     let closestIdx = 0;
     let closestDist = Infinity;
@@ -245,7 +245,7 @@ export function LyricsPanel({ track, active = true }: LyricsPanelProps) {
 
       const rect = el.getBoundingClientRect();
       const elCenter = rect.top + rect.height / 2;
-      const dist = Math.abs(elCenter - containerAnchor);
+      const dist = Math.abs(elCenter - containerCenter);
 
       if (dist < closestDist) {
         closestDist = dist;
@@ -328,9 +328,8 @@ export function LyricsPanel({ track, active = true }: LyricsPanelProps) {
 
     if (!container || !el) return;
 
-    // 活动行定位在容器上 1/3 处，避免居中导致视觉重心过低
     const offset =
-      el.offsetTop - container.clientHeight / 3 + el.clientHeight / 2;
+      el.offsetTop - container.clientHeight / 2 + el.clientHeight / 2;
 
     isAutoScrollingRef.current = true;
 
@@ -506,7 +505,7 @@ export function LyricsPanel({ track, active = true }: LyricsPanelProps) {
       </ScrollArea>
 
       {isUserScrolling && centerLine && (
-        <div className="absolute inset-x-0 top-1/3 z-10 -translate-y-1/2 px-4 pointer-events-none">
+        <div className="absolute inset-x-0 top-1/2 z-10 -translate-y-1/2 px-4 pointer-events-none">
           <div className="flex items-center gap-3">
             {lyricAlign === "right" && (
               <>
