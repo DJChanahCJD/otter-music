@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { Music2, Download } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -19,6 +19,9 @@ interface MusicCoverProps {
   iconClassName?: string;
   fallbackIcon?: React.ReactNode;
   previewable?: boolean;
+  /** 受控：外部控制预览浮层开关（配合 onPreviewOpenChange），不传则走内部状态 */
+  previewOpen?: boolean;
+  onPreviewOpenChange?: (open: boolean) => void;
 }
 
 export function MusicCover({
@@ -28,12 +31,28 @@ export function MusicCover({
   iconClassName,
   fallbackIcon,
   previewable = false,
+  previewOpen,
+  onPreviewOpenChange,
 }: MusicCoverProps) {
   const [error, setError] = useState(false);
-  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+  const [internalPreviewOpen, setInternalPreviewOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const { push, pop } = useExitLayer();
   const coverUrl = forceHttps(src);
+
+  // 受控时以外界状态为准，否则使用内部开关
+  const isPreviewOpen = previewOpen ?? internalPreviewOpen;
+
+  // 打开预览：外部控制时通知父组件；自管时更新内部状态
+  const openPreview = useCallback(() => {
+    if (previewOpen === undefined) setInternalPreviewOpen(true);
+    onPreviewOpenChange?.(true);
+  }, [previewOpen, onPreviewOpenChange]);
+
+  const closePreview = useCallback(() => {
+    if (previewOpen === undefined) setInternalPreviewOpen(false);
+    onPreviewOpenChange?.(false);
+  }, [previewOpen, onPreviewOpenChange]);
 
   // src 变化时重置错误状态，让新的封面 URL 有机会重新加载
   useEffect(() => {
@@ -42,11 +61,11 @@ export function MusicCover({
 
   useEffect(() => {
     if (!isPreviewOpen) return;
-    const id = push({ close: () => setIsPreviewOpen(false) });
+    const id = push({ close: closePreview });
     return () => {
       pop(id);
     };
-  }, [isPreviewOpen, push, pop]);
+  }, [isPreviewOpen, push, pop, closePreview]);
 
   const handleSave = async (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -108,17 +127,16 @@ export function MusicCover({
         )}
         draggable={false}
         onError={() => setError(true)}
-        onClick={() => previewable && setIsPreviewOpen(true)}
+        onClick={() => previewable && openPreview()}
         onContextMenu={(e) => e.preventDefault()}
       />
 
-      {previewable &&
-        isPreviewOpen &&
+      {isPreviewOpen &&
         createPortal(
           <div
             data-testid="cover-preview-portal"
             className="fixed inset-0 z-500 flex flex-col items-center justify-center bg-black select-none animate-in fade-in duration-200"
-            onClick={() => setIsPreviewOpen(false)}
+            onClick={closePreview}
           >
             <img
               src={coverUrl}

@@ -1,7 +1,7 @@
 "use client";
 
 import { createPortal } from "react-dom";
-import { memo, useMemo } from "react";
+import { memo, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { LyricsPanel } from "./LyricsPanel";
@@ -214,12 +214,24 @@ export function FullScreenPlayer({
 
   const currentTrack = queue[currentIndex] || null;
 
+  const [isCoverPreviewOpen, setIsCoverPreviewOpen] = useState(false);
+
+  /** 封面长按 → 打开图片预览（无封面时提示） */
+  const handleCoverLongPress = () => {
+    if (!coverUrl) {
+      toast.error("暂无封面");
+      return;
+    }
+    setIsCoverPreviewOpen(true);
+  };
+
   const {
     handleShare,
     handleToggleLike,
     isCurrentTrackFavorite,
     trackInfoPressHandlers,
-  } = usePlayerActions(currentTrack, currentAudioUrl);
+    coverPressHandlers,
+  } = usePlayerActions(currentTrack, currentAudioUrl, handleCoverLongPress);
 
   const { swatches } = useCoverColors(
     coverUrl && fullScreenBackgroundMode === "theme" ? coverUrl : null
@@ -311,6 +323,8 @@ export function FullScreenPlayer({
       <div
         className="flex-1 flex flex-col items-center justify-center px-2 relative z-10 overflow-hidden cursor-pointer"
         onClick={() => {
+          // 封面预览打开期间不切换歌词，避免长按后的 click 冒泡到这里
+          if (isCoverPreviewOpen) return;
           setShowLyrics(!showLyrics);
         }}
       >
@@ -320,6 +334,8 @@ export function FullScreenPlayer({
           </div>
         ) : (
           <div
+            {...coverPressHandlers}
+            title="长按预览图片"
             className={cn(
               "relative aspect-square max-w-[calc(100vw-16px)] overflow-hidden transition-transform duration-500 ring-1 ring-white/5",
               isPlaying ? "scale-100" : "scale-[0.95]"
@@ -340,6 +356,8 @@ export function FullScreenPlayer({
               alt={currentTrack?.name}
               className="h-full w-full object-cover dark select-none touch-none"
               iconClassName="h-16 w-16 text-white/30"
+              previewOpen={isCoverPreviewOpen}
+              onPreviewOpenChange={setIsCoverPreviewOpen}
             />
           </div>
         )}

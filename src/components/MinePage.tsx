@@ -13,6 +13,8 @@ import {
   History,
   Link2,
   WifiOff,
+  Pause,
+  Play,
 } from "lucide-react";
 import { PlaylistCover } from "./PlaylistCover";
 import { useMusicStore } from "@/store/music-store";
@@ -40,6 +42,8 @@ import { useActivePlaylists } from "@/hooks/use-active-playlists";
 import { PlaylistImportDrawer } from "./PlaylistImportDrawer";
 import { useNetworkStatus } from "@/hooks/use-network-status";
 import { useOfflinePlaylist } from "@/hooks/use-offline-playlist";
+import { getPlayAllStartIndex } from "@/hooks/usePlayHelper";
+import type { MusicTrack } from "@/types/music";
 
 interface MinePageProps {
   onSelectPlaylist: (playlistId: string) => void;
@@ -54,6 +58,16 @@ export function MinePage({ onSelectPlaylist }: MinePageProps) {
       deletePlaylist: state.deletePlaylist,
     }))
   );
+  const { playContext, togglePlay, isShuffle, isPlaying, contextId } =
+    useMusicStore(
+      useShallow((state) => ({
+        playContext: state.playContext,
+        togglePlay: state.togglePlay,
+        isShuffle: state.isShuffle,
+        isPlaying: state.isPlaying,
+        contextId: state.contextId,
+      }))
+    );
   const activePlaylists = useActivePlaylists();
   const isOnline = useNetworkStatus();
   const offlineTracks = useOfflinePlaylist();
@@ -94,6 +108,44 @@ export function MinePage({ onSelectPlaylist }: MinePageProps) {
       deletePlaylist(playlistId);
       toast.success("歌单已删除");
     }
+  };
+
+  /**
+   * 点击封面直接播放歌单
+   * - 空歌单提示；同一歌单正在上下文中则暂停/继续；否则整单播放
+   */
+  const playPlaylist = (tracks: MusicTrack[], ctxId: string) => {
+    if (!tracks.length) {
+      toast.error("歌单暂无歌曲");
+      return;
+    }
+    if (contextId === ctxId) {
+      togglePlay();
+      return;
+    }
+    playContext(tracks, getPlayAllStartIndex(tracks.length, isShuffle), ctxId);
+  };
+
+  /**
+   * 封面播放状态角标：仅当前歌单是播放上下文时显示，
+   * 播放中显示暂停图标，暂停时显示播放图标；非当前歌单不渲染
+   */
+  const renderPlaybackBadge = (ctxId: string) => {
+    if (contextId !== ctxId) return null;
+    return (
+      <div className="absolute inset-0 flex items-center justify-center bg-black/35">
+        <div className="h-5 w-5 shrink-0 flex-[0_0_20px] min-w-5 min-h-5">
+          {isPlaying ? (
+            <Pause
+              size={20}
+              className="h-full w-full text-white fill-current"
+            />
+          ) : (
+            <Play size={20} className="h-full w-full text-white fill-current" />
+          )}
+        </div>
+      </div>
+    );
   };
 
   const quickNavs = [
@@ -178,8 +230,17 @@ export function MinePage({ onSelectPlaylist }: MinePageProps) {
             className="flex items-center gap-3 p-3 rounded-xl bg-primary/5 border border-primary/20 hover:bg-primary/10 transition-colors cursor-pointer"
             onClick={() => onSelectPlaylist("__offline__")}
           >
-            <div className="h-11 w-11 rounded-lg bg-primary/15 flex items-center justify-center shrink-0 flex-[0_0_44px] min-w-11 min-h-11">
-              <WifiOff size={24} className="h-6 w-6 text-primary" />
+            <div
+              className="relative shrink-0 flex-[0_0_44px] rounded-lg overflow-hidden"
+              onClick={(e) => {
+                e.stopPropagation();
+                playPlaylist(offlineTracks, "offline");
+              }}
+            >
+              <div className="h-11 w-11 rounded-lg bg-primary/15 flex items-center justify-center shrink-0 flex-[0_0_44px] min-w-11 min-h-11">
+                <WifiOff size={24} className="h-6 w-6 text-primary" />
+              </div>
+              {renderPlaybackBadge("offline")}
             </div>
             <div className="flex-1 min-w-0">
               <p className="font-medium text-foreground truncate">离线歌单</p>
@@ -207,10 +268,27 @@ export function MinePage({ onSelectPlaylist }: MinePageProps) {
               className="flex items-center gap-3 p-2 rounded-xl transition-colors cursor-pointer group"
               onClick={() => onSelectPlaylist(playlist.id)}
             >
-              <PlaylistCover
-                playlist={playlist}
-                className="h-13 w-13 rounded-lg shrink-0 object-cover"
-              />
+              <div
+                className="relative shrink-0 overflow-hidden rounded-lg"
+                role="button"
+                aria-label={`播放歌单 ${playlist.name}`}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  playPlaylist(
+                    playlist.tracks.filter(
+                      (track) => track.is_deleted !== true
+                    ),
+                    `playlist-${playlist.id}`
+                  );
+                }}
+              >
+                <PlaylistCover
+                  playlist={playlist}
+                  className="h-13 w-13 rounded-lg object-cover"
+                  previewable={false}
+                />
+                {renderPlaybackBadge(`playlist-${playlist.id}`)}
+              </div>
               <div className="flex-1 min-w-0">
                 {editingPlaylistId === playlist.id ? (
                   <Input
@@ -231,7 +309,13 @@ export function MinePage({ onSelectPlaylist }: MinePageProps) {
                   />
                 ) : (
                   <>
-                    <p className="font-medium text-foreground text-sm truncate">
+                    <p
+                      className={`font-medium text-sm truncate transition-colors ${
+                        contextId === `playlist-${playlist.id}`
+                          ? "text-primary"
+                          : "text-foreground"
+                      }`}
+                    >
                       {playlist.name}
                     </p>
                     <p className="text-xs text-muted-foreground/80 mt-0.5">
