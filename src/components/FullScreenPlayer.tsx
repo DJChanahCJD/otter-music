@@ -2,8 +2,7 @@
 
 import { createPortal } from "react-dom";
 import { memo, useMemo, useState } from "react";
-import type { SodaColors } from "@/lib/utils/soda-color";
-import { srgbToLab, labToSrgb } from "@/lib/utils/soda-color";
+import { labToSrgb, srgbToLab, type SodaColors } from "@/lib/utils/soda-color";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { LyricsPanel } from "./LyricsPanel";
