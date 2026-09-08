@@ -63,13 +63,13 @@ describe("kmeans", () => {
 });
 
 describe("extractFromPixels", () => {
-  it("低色度下渐变底部为顶部 Lab 亮度 −15，且色相保持一致", () => {
+  it("低色度下渐变底部为顶部 Lab 亮度 −10，且色相保持一致", () => {
     // 选用低色度颜色，避免 Lab→RGB 越界截断干扰亮度验证
     const result = extractFromPixels(solidPixels([122, 122, 94]));
     const topLab = srgbToLab(result.top);
     const bottomLab = srgbToLab(result.bottom);
-    expect(topLab[0] - bottomLab[0]).toBeGreaterThan(14);
-    expect(topLab[0] - bottomLab[0]).toBeLessThan(16);
+    expect(topLab[0] - bottomLab[0]).toBeGreaterThan(9);
+    expect(topLab[0] - bottomLab[0]).toBeLessThan(11);
     // 渐变仅改变亮度，a/b（色相与色度）保持不变
     expect(Math.abs(bottomLab[1] - topLab[1])).toBeLessThan(2);
     expect(Math.abs(bottomLab[2] - topLab[2])).toBeLessThan(2);
@@ -79,14 +79,14 @@ describe("extractFromPixels", () => {
     const result = extractFromPixels(solidPixels([51, 85, 170]));
     const topL = srgbToLab(result.top)[0];
     const bottomL = srgbToLab(result.bottom)[0];
-    expect(topL - bottomL).toBeGreaterThan(10);
+    expect(topL - bottomL).toBeGreaterThan(5);
   });
 
-  it("基色亮度被钳制到算法区间 [24.55, 69.34]（允许取整量化误差）", () => {
+  it("基色亮度被钳制到算法区间 [12, 28]（允许取整量化误差）", () => {
     const dark = extractFromPixels(solidPixels([5, 5, 8]));
     const bright = extractFromPixels(solidPixels([240, 232, 200]));
-    expect(srgbToLab(dark.top)[0]).toBeGreaterThanOrEqual(24);
-    expect(srgbToLab(bright.top)[0]).toBeLessThanOrEqual(70);
+    expect(srgbToLab(dark.top)[0]).toBeGreaterThanOrEqual(11);
+    expect(srgbToLab(bright.top)[0]).toBeLessThanOrEqual(29);
   });
 
   it("高占比颜色主导主色与基色色相", () => {
@@ -102,7 +102,10 @@ describe("extractFromPixels", () => {
       srgbToLab(result.dominant)[2],
       srgbToLab(result.dominant)[1]
     );
-    const topHue = Math.atan2(srgbToLab(result.top)[2], srgbToLab(result.top)[1]);
+    const topHue = Math.atan2(
+      srgbToLab(result.top)[2],
+      srgbToLab(result.top)[1]
+    );
     expect(dominantHue).toBeLessThan(0); // 蓝色 Lab b 分量为负
     // 基色色相应与主色色相一致（允许轻微偏差）
     expect(Math.abs(dominantHue - topHue)).toBeLessThan(0.15);

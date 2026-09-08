@@ -34,7 +34,7 @@ type BackupPayload = Parameters<typeof importStoreData>[0];
 
 const DEFAULTS = {
   coverSize: 328,
-  lyricAlign: "center" as const,
+  lyricAlign: "left" as const,
   lyricFontSize: 18,
   lyricOffset: -0.5,
 };
