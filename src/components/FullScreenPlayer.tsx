@@ -22,6 +22,7 @@ import {
   Pause,
   SquareArrowOutUpRight,
   ClockFading,
+  Maximize2,
 } from "lucide-react";
 import { Spinner } from "@/components/ui/spinner";
 import { useMounted } from "@/hooks/use-mounted";
@@ -43,6 +44,8 @@ import {
 import { useShallow } from "zustand/react/shallow";
 import toast from "react-hot-toast";
 import { useCoverColors } from "@/hooks/useCoverColors";
+import { useLandscapeMode } from "@/hooks/useLandscapeMode";
+import { LandscapePlayer } from "@/components/LandscapePlayer";
 
 interface ModeIconProps {
   isRepeat: boolean;
@@ -143,6 +146,12 @@ export function FullScreenPlayer({
   onClose,
 }: FullScreenPlayerProps) {
   const isMounted = useMounted();
+  /** 横屏沉浸模式：手动进入后锁定横屏，由独立的 LandscapePlayer 渲染 */
+  const {
+    isLandscapeMode,
+    enter: enterLandscapeMode,
+    exit: exitLandscapeMode,
+  } = useLandscapeMode(isFullScreen);
   const {
     showLyrics,
     setShowLyrics,
@@ -290,33 +299,70 @@ export function FullScreenPlayer({
         mode={fullScreenBackgroundMode}
       />
 
-      <header className="shrink-0 flex items-center justify-between px-6 pt-[calc(1rem+var(--safe-area-top))] relative z-10">
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-12 w-12 text-white/60 hover:bg-white/10 hover:text-white"
-          onClick={() => {
-            onClose();
-          }}
-        >
-          <ChevronDown className="h-6 w-6" />
-        </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="text-xs tracking-widest text-white/50 hover:text-white hover:bg-white/10 h-8 px-3"
-          onClick={() => setQualityDrawerOpen(true)}
-        >
-          {!showLyrics && getQualityShortLabel(quality)}
-        </Button>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-12 w-12 text-white/60 hover:bg-white/10 hover:text-white"
-          onClick={handleShare}
-        >
-          <SquareArrowOutUpRight className="h-5 w-5" />
-        </Button>
+      {/* 横屏沉浸模式：独立组件，覆盖于普通布局之上 */}
+      {isLandscapeMode && (
+        <LandscapePlayer
+          background={
+            <BackgroundLayer
+              colors={backgroundColors}
+              coverUrl={coverUrl}
+              mode={fullScreenBackgroundMode}
+            />
+          }
+          onExit={exitLandscapeMode}
+        />
+      )}
+
+      <header className="shrink-0 grid grid-cols-3 items-center px-6 pt-[calc(1rem+var(--safe-area-top))] relative z-10">
+        <div className="flex justify-start">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-12 w-12 text-white/60 hover:bg-white/10 hover:text-white"
+            onClick={() => {
+              onClose();
+            }}
+          >
+            <ChevronDown className="h-6 w-6" />
+          </Button>
+        </div>
+        <div className="flex justify-center">
+          {!showLyrics && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-xs tracking-widest text-white/50 hover:text-white hover:bg-white/10 h-8 px-3"
+              onClick={() => setQualityDrawerOpen(true)}
+            >
+              {getQualityShortLabel(quality)}
+            </Button>
+          )}
+        </div>
+        <div className="flex items-center justify-end">
+          {showLyrics ? (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-12 w-12 text-white/60 hover:bg-white/10 hover:text-white"
+              onClick={enterLandscapeMode}
+              aria-label="横屏沉浸播放"
+              title="横屏沉浸播放"
+            >
+              <Maximize2 className="h-5 w-5" />
+            </Button>
+          ) : (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-12 w-12 text-white/60 hover:bg-white/10 hover:text-white"
+              onClick={handleShare}
+              aria-label="分享"
+              title="分享"
+            >
+              <SquareArrowOutUpRight className="h-5 w-5" />
+            </Button>
+          )}
+        </div>
       </header>
 
       <div

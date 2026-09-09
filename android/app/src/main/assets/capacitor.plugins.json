@@ -1,26 +1,34 @@
 [
-  {
-    "pkg": "@capacitor/app",
-    "classpath": "com.capacitorjs.plugins.app.AppPlugin"
-  },
-  {
-    "pkg": "@capacitor/clipboard",
-    "classpath": "com.capacitorjs.plugins.clipboard.ClipboardPlugin"
-  },
-  {
-    "pkg": "@capacitor/file-transfer",
-    "classpath": "com.capacitorjs.plugins.filetransfer.FileTransferPlugin"
-  },
-  {
-    "pkg": "@capacitor/filesystem",
-    "classpath": "com.capacitorjs.plugins.filesystem.FilesystemPlugin"
-  },
-  {
-    "pkg": "@capacitor/network",
-    "classpath": "com.capacitorjs.plugins.network.NetworkPlugin"
-  },
-  {
-    "pkg": "@jofr/capacitor-media-session",
-    "classpath": "io.github.jofr.capacitor.mediasessionplugin.MediaSessionPlugin"
-  }
+	{
+		"pkg": "@capacitor/app",
+		"classpath": "com.capacitorjs.plugins.app.AppPlugin"
+	},
+	{
+		"pkg": "@capacitor/clipboard",
+		"classpath": "com.capacitorjs.plugins.clipboard.ClipboardPlugin"
+	},
+	{
+		"pkg": "@capacitor/file-transfer",
+		"classpath": "com.capacitorjs.plugins.filetransfer.FileTransferPlugin"
+	},
+	{
+		"pkg": "@capacitor/filesystem",
+		"classpath": "com.capacitorjs.plugins.filesystem.FilesystemPlugin"
+	},
+	{
+		"pkg": "@capacitor/network",
+		"classpath": "com.capacitorjs.plugins.network.NetworkPlugin"
+	},
+	{
+		"pkg": "@capacitor/screen-orientation",
+		"classpath": "com.capacitorjs.plugins.screenorientation.ScreenOrientationPlugin"
+	},
+	{
+		"pkg": "@capacitor/status-bar",
+		"classpath": "com.capacitorjs.plugins.statusbar.StatusBarPlugin"
+	},
+	{
+		"pkg": "@jofr/capacitor-media-session",
+		"classpath": "io.github.jofr.capacitor.mediasessionplugin.MediaSessionPlugin"
+	}
 ]

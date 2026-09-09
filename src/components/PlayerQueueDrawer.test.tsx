@@ -115,6 +115,16 @@ describe("PlayerQueueDrawer", () => {
     expect(props.onPlay).toHaveBeenCalledWith(1);
   });
 
+  it("direction=right 时以右端侧边栏形式弹出", () => {
+    renderDrawer({ direction: "right" });
+
+    click(document.querySelector("button")!);
+
+    expect(
+      document.body.querySelector('[data-vaul-drawer-direction="right"]')
+    ).not.toBeNull();
+  });
+
   it("removes one queued track without playing it", () => {
     const props = renderDrawer({ currentIndex: 1 });
 

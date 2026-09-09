@@ -1,10 +1,10 @@
 {
-  "appId": "com.otterhub.music",
-  "appName": "Otter Music",
-  "webDir": "dist",
-  "plugins": {
-    "SystemBars": {
-      "insetsHandling": "css"
-    }
-  }
+	"appId": "com.otterhub.music",
+	"appName": "Otter Music",
+	"webDir": "dist",
+	"plugins": {
+		"SystemBars": {
+			"insetsHandling": "css"
+		}
+	}
 }

@@ -30,6 +30,8 @@ interface PlayerQueueDrawerProps {
   onRemove: (track: MusicTrack) => void;
   onPlayTrack?: (track: MusicTrack) => void;
   onOpenChange?: (open: boolean) => void;
+  /** 弹出方向：默认底部弹出，横屏沉浸模式使用右端侧边栏 */
+  direction?: "bottom" | "right";
   trigger: React.ReactNode;
 }
 
@@ -134,6 +136,7 @@ export function PlayerQueueDrawer({
   onRemove,
   onPlayTrack,
   onOpenChange,
+  direction = "bottom",
   trigger,
 }: PlayerQueueDrawerProps) {
   const navigate = useNavigate();
@@ -176,10 +179,15 @@ export function PlayerQueueDrawer({
   };
 
   return (
-    <Drawer open={open} onOpenChange={setOpen}>
+    <Drawer open={open} onOpenChange={setOpen} direction={direction}>
       <DrawerTrigger asChild>{trigger}</DrawerTrigger>
       <DrawerContent
-        className="h-[75vh] max-h-[75vh] gap-0 rounded-t-3xl outline-none"
+        className={cn(
+          "gap-0 outline-none",
+          direction === "right"
+            ? "h-full max-h-full w-[min(24rem,80vw)] rounded-l-3xl"
+            : "h-[75vh] max-h-[75vh] rounded-t-3xl"
+        )}
         onClick={(e) => e.stopPropagation()}
       >
         <DrawerHeader className="shrink-0 px-6 pb-4 pt-6">

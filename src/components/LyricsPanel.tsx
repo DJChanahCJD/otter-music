@@ -107,11 +107,13 @@ function parseLrc(lrc: string, tLrc?: string): LyricLine[] {
 const LyricLineView = memo(function LyricLineView({
   line,
   isActive,
+  isBaseLine,
   align,
   fontSize,
 }: {
   line: LyricLine;
   isActive: boolean;
+  isBaseLine: boolean;
   align: LyricAlign;
   fontSize: number;
 }) {
@@ -128,8 +130,11 @@ const LyricLineView = memo(function LyricLineView({
         align === "left" && "text-left",
         align === "right" && "text-right",
         isActive
-          ? "text-white opacity-100"
-          : "text-white/40 opacity-100 hover:text-white/60"
+          ? "text-white opacity-100 hover:text-white/40"
+          : "text-white/40 opacity-100 hover:text-white/60",
+        // 基准线行加浅色背景框；py 与 -my 等额抵消，保证行间距不变
+        // self-start 阻止 flex 拉伸，避免抵消后的内边距被压缩
+        isBaseLine && "-my-2.5 self-start rounded-xl bg-white/10 py-2.5"
       )}
     >
       <p
@@ -435,6 +440,7 @@ export function LyricsPanel({ track, active = true }: LyricsPanelProps) {
           <LyricLineView
             line={line}
             isActive={i === activeIndex}
+            isBaseLine={i === centerLineIndex}
             align={lyricAlign}
             fontSize={lyricFontSize}
           />
@@ -449,11 +455,10 @@ export function LyricsPanel({ track, active = true }: LyricsPanelProps) {
 
   const centerLine = centerLineIndex >= 0 ? lyrics[centerLineIndex] : null;
 
-  // 基准线时间标签：居左模式下右对齐，使数字紧贴播放按钮形成控件组
   const baselineTime = centerLine ? (
     <span
       className={cn(
-        "min-w-9 text-xs tabular-nums text-white/60",
+        "min-w-9 shrink-0 text-xs tabular-nums text-white/60",
         lyricAlign === "left" && "text-right"
       )}
     >
@@ -461,27 +466,20 @@ export function LyricsPanel({ track, active = true }: LyricsPanelProps) {
     </span>
   ) : null;
 
-  const baselinePlay = centerLine ? (
-    <button
-      type="button"
-      onClick={(e) => {
-        e.stopPropagation();
-        handleSeek(centerLine.time);
-      }}
+  // 图标仅为视觉提示，点击由外层整条基准线接管，扩大触控范围
+  const baselineIcon = centerLine ? (
+    <span
       className={cn(
-        "pointer-events-auto",
-        "flex h-8 w-8 items-center justify-center",
+        "flex h-8 w-8 shrink-0 items-center justify-center",
         "rounded-full",
         "bg-white/10 backdrop-blur-sm",
         "text-white",
-        "transition-all",
-        "hover:bg-white/20",
-        "active:scale-95"
+        "transition-colors",
+        "group-hover:bg-white/20 group-active:bg-white/30"
       )}
-      aria-label="播放此处歌词"
     >
       <Play size={14} className="ml-0.5 fill-current" />
-    </button>
+    </span>
   ) : null;
 
   return (
@@ -505,11 +503,20 @@ export function LyricsPanel({ track, active = true }: LyricsPanelProps) {
       </ScrollArea>
 
       {isUserScrolling && centerLine && (
-        <div className="absolute inset-x-0 top-1/2 z-10 -translate-y-1/2 px-4 pointer-events-none">
-          <div className="flex items-center gap-3">
+        <div className="absolute inset-x-0 top-1/2 z-10 -translate-y-1/2 px-4">
+          <button
+            type="button"
+            onClick={(e) => {
+              // 阻止冒泡到全屏播放器的歌词区域，否则会同时切换到封面模式
+              e.stopPropagation();
+              handleSeek(centerLine.time);
+            }}
+            className="group flex w-full items-center gap-3 py-2 outline-none"
+            aria-label="从此句开始播放"
+          >
             {lyricAlign === "right" && (
               <>
-                {baselinePlay}
+                {baselineIcon}
                 {baselineTime}
               </>
             )}
@@ -518,15 +525,15 @@ export function LyricsPanel({ track, active = true }: LyricsPanelProps) {
 
             <div className="h-px flex-1 bg-white/20" />
 
-            {lyricAlign === "center" && baselinePlay}
+            {lyricAlign === "center" && baselineIcon}
 
             {lyricAlign === "left" && (
               <>
                 {baselineTime}
-                {baselinePlay}
+                {baselineIcon}
               </>
             )}
-          </div>
+          </button>
         </div>
       )}
     </div>

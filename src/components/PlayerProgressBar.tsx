@@ -8,6 +8,8 @@ import { useShallow } from "zustand/react/shallow";
 
 interface PlayerProgressBarProps {
   className?: string;
+  /** 是否显示左右时间文本，默认显示 */
+  showTime?: boolean;
   leftTimeSuffix?: React.ReactNode;
   centerContent?: React.ReactNode;
   onLeftTimeClick?: () => void;
@@ -17,6 +19,7 @@ interface PlayerProgressBarProps {
 
 export function PlayerProgressBar({
   className,
+  showTime = true,
   leftTimeSuffix,
   centerContent,
   onLeftTimeClick,
@@ -121,46 +124,48 @@ export function PlayerProgressBar({
           </div>
         </div>
       </div>
-      <div className="relative flex justify-between text-xs text-white/60 font-medium mt-1.5 px-0.5 tracking-wider">
-        <span
-          className={cn(
-            "flex items-baseline gap-0.5",
-            onLeftTimeClick &&
-              "cursor-pointer hover:text-white transition-colors"
-          )}
-          onClick={onLeftTimeClick}
-          role={onLeftTimeClick ? "button" : undefined}
-          tabIndex={onLeftTimeClick ? 0 : undefined}
-        >
-          {formatMediaTime(isDragging ? dragTime : currentTime)}
-          {leftTimeSuffix}
-        </span>
-        {centerContent && (
+      {showTime && (
+        <div className="relative flex justify-between text-xs text-white/60 font-medium mt-1.5 px-0.5 tracking-wider">
           <span
             className={cn(
-              "absolute left-1/2 -translate-x-1/2",
-              onCenterClick &&
+              "flex items-baseline gap-0.5",
+              onLeftTimeClick &&
                 "cursor-pointer hover:text-white transition-colors"
             )}
-            onClick={onCenterClick}
-            role={onCenterClick ? "button" : undefined}
-            tabIndex={onCenterClick ? 0 : undefined}
+            onClick={onLeftTimeClick}
+            role={onLeftTimeClick ? "button" : undefined}
+            tabIndex={onLeftTimeClick ? 0 : undefined}
           >
-            {centerContent}
+            {formatMediaTime(isDragging ? dragTime : currentTime)}
+            {leftTimeSuffix}
           </span>
-        )}
-        <span
-          className={cn(
-            onRightTimeClick &&
-              "cursor-pointer hover:text-white transition-colors"
+          {centerContent && (
+            <span
+              className={cn(
+                "absolute left-1/2 -translate-x-1/2",
+                onCenterClick &&
+                  "cursor-pointer hover:text-white transition-colors"
+              )}
+              onClick={onCenterClick}
+              role={onCenterClick ? "button" : undefined}
+              tabIndex={onCenterClick ? 0 : undefined}
+            >
+              {centerContent}
+            </span>
           )}
-          onClick={onRightTimeClick}
-          role={onRightTimeClick ? "button" : undefined}
-          tabIndex={onRightTimeClick ? 0 : undefined}
-        >
-          {formatMediaTime(duration)}
-        </span>
-      </div>
+          <span
+            className={cn(
+              onRightTimeClick &&
+                "cursor-pointer hover:text-white transition-colors"
+            )}
+            onClick={onRightTimeClick}
+            role={onRightTimeClick ? "button" : undefined}
+            tabIndex={onRightTimeClick ? 0 : undefined}
+          >
+            {formatMediaTime(duration)}
+          </span>
+        </div>
+      )}
     </div>
   );
 }
