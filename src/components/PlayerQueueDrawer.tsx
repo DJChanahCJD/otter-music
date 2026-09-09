@@ -258,7 +258,11 @@ export function PlayerQueueDrawer({
                 className="h-9 w-9 text-muted-foreground/70 hover:bg-destructive/10 hover:text-destructive transition-colors"
                 onClick={
                   activeTab === "queue"
-                    ? onClear
+                    ? () => {
+                        if (confirm("确定清空播放列表吗？")) {
+                          onClear();
+                        }
+                      }
                     : () => {
                         if (confirm("确定清空播放历史吗？")) {
                           clearHistory();

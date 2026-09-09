@@ -94,7 +94,8 @@ export const CommonDetailHeader = memo(function CommonDetailHeader({
         hasDesc ? "flex-col pb-0" : "flex-row items-stretch"
       )}
     >
-      <div className="flex gap-4 items-start w-full">
+      {/* items-stretch：右侧列拉伸至封面高度，无描述时播放栏的 mt-auto 才能贴底 */}
+      <div className="flex gap-4 items-stretch w-full">
         <MusicCover
           src={coverUrl}
           alt={title}
