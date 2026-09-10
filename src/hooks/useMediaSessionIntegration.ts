@@ -1,11 +1,38 @@
 import { useEffect } from "react";
 import { useMusicStore } from "@/store/music-store";
-import { MediaSession } from "@jofr/capacitor-media-session";
+import {
+  MediaSession,
+  type ActionHandlerOptions,
+  type ActionStateOptions,
+} from "@jofr/capacitor-media-session";
 import { forceHttps } from "@otter-music/shared";
 import { IS_NATIVE } from "@/lib/api/config";
 import { logger } from "@/lib/logger";
 
 const artworkCache = new Map<string, boolean>();
+
+/**
+ * 通知栏上的自定义按钮，不属于 MediaSession 标准动作，需要插件原生支持。
+ * - like：喜欢 / 取消喜欢，图标随收藏状态切换
+ * - playmode：播放模式，图标随「列表循环 / 单曲循环 / 随机播放」切换
+ */
+type CustomAction = "like" | "playmode";
+
+/** 播放模式，与应用内切换顺序一致 */
+type PlayMode = "list" | "repeat" | "shuffle";
+
+/** 原生插件在 Web 端没有 setActionState，仅 Android 需要同步按钮状态 */
+function syncActionState(options: ActionStateOptions) {
+  if (!IS_NATIVE) return;
+  const errorMessage = `MediaSession ${options.action} state error:`;
+  try {
+    void MediaSession.setActionState(options).catch((e) =>
+      logger.error("MediaSession", errorMessage, e)
+    );
+  } catch (e) {
+    logger.error("MediaSession", errorMessage, e);
+  }
+}
 
 async function prefetchArtwork(url: string): Promise<boolean> {
   const cached = artworkCache.get(url);
@@ -59,6 +86,29 @@ export function useMediaSessionIntegration(
   const currentTrack = useMusicStore((s) => s.queue[s.currentIndex]);
   const isPlaying = useMusicStore((s) => s.isPlaying);
   const hasUserGesture = useMusicStore((s) => s.hasUserGesture);
+  const isRepeat = useMusicStore((s) => s.isRepeat);
+  const isShuffle = useMusicStore((s) => s.isShuffle);
+  const favorites = useMusicStore((s) => s.favorites);
+
+  const currentTrackId = currentTrack?.id;
+  const isCurrentTrackFavorite = currentTrackId
+    ? favorites.some((t) => t.id === currentTrackId && !t.is_deleted)
+    : false;
+
+  const playMode: PlayMode = isShuffle
+    ? "shuffle"
+    : isRepeat
+      ? "repeat"
+      : "list";
+
+  // 同步通知栏两个自定义按钮的图标状态
+  useEffect(() => {
+    syncActionState({ action: "like", active: isCurrentTrackFavorite });
+  }, [isCurrentTrackFavorite]);
+
+  useEffect(() => {
+    syncActionState({ action: "playmode", mode: playMode });
+  }, [playMode]);
 
   useEffect(() => {
     const updateMetadata = async () => {
@@ -199,17 +249,42 @@ export function useMediaSessionIntegration(
       ],
     ];
 
+    // 自定义按钮仅原生端支持，Web 端 setActionHandler 遇到未知 action 会抛错
+    if (IS_NATIVE) {
+      const customActionHandlers: [CustomAction, () => void][] = [
+        [
+          "like",
+          () => {
+            const state = useMusicStore.getState();
+            const track = state.queue[state.currentIndex];
+            if (!track) return;
+            if (state.isFavorite(track.id)) {
+              state.removeFromFavorites(track.id);
+            } else {
+              state.addToFavorites(track);
+            }
+          },
+        ],
+        [
+          "playmode",
+          () => {
+            const state = useMusicStore.getState();
+            // 与应用内 handleModeToggle 保持一致：列表循环 → 单曲循环 → 随机 → 列表循环
+            if (!state.isShuffle && !state.isRepeat) state.toggleRepeat();
+            else if (state.isRepeat) {
+              state.toggleRepeat();
+              state.toggleShuffle();
+            } else state.toggleShuffle();
+          },
+        ],
+      ];
+      actionHandlers.push(...customActionHandlers);
+    }
+
     for (const [action, handler] of actionHandlers) {
       try {
         MediaSession.setActionHandler(
-          {
-            action: action as
-              | "play"
-              | "pause"
-              | "previoustrack"
-              | "nexttrack"
-              | "seekto",
-          },
+          { action } as ActionHandlerOptions,
           handler
         );
       } catch (e) {

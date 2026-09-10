@@ -25,7 +25,8 @@
     "version": "node scripts/update-mobile-version.js && git add android/app/build.gradle",
     "build:android:debug": "npm run cap:sync:android && cd android && gradlew.bat assembleDebug",
     "build:android:release": "npm run cap:sync:android && cd android && gradlew.bat assembleRelease",
-    "prepare": "husky"
+    "prepare": "husky",
+    "postinstall": "patch-package"
   },
   "dependencies": {
     "@capacitor/android": "^8.1.0",
@@ -84,6 +85,7 @@
     "husky": "^9.1.7",
     "jsdom": "^28.1.0",
     "lint-staged": "^16.4.0",
+    "patch-package": "^8.0.1",
     "postcss": "^8.5.6",
     "prettier": "^3.8.3",
     "tailwindcss": "^4.1.18",

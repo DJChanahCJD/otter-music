@@ -1,0 +1,366 @@
+diff --git a/node_modules/@jofr/capacitor-media-session/android/src/main/java/io/github/jofr/capacitor/mediasessionplugin/MediaSessionCallback.java b/node_modules/@jofr/capacitor-media-session/android/src/main/java/io/github/jofr/capacitor/mediasessionplugin/MediaSessionCallback.java
+index e273185..b430341 100644
+--- a/node_modules/@jofr/capacitor-media-session/android/src/main/java/io/github/jofr/capacitor/mediasessionplugin/MediaSessionCallback.java
++++ b/node_modules/@jofr/capacitor-media-session/android/src/main/java/io/github/jofr/capacitor/mediasessionplugin/MediaSessionCallback.java
+@@ -1,5 +1,6 @@
+ package io.github.jofr.capacitor.mediasessionplugin;
+ 
++import android.os.Bundle;
+ import android.support.v4.media.session.MediaSessionCompat;
+ 
+ import com.getcapacitor.JSObject;
+@@ -54,4 +55,9 @@ public class MediaSessionCallback extends MediaSessionCompat.Callback {
+     public void onStop() {
+         plugin.actionCallback("stop");
+     }
++
++    @Override
++    public void onCustomAction(String action, Bundle extras) {
++        plugin.actionCallback(action);
++    }
+ }
+diff --git a/node_modules/@jofr/capacitor-media-session/android/src/main/java/io/github/jofr/capacitor/mediasessionplugin/MediaSessionPlugin.java b/node_modules/@jofr/capacitor-media-session/android/src/main/java/io/github/jofr/capacitor/mediasessionplugin/MediaSessionPlugin.java
+index 6f54b7f..69b8ffd 100644
+--- a/node_modules/@jofr/capacitor-media-session/android/src/main/java/io/github/jofr/capacitor/mediasessionplugin/MediaSessionPlugin.java
++++ b/node_modules/@jofr/capacitor-media-session/android/src/main/java/io/github/jofr/capacitor/mediasessionplugin/MediaSessionPlugin.java
+@@ -45,6 +45,8 @@ public class MediaSessionPlugin extends Plugin {
+     private double duration = 0.0;
+     private double position = 0.0;
+     private double playbackRate = 1.0;
++    private boolean likeActive = false;
++    private String playmodeMode = MediaSessionService.PLAYMODE_LIST;
+     private final Map<String, PluginCall> actionHandlers = new HashMap<>();
+ 
+     private MediaSessionService service = null;
+@@ -56,6 +58,8 @@ public class MediaSessionPlugin extends Plugin {
+             service = binder.getService();
+             Intent intent = new Intent(getActivity(), getActivity().getClass());
+             service.connectAndInitialize(MediaSessionPlugin.this, intent);
++            service.setActionState("like", likeActive, null);
++            service.setActionState("playmode", false, playmodeMode);
+             updateServiceMetadata();
+             updateServicePlaybackState();
+             updateServicePositionState();
+@@ -187,6 +191,47 @@ public class MediaSessionPlugin extends Plugin {
+         call.resolve();
+     }
+ 
++    /**
++     * 更新自定义动作的状态，用于刷新通知栏按钮的图标与文案。
++     * like 使用 active（是否已收藏），playmode 使用 mode（list / repeat / shuffle）。
++     * 服务尚未启动时先缓存，等绑定成功后再下发。
++     */
++    @PluginMethod
++    public void setActionState(PluginCall call) {
++        final String action = call.getString("action");
++        if (action == null) {
++            call.reject("action is required");
++            return;
++        }
++
++        if (action.equals("like")) {
++            likeActive = Boolean.TRUE.equals(call.getBoolean("active", false));
++        } else if (action.equals("playmode")) {
++            final String mode = call.getString("mode");
++            if (!isSupportedPlaymode(mode)) {
++                call.reject("Unsupported playmode: " + mode);
++                return;
++            }
++            playmodeMode = mode;
++        } else {
++            call.reject("Unsupported action state: " + action);
++            return;
++        }
++
++        if (service != null) {
++            // 只下发当前 action 关心的字段，另一个传中性值
++            service.setActionState(action, action.equals("like") && likeActive, "playmode".equals(action) ? playmodeMode : null);
++            service.update();
++        }
++        call.resolve();
++    }
++
++    private boolean isSupportedPlaymode(String mode) {
++        return MediaSessionService.PLAYMODE_LIST.equals(mode)
++                || MediaSessionService.PLAYMODE_REPEAT.equals(mode)
++                || MediaSessionService.PLAYMODE_SHUFFLE.equals(mode);
++    }
++
+     @PluginMethod(returnType = PluginMethod.RETURN_CALLBACK)
+     public void setActionHandler(PluginCall call) {
+         call.setKeepAlive(true);
+diff --git a/node_modules/@jofr/capacitor-media-session/android/src/main/java/io/github/jofr/capacitor/mediasessionplugin/MediaSessionService.java b/node_modules/@jofr/capacitor-media-session/android/src/main/java/io/github/jofr/capacitor/mediasessionplugin/MediaSessionService.java
+index cb0417f..b6fc595 100644
+--- a/node_modules/@jofr/capacitor-media-session/android/src/main/java/io/github/jofr/capacitor/mediasessionplugin/MediaSessionService.java
++++ b/node_modules/@jofr/capacitor-media-session/android/src/main/java/io/github/jofr/capacitor/mediasessionplugin/MediaSessionService.java
+@@ -21,9 +21,11 @@ import androidx.core.app.NotificationCompat;
+ import androidx.media.session.MediaButtonReceiver;
+ import androidx.media.app.NotificationCompat.MediaStyle;
+ 
++import java.util.ArrayList;
+ import java.util.Arrays;
+ import java.util.HashMap;
+ import java.util.HashSet;
++import java.util.List;
+ import java.util.Map;
+ import java.util.Set;
+ 
+@@ -38,10 +40,20 @@ public class MediaSessionService extends Service {
+     private MediaStyle notificationStyle;
+     private final Map<String, NotificationCompat.Action> notificationActions = new HashMap<>();
+     private final Map<String, Long> playbackStateActions = new HashMap<>();
+-    private final String[] possibleActions = {"previoustrack", "seekbackward", "play", "pause", "seekforward", "nexttrack", "seekto", "stop"};
+-    final Set<String> possibleCompactViewActions = new HashSet<>(Arrays.asList("previoustrack", "play", "pause", "nexttrack", "stop"));
++    private final String[] possibleActions = {"previoustrack", "seekbackward", "play", "pause", "seekforward", "nexttrack", "seekto", "stop", "like", "playmode"};
++    final Set<String> possibleCompactViewActions = new HashSet<>(Arrays.asList("previoustrack", "play", "pause", "nexttrack", "stop", "like", "playmode"));
+     private static final int NOTIFICATION_ID = 1;
+ 
++    /** 通知/锁屏上的自定义按钮：喜欢、播放模式 */
++    static final String ACTION_CUSTOM_MEDIA_ACTION = "io.github.jofr.capacitor.mediasessionplugin.CUSTOM_MEDIA_ACTION";
++    static final String EXTRA_CUSTOM_ACTION = "customAction";
++    private static final int MAX_COMPACT_ACTIONS = 5;
++
++    /** 播放模式：与应用内一致（列表循环 → 单曲循环 → 随机播放） */
++    static final String PLAYMODE_LIST = "list";
++    static final String PLAYMODE_REPEAT = "repeat";
++    static final String PLAYMODE_SHUFFLE = "shuffle";
++
+     private int playbackState = PlaybackStateCompat.STATE_NONE;
+     private String title = "";
+     private String artist = "";
+@@ -51,6 +63,9 @@ public class MediaSessionService extends Service {
+     private long position = 0;
+     private float playbackSpeed = 1.0F;
+ 
++    private boolean likeActive = false;
++    private String playmodeMode = PLAYMODE_LIST;
++
+     private boolean possibleActionsUpdate = true;
+     private boolean playbackStateUpdate = false;
+     private boolean mediaMetadataUpdate = false;
+@@ -153,10 +168,83 @@ public class MediaSessionService extends Service {
+ 
+     @Override
+     public int onStartCommand(Intent intent, int flags, int startId) {
++        if (intent != null && mediaSession != null) {
++            final String customAction = intent.getStringExtra(EXTRA_CUSTOM_ACTION);
++            if (customAction != null) {
++                // 走 MediaSession 的自定义动作通道，最终回调到 JS 里注册的 handler
++                mediaSession
++                        .getController()
++                        .getTransportControls()
++                        .sendCustomAction(customAction, null);
++                return START_STICKY;
++            }
++        }
+         MediaButtonReceiver.handleIntent(mediaSession, intent);
+         return super.onStartCommand(intent, flags, startId);
+     }
+ 
++    /**
++     * 自定义按钮（like / playmode）在通知栏上的状态。
++     * like 使用 active（是否已收藏），playmode 使用 mode（list / repeat / shuffle）。
++     * 状态变化会重建通知与 PlaybackState，从而刷新按钮图标与文案。
++     */
++    public void setActionState(String action, boolean active, String mode) {
++        if (action == null) return;
++
++        if (action.equals("like")) {
++            if (this.likeActive == active) return;
++            this.likeActive = active;
++        } else if (action.equals("playmode")) {
++            final String nextMode = mode == null ? PLAYMODE_LIST : mode;
++            if (this.playmodeMode.equals(nextMode)) return;
++            this.playmodeMode = nextMode;
++        } else {
++            return;
++        }
++
++        possibleActionsUpdate = true;
++    }
++
++    private PendingIntent buildCustomActionIntent(String action) {
++        Intent intent = new Intent(this, MediaSessionService.class);
++        intent.setAction(ACTION_CUSTOM_MEDIA_ACTION);
++        intent.putExtra(EXTRA_CUSTOM_ACTION, action);
++
++        int pendingIntentFlags = PendingIntent.FLAG_UPDATE_CURRENT;
++        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
++            pendingIntentFlags = pendingIntentFlags | PendingIntent.FLAG_IMMUTABLE;
++        }
++        // 服务已在运行（前台服务），startService 不受后台启动限制影响
++        return PendingIntent.getService(this, action.hashCode(), intent, pendingIntentFlags);
++    }
++
++    /** 由 JS 直接下发开关状态、而非映射为 MediaButton 按键的自定义动作 */
++    private boolean isCustomAction(String action) {
++        return action.equals("like") || action.equals("playmode");
++    }
++
++    private int resolveCustomActionIcon(String action) {
++        if (action.equals("like")) {
++            return likeActive ? R.drawable.ic_baseline_favorite_24 : R.drawable.ic_baseline_favorite_border_24;
++        }
++        if (playmodeMode.equals(PLAYMODE_SHUFFLE)) {
++            return R.drawable.ic_baseline_shuffle_24;
++        }
++        return playmodeMode.equals(PLAYMODE_REPEAT)
++                ? R.drawable.ic_baseline_repeat_one_24
++                : R.drawable.ic_baseline_repeat_24;
++    }
++
++    private String resolveCustomActionLabel(String action) {
++        if (action.equals("like")) {
++            return likeActive ? "取消喜欢" : "喜欢";
++        }
++        if (playmodeMode.equals(PLAYMODE_SHUFFLE)) {
++            return "随机播放";
++        }
++        return playmodeMode.equals(PLAYMODE_REPEAT) ? "单曲循环" : "列表循环";
++    }
++
+     public void setPlaybackState(int playbackState) {
+         if (this.playbackState != playbackState) {
+             this.playbackState = playbackState;
+@@ -225,7 +313,8 @@ public class MediaSessionService extends Service {
+           }
+ 
+             long activePlaybackStateActions = 0;
+-            int[] activeCompactViewActionIndices = new int[3];
++            int[] activeCompactViewActionIndices = new int[MAX_COMPACT_ACTIONS];
++            List<PlaybackStateCompat.CustomAction> customActions = new ArrayList<>();
+ 
+             int notificationActionIndex = 0;
+             int compactNotificationActionIndicesIndex = 0;
+@@ -238,13 +327,26 @@ public class MediaSessionService extends Service {
+                         continue;
+                     }
+ 
++                    if (isCustomAction(actionName)) {
++                        final int icon = resolveCustomActionIcon(actionName);
++                        final String label = resolveCustomActionLabel(actionName);
++                        customActions.add(new PlaybackStateCompat.CustomAction.Builder(actionName, label, icon).build());
++                        notificationBuilder.addAction(icon, label, buildCustomActionIntent(actionName));
++                        if (compactNotificationActionIndicesIndex < MAX_COMPACT_ACTIONS) {
++                            activeCompactViewActionIndices[compactNotificationActionIndicesIndex] = notificationActionIndex;
++                            compactNotificationActionIndicesIndex++;
++                        }
++                        notificationActionIndex++;
++                        continue;
++                    }
++
+                     if (playbackStateActions.containsKey(actionName)) {
+                         activePlaybackStateActions = activePlaybackStateActions | playbackStateActions.get(actionName);
+                     }
+ 
+                     if (notificationActions.containsKey(actionName)) {
+                         notificationBuilder.addAction(notificationActions.get(actionName));
+-                        if (possibleCompactViewActions.contains(actionName) && compactNotificationActionIndicesIndex < 3) {
++                        if (possibleCompactViewActions.contains(actionName) && compactNotificationActionIndicesIndex < MAX_COMPACT_ACTIONS) {
+                             activeCompactViewActionIndices[compactNotificationActionIndicesIndex] = notificationActionIndex;
+                             compactNotificationActionIndicesIndex++;
+                         }
+@@ -253,8 +355,10 @@ public class MediaSessionService extends Service {
+                 }
+             }
+ 
+-            if (playbackStateBuilder != null) {
+-              playbackStateBuilder.setActions(activePlaybackStateActions);
++            // 自定义动作无法从已有的 builder 上移除，因此每次重建
++            playbackStateBuilder = new PlaybackStateCompat.Builder().setActions(activePlaybackStateActions);
++            for (PlaybackStateCompat.CustomAction customAction : customActions) {
++                playbackStateBuilder.addCustomAction(customAction);
+             }
+             if (notificationStyle != null) {
+               if (compactNotificationActionIndicesIndex > 0) {
+diff --git a/node_modules/@jofr/capacitor-media-session/android/src/main/res/drawable/ic_baseline_favorite_24.xml b/node_modules/@jofr/capacitor-media-session/android/src/main/res/drawable/ic_baseline_favorite_24.xml
+new file mode 100644
+index 0000000..7f7d98f
+--- /dev/null
++++ b/node_modules/@jofr/capacitor-media-session/android/src/main/res/drawable/ic_baseline_favorite_24.xml
+@@ -0,0 +1,5 @@
++<vector android:height="24dp" android:tint="#000000"
++    android:viewportHeight="24" android:viewportWidth="24"
++    android:width="24dp" xmlns:android="http://schemas.android.com/apk/res/android">
++    <path android:fillColor="@android:color/white" android:pathData="M12,21.35l-1.45,-1.32C5.4,15.36 2,12.28 2,8.5C2,5.42 4.42,3 7.5,3c1.74,0 3.41,0.81 4.5,2.09C13.09,3.81 14.76,3 16.5,3C19.58,3 22,5.42 22,8.5c0,3.78 -3.4,6.86 -8.55,11.54L12,21.35z"/>
++</vector>
+diff --git a/node_modules/@jofr/capacitor-media-session/android/src/main/res/drawable/ic_baseline_favorite_border_24.xml b/node_modules/@jofr/capacitor-media-session/android/src/main/res/drawable/ic_baseline_favorite_border_24.xml
+new file mode 100644
+index 0000000..8737080
+--- /dev/null
++++ b/node_modules/@jofr/capacitor-media-session/android/src/main/res/drawable/ic_baseline_favorite_border_24.xml
+@@ -0,0 +1,5 @@
++<vector android:height="24dp" android:tint="#000000"
++    android:viewportHeight="24" android:viewportWidth="24"
++    android:width="24dp" xmlns:android="http://schemas.android.com/apk/res/android">
++    <path android:fillColor="@android:color/white" android:pathData="M16.5,3c-1.74,0 -3.41,0.81 -4.5,2.09C10.91,3.81 9.24,3 7.5,3C4.42,3 2,5.42 2,8.5c0,3.78 3.4,6.86 8.55,11.54L12,21.35l1.45,-1.32C18.6,15.36 22,12.28 22,8.5C22,5.42 19.58,3 16.5,3zM12.1,18.55l-0.1,0.1 -0.1,-0.1C7.14,14.24 4,11.39 4,8.5C4,6.5 5.5,5 7.5,5c1.54,0 3.04,0.99 3.57,2.36h1.87C13.46,5.99 14.96,5 16.5,5c2,0 3.5,1.5 3.5,3.5c0,2.89 -3.14,5.74 -7.9,10.05z"/>
++</vector>
+diff --git a/node_modules/@jofr/capacitor-media-session/android/src/main/res/drawable/ic_baseline_repeat_24.xml b/node_modules/@jofr/capacitor-media-session/android/src/main/res/drawable/ic_baseline_repeat_24.xml
+new file mode 100644
+index 0000000..9150e73
+--- /dev/null
++++ b/node_modules/@jofr/capacitor-media-session/android/src/main/res/drawable/ic_baseline_repeat_24.xml
+@@ -0,0 +1,5 @@
++<vector android:height="24dp" android:tint="#000000"
++    android:viewportHeight="24" android:viewportWidth="24"
++    android:width="24dp" xmlns:android="http://schemas.android.com/apk/res/android">
++    <path android:fillColor="@android:color/white" android:pathData="M7,7h10v3l4,-4 -4,-4v3L5,5v6h2V7zM17,17L7,17v-3l-4,4 4,4v-3h12v-6h-2v4z"/>
++</vector>
+diff --git a/node_modules/@jofr/capacitor-media-session/android/src/main/res/drawable/ic_baseline_repeat_one_24.xml b/node_modules/@jofr/capacitor-media-session/android/src/main/res/drawable/ic_baseline_repeat_one_24.xml
+new file mode 100644
+index 0000000..eeda87e
+--- /dev/null
++++ b/node_modules/@jofr/capacitor-media-session/android/src/main/res/drawable/ic_baseline_repeat_one_24.xml
+@@ -0,0 +1,5 @@
++<vector android:height="24dp" android:tint="#000000"
++    android:viewportHeight="24" android:viewportWidth="24"
++    android:width="24dp" xmlns:android="http://schemas.android.com/apk/res/android">
++    <path android:fillColor="@android:color/white" android:pathData="M7,7h10v3l4,-4 -4,-4v3L5,5v6h2V7zM17,17L7,17v-3l-4,4 4,4v-3h12v-6h-2v4zM13,15V9h-1l-2,1v1h1.5v4H13z"/>
++</vector>
+diff --git a/node_modules/@jofr/capacitor-media-session/android/src/main/res/drawable/ic_baseline_shuffle_24.xml b/node_modules/@jofr/capacitor-media-session/android/src/main/res/drawable/ic_baseline_shuffle_24.xml
+new file mode 100644
+index 0000000..0e018a9
+--- /dev/null
++++ b/node_modules/@jofr/capacitor-media-session/android/src/main/res/drawable/ic_baseline_shuffle_24.xml
+@@ -0,0 +1,5 @@
++<vector android:height="24dp" android:tint="#000000"
++    android:viewportHeight="24" android:viewportWidth="24"
++    android:width="24dp" xmlns:android="http://schemas.android.com/apk/res/android">
++    <path android:fillColor="@android:color/white" android:pathData="M10.59,9.17L5.41,4 4,5.41l5.17,5.17 1.42,-1.41zM14.5,4l2.04,2.04L4,18.59 5.41,20 17.96,7.46 20,9.5V4h-5.5zM14.83,13.41l-1.41,1.41 3.38,3.38L14,21h5.5v-5.5l-2.04,2.04 -3.63,-3.63z"/>
++</vector>
+diff --git a/node_modules/@jofr/capacitor-media-session/dist/esm/definitions.d.ts b/node_modules/@jofr/capacitor-media-session/dist/esm/definitions.d.ts
+index 4b36d38..028a71f 100644
+--- a/node_modules/@jofr/capacitor-media-session/dist/esm/definitions.d.ts
++++ b/node_modules/@jofr/capacitor-media-session/dist/esm/definitions.d.ts
+@@ -15,6 +15,21 @@ interface ActionDetails {
+     action: MediaSessionAction;
+     seekTime?: number | null;
+ }
++export interface ActionStateOptions {
++    /**
++     * 自定义动作的标识，目前仅支持 `like`（喜欢）与 `playmode`（播放模式）。
++     */
++    action: string;
++    /**
++     * `like` 专用：按钮是否处于"选中"态（当前曲目已收藏）。
++     */
++    active?: boolean;
++    /**
++     * `playmode` 专用：当前播放模式，与应用内切换顺序一致
++     * （列表循环 → 单曲循环 → 随机播放 → 列表循环）。
++     */
++    mode?: "list" | "repeat" | "shuffle";
++}
+ export interface PositionStateOptions {
+     duration?: number;
+     playbackRate?: number;
+@@ -50,5 +65,9 @@ export interface MediaSessionPlugin {
+      * when using the Media Session API directly.
+      */
+     setPositionState(options: PositionStateOptions): Promise<void>;
++    /**
++     * 更新自定义媒体控制按钮（like / playmode）的开关状态，用于刷新通知栏图标与文案。
++     */
++    setActionState(options: ActionStateOptions): Promise<void>;
+ }
+ export {};

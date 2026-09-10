@@ -37,6 +37,11 @@ Otter Music 是一款 Capacitor 混合架构音乐播放器。当前仅面向 An
 - **逻辑层**：用 `IS_NATIVE` 做条件分支，而非创建两套实现。例如：下载用 `@capacitor/filesystem`（原生）vs 浏览器 download API（Web）；网络请求原生优先直连 API，Web 走代理。
 - **API 层**：`src/lib/api/config.ts` 已封装平台感知的 URL 选择和超时逻辑，新增 API 调用应复用该层而非自行判断平台。
 - **原生插件**：修改 `android/` 下的插件 Java 实现或新增 Capacitor 插件方法后，必须同步更新 `src/plugins/` 下对应的 TS 接口定义。运行 `npm run cap:sync:android` 同步 Web 资源到 Android 项目后才能真机验证。
+- **第三方插件改造（patch-package）**：需要改动 `node_modules` 下第三方 Capacitor 插件的原生实现时，**不要直接改完就算**，必须用 `patch-package` 固化：
+  1. 直接修改 `node_modules/<pkg>/` 下的文件（Java、`res/`、`.d.ts` 等）；
+  2. 先移走插件目录里的 gradle 构建产物（如 `android/build`，否则会被打进补丁；Windows 上这些产物路径过长，会让 `git add` 直接失败，`--exclude` 无法规避，必须移走）；
+  3. 执行 `npx patch-package <pkg>`，补丁落在 `patches/`（已由 `postinstall: patch-package` 在每次 `npm install` 后自动应用）。
+     生成后务必检查补丁里没有混入 `.gradle/`、`.settings/`、`.classpath` 等本地垃圾文件（可用 `--exclude` 或手工清理补丁文本），并用 `npx patch-package` 验证能干净应用。
 - **新增依赖**：优先用 JS/TS 方案解决。只有涉及文件系统、蓝牙、通知等必须原生 API 的场景才引入 Capacitor 插件。
 - **音乐API**：默认直连 GD 音乐台 API，失败自动回退后端 functions 代理（`/music-api`、`/proxy`，见 `src/lib/api/config.ts` 的 `getOrderedMusicApiUrls`）。严禁自己实现加密算法，优先使用已有的加密库`node-forge`。
 - **Lucide 图标 Android 兼容**：在低版本 Android WebView 下，被 `bg-*` + Flex 容器包裹的 `<Icon />` 可能被压缩至 0 像素。直接在 SVG 上加 `shrink-0` 无效（低版本 WebView 对 SVG 的 `flex-shrink: 0` 支持有 bug），因此 `shrink-0` 必须加在外层 `div` 上。修复方案：用外层 `div` 包裹 SVG，`div` 固定尺寸 + `shrink-0`，并建议显式声明 `flex-[0_0_Npx]` 与 `min-w-* min-h-*` 作为兜底，内层 SVG 用 `h-full w-full` 继承尺寸。示例：`<div className="h-6 w-6 shrink-0 flex-[0_0_24px] min-w-6 min-h-6"><Icon size={24} className="h-full w-full" /></div>`
