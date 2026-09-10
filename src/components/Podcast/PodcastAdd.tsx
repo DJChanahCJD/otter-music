@@ -4,18 +4,17 @@ import { Input } from "@/components/ui/input";
 import {
   Drawer,
   DrawerContent,
-  DrawerDescription,
   DrawerHeader,
   DrawerTitle,
 } from "@/components/ui/drawer";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MusicCover } from "@/components/MusicCover";
 import { searchPodcast } from "@/lib/api";
 import { usePodcastStore } from "@/store/podcast-store";
 import type { SearchPodcastItem } from "@/types/podcast";
-import { Loader2, Search, Radio, Link2 } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { Loader2, Radio } from "lucide-react";
 import toast from "react-hot-toast";
-
-type AddMode = "search" | "rss";
 
 interface PodcastAddProps {
   open: boolean;
@@ -24,62 +23,48 @@ interface PodcastAddProps {
 
 export function PodcastAdd({ open, onOpenChange }: PodcastAddProps) {
   const { rssSources, addRssSource } = usePodcastStore();
-  const [mode, setMode] = useState<AddMode>("search");
+  const [mode, setMode] = useState<"search" | "rss">("search");
 
-  const [keyword, setKeyword] = useState("");
-  const [isSearching, setIsSearching] = useState(false);
-  const [searchItems, setSearchItems] = useState<SearchPodcastItem[]>([]);
-  const [rssName, setRssName] = useState("");
-  const [rssUrl, setRssUrl] = useState("");
-  const [isSubmittingRss, setIsSubmittingRss] = useState(false);
+  // 状态分组
+  const [search, setSearch] = useState({
+    kw: "",
+    items: [] as SearchPodcastItem[],
+    loading: false,
+    searched: false,
+  });
+  const [rss, setRss] = useState({ url: "", name: "", loading: false });
 
-  const activeSources = useMemo(
-    () => rssSources.filter((item) => !item.is_deleted),
+  // 已订阅 RSS 集合（O(1) 匹配）
+  const activeRssSet = useMemo(
+    () => new Set(rssSources.filter((s) => !s.is_deleted).map((s) => s.rssUrl)),
     [rssSources]
   );
 
-  const normalizedKeyword = keyword.trim();
-  const normalizedRssUrl = rssUrl.trim();
-  const normalizedRssName = rssName.trim();
-
-  const resetDialogState = () => {
+  const resetState = () => {
     setMode("search");
-    setKeyword("");
-    setSearchItems([]);
-    setRssName("");
-    setRssUrl("");
-    setIsSearching(false);
-    setIsSubmittingRss(false);
+    setSearch({ kw: "", items: [], loading: false, searched: false });
+    setRss({ url: "", name: "", loading: false });
   };
 
   const handleSearch = async () => {
-    if (!normalizedKeyword) {
-      toast("请输入搜索关键词");
-      return;
-    }
+    const kw = search.kw.trim();
+    if (!kw) return toast("请输入搜索关键词");
 
+    setSearch((s) => ({ ...s, loading: true }));
     try {
-      setIsSearching(true);
-      const result = await searchPodcast(normalizedKeyword);
-      setSearchItems(result);
-      if (result.length === 0) toast("未找到相关播客");
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "搜索失败");
+      const items = await searchPodcast(kw);
+      setSearch((s) => ({ ...s, items, searched: true }));
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "搜索失败");
     } finally {
-      setIsSearching(false);
+      setSearch((s) => ({ ...s, loading: false }));
     }
   };
 
   const handleAddSearchItem = (item: SearchPodcastItem) => {
-    if (!item.rssUrl) {
-      toast.error("该播客缺少 RSS 地址");
-      return;
-    }
-    if (activeSources.some((source) => source.rssUrl === item.rssUrl)) {
-      toast("已在订阅列表");
-      return;
-    }
-    // Pass cover and description to store
+    if (!item.rssUrl) return toast.error("该播客缺少 RSS 地址");
+    if (activeRssSet.has(item.rssUrl)) return toast("已在订阅列表");
+
     addRssSource(
       item.title,
       item.rssUrl,
@@ -91,174 +76,165 @@ export function PodcastAdd({ open, onOpenChange }: PodcastAddProps) {
   };
 
   const handleAddRss = async () => {
-    if (!normalizedRssUrl) {
-      toast("请输入 RSS 地址");
-      return;
-    }
-    let url: URL;
+    const urlStr = rss.url.trim();
+    if (!urlStr) return toast("请输入 RSS 地址");
+
     try {
-      url = new URL(normalizedRssUrl);
-      if (url.protocol !== "http:" && url.protocol !== "https:") {
-        toast.error("RSS 地址需为 http/https");
-        return;
-      }
-    } catch {
-      toast.error("RSS 地址格式不正确");
-      return;
-    }
-    const existed = activeSources.some(
-      (source) => source.rssUrl === normalizedRssUrl
-    );
-    if (existed) {
-      toast("该 RSS 已订阅");
-      return;
-    }
-    setIsSubmittingRss(true);
-    try {
-      const displayName = normalizedRssName || url.hostname;
-      // For manual RSS, we don't have cover/desc yet.
-      // Ideally we should fetch it, but for now passing undefined.
-      addRssSource(displayName, normalizedRssUrl);
+      const url = new URL(urlStr);
+      if (!["http:", "https:"].includes(url.protocol)) throw new Error();
+      if (activeRssSet.has(urlStr)) return toast("该 RSS 已订阅");
+
+      setRss((r) => ({ ...r, loading: true }));
+      addRssSource(rss.name.trim() || url.hostname, urlStr);
       toast.success("订阅成功");
-      // onOpenChange(false);
-      // resetDialogState();
+    } catch {
+      toast.error("请输入有效的 HTTP/HTTPS RSS 地址");
     } finally {
-      setIsSubmittingRss(false);
+      setRss((r) => ({ ...r, loading: false }));
     }
   };
 
   return (
     <Drawer
       open={open}
-      onOpenChange={(val) => {
-        onOpenChange(val);
-        if (!val) resetDialogState();
-      }}
+      onOpenChange={(val) => (onOpenChange(val), !val && resetState())}
     >
-      <DrawerContent className="max-h-[90vh] overflow-hidden">
-        <DrawerHeader className="mb-1 px-4">
-          <DrawerTitle className="text-center text-lg">
+      <DrawerContent
+        className={cn(
+          "flex flex-col outline-none",
+          mode === "search" && "h-[80vh]"
+        )}
+      >
+        <DrawerHeader className="px-5 pb-3">
+          <DrawerTitle className="text-center text-base font-semibold">
             添加播客订阅
           </DrawerTitle>
-          <DrawerDescription className="text-center text-xs">
-            {mode === "search" ? "先搜索，再一键订阅" : "手动填写 RSS 地址订阅"}
-          </DrawerDescription>
         </DrawerHeader>
 
-        <div className="flex-1 min-h-0 space-y-4 overflow-y-auto px-4 pb-5">
-          {mode === "search" ? (
-            <div className="space-y-3">
-              <div className="flex gap-2">
-                <div className="relative flex-1">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <Input
-                    autoFocus
-                    className="pl-9"
-                    placeholder="搜索播客名称..."
-                    value={keyword}
-                    onChange={(e) => setKeyword(e.target.value)}
-                    onKeyDown={(e) => e.key === "Enter" && void handleSearch()}
-                  />
+        <Tabs
+          value={mode}
+          onValueChange={(v) => setMode(v as typeof mode)}
+          className="flex-1 flex flex-col min-h-0 px-5 pb-5"
+        >
+          <TabsList className="grid h-9 w-full grid-cols-2 rounded-full">
+            <TabsTrigger value="search" className="rounded-full">
+              搜索播客
+            </TabsTrigger>
+            <TabsTrigger value="rss" className="rounded-full">
+              RSS 链接
+            </TabsTrigger>
+          </TabsList>
+
+          {/* 搜索 Tab */}
+          <TabsContent
+            value="search"
+            className="mt-3 flex-1 flex flex-col gap-3 min-h-0"
+          >
+            <div className="flex gap-2">
+              <Input
+                autoFocus
+                className="h-10 flex-1 rounded-xl border-none bg-muted/50"
+                placeholder="输入播客名称"
+                value={search.kw}
+                onChange={(e) =>
+                  setSearch((s) => ({ ...s, kw: e.target.value }))
+                }
+                onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+              />
+              <Button
+                onClick={handleSearch}
+                disabled={search.loading || !search.kw.trim()}
+                className="min-w-[72px]"
+              >
+                {search.loading ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  "搜索"
+                )}
+              </Button>
+            </div>
+
+            <div className="flex-1 space-y-1 overflow-y-auto min-h-0">
+              {search.loading ? (
+                <div className="flex h-full items-center justify-center gap-2 text-xs text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin" /> 正在搜索
                 </div>
-                <Button
-                  onClick={() => void handleSearch()}
-                  disabled={isSearching}
-                  className="min-w-[72px]"
-                >
-                  {isSearching ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    "搜索"
-                  )}
-                </Button>
-              </div>
-              <div className="space-y-2 pr-1 custom-scrollbar">
-                {searchItems.map((item) => {
-                  const existed =
-                    !item.rssUrl ||
-                    activeSources.some((s) => s.rssUrl === item.rssUrl);
+              ) : search.items.length > 0 ? (
+                search.items.map((item) => {
+                  const existed = !item.rssUrl || activeRssSet.has(item.rssUrl);
                   return (
                     <div
                       key={`${item.source}-${item.id}-${item.rssUrl}`}
-                      className="flex items-center gap-3 rounded-lg border p-2.5"
+                      className="flex items-center gap-3 rounded-xl p-2 active:bg-muted/60"
                     >
-                      <div className="w-11 h-11 rounded-md border bg-muted/40 overflow-hidden shrink-0">
-                        <MusicCover
-                          src={item.cover}
-                          alt={item.title}
-                          className="bg-transparent"
-                          fallbackIcon={
-                            <Radio className="w-4 h-4 text-muted-foreground/60" />
-                          }
-                        />
-                      </div>
+                      <MusicCover
+                        src={item.cover}
+                        alt={item.title}
+                        className="h-11 w-11 shrink-0 rounded-lg bg-muted/50"
+                        fallbackIcon={
+                          <Radio className="h-4 w-4 text-muted-foreground/60" />
+                        }
+                      />
                       <div className="min-w-0 flex-1">
-                        <p className="text-sm font-medium line-clamp-1">
+                        <p className="text-sm font-medium truncate">
                           {item.title}
                         </p>
-                        <p className="text-[11px] text-muted-foreground line-clamp-1">
+                        <p className="text-[11px] text-muted-foreground truncate">
                           {item.author || "未知作者"}
                         </p>
                       </div>
                       <Button
                         size="sm"
-                        variant={existed ? "secondary" : "default"}
+                        variant={existed ? "ghost" : "default"}
                         disabled={existed}
-                        className="h-7 rounded-full px-3 text-xs"
+                        className={cn(
+                          "h-7 shrink-0 rounded-full text-xs",
+                          existed && "text-muted-foreground"
+                        )}
                         onClick={() => handleAddSearchItem(item)}
                       >
                         {existed ? "已订阅" : "订阅"}
                       </Button>
                     </div>
                   );
-                })}
-                {!isSearching && searchItems.length === 0 && (
-                  <div className="py-8 text-center text-xs text-muted-foreground/70">
-                    输入关键词搜索可订阅的播客
-                  </div>
-                )}
-              </div>
+                })
+              ) : (
+                <div className="flex h-full flex-col items-center justify-center gap-2 text-xs text-muted-foreground/70">
+                  <Radio className="h-7 w-7 opacity-50" />
+                  {search.searched
+                    ? "未找到相关播客"
+                    : "搜索并订阅你喜欢的播客"}
+                </div>
+              )}
             </div>
-          ) : (
-            <div className="space-y-3">
-              <Input
-                placeholder="播客名称（可选）"
-                value={rssName}
-                onChange={(e) => setRssName(e.target.value)}
-              />
-              <div className="relative">
-                <Link2 className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <Input
-                  className="pl-9"
-                  placeholder="https://example.com/feed.xml"
-                  value={rssUrl}
-                  onChange={(e) => setRssUrl(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && void handleAddRss()}
-                />
-              </div>
-              <Button
-                className="w-full rounded-full"
-                onClick={() => void handleAddRss()}
-                disabled={isSubmittingRss}
-              >
-                {isSubmittingRss && (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                )}
-                验证并订阅
-              </Button>
-            </div>
-          )}
+          </TabsContent>
 
-          <Button
-            variant="link"
-            className="h-auto px-0 text-xs text-muted-foreground/70 hover:text-muted-foreground w-full"
-            onClick={() =>
-              setMode((prev) => (prev === "search" ? "rss" : "search"))
-            }
-          >
-            {mode === "search" ? "改用手动 RSS 订阅" : "返回搜索订阅"}
-          </Button>
-        </div>
+          {/* RSS Tab */}
+          <TabsContent value="rss" className="mt-3 space-y-2.5">
+            <Input
+              className="h-10 rounded-xl border-none bg-muted/50"
+              placeholder="RSS 链接，如 https://example.com/feed.xml"
+              inputMode="url"
+              value={rss.url}
+              onChange={(e) => setRss((r) => ({ ...r, url: e.target.value }))}
+              onKeyDown={(e) => e.key === "Enter" && handleAddRss()}
+            />
+            <Input
+              className="h-10 rounded-xl border-none bg-muted/50"
+              placeholder="播客名称（可选，默认取域名）"
+              value={rss.name}
+              onChange={(e) => setRss((r) => ({ ...r, name: e.target.value }))}
+            />
+            <Button
+              className="w-full rounded-full"
+              onClick={handleAddRss}
+              disabled={rss.loading || !rss.url.trim()}
+            >
+              {rss.loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              订阅
+            </Button>
+          </TabsContent>
+        </Tabs>
       </DrawerContent>
     </Drawer>
   );
