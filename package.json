@@ -15,6 +15,7 @@
     "lint": "eslint .",
     "test": "vitest",
     "ci-test": "node scripts/ci-test.js",
+    "verify:car-lyric": "node scripts/verify-car-lyric.mjs",
     "preview": "vite preview",
     "resources": "capacitor-assets generate",
     "cap:add:android": "npx cap add android",

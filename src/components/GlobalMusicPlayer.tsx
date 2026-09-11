@@ -12,6 +12,7 @@ import { useAudioTrackLoader } from "@/hooks/useAudioTrackLoader";
 import { useSleepTimer } from "@/hooks/useSleepTimer";
 import { useAudioPreloader } from "@/hooks/useAudioPreloader";
 import { useAudioRouteSafety } from "@/hooks/useAudioRouteSafety";
+import { useCarLyric } from "@/hooks/useCarLyric";
 
 export function GlobalMusicPlayer() {
   const audioRef = useAudioElement();
@@ -33,6 +34,7 @@ export function GlobalMusicPlayer() {
   useAudioEventHandlers(audioRef, isSwitchingTrackRef, hasRecordedRef);
   useAudioRouteSafety(audioRef);
   useMediaSessionIntegration(audioRef, coverUrl);
+  useCarLyric();
   useAudioPreloader(audioRef);
 
   return (

@@ -20,10 +20,16 @@ index e273185..b430341 100644
 +    }
  }
 diff --git a/node_modules/@jofr/capacitor-media-session/android/src/main/java/io/github/jofr/capacitor/mediasessionplugin/MediaSessionPlugin.java b/node_modules/@jofr/capacitor-media-session/android/src/main/java/io/github/jofr/capacitor/mediasessionplugin/MediaSessionPlugin.java
-index 6f54b7f..69b8ffd 100644
+index 6f54b7f..64f4fc1 100644
 --- a/node_modules/@jofr/capacitor-media-session/android/src/main/java/io/github/jofr/capacitor/mediasessionplugin/MediaSessionPlugin.java
 +++ b/node_modules/@jofr/capacitor-media-session/android/src/main/java/io/github/jofr/capacitor/mediasessionplugin/MediaSessionPlugin.java
-@@ -45,6 +45,8 @@ public class MediaSessionPlugin extends Plugin {
+@@ -41,10 +41,14 @@ public class MediaSessionPlugin extends Plugin {
+     private String artist = "";
+     private String album = "";
+     private Bitmap artwork = null;
++    /** 车载歌词（覆写 AVRCP 的 TITLE 字段）；服务未就绪时先缓存 */
++    private String carLyric = null;
+     private String playbackState = "none";
      private double duration = 0.0;
      private double position = 0.0;
      private double playbackRate = 1.0;
@@ -32,7 +38,7 @@ index 6f54b7f..69b8ffd 100644
      private final Map<String, PluginCall> actionHandlers = new HashMap<>();
  
      private MediaSessionService service = null;
-@@ -56,6 +58,8 @@ public class MediaSessionPlugin extends Plugin {
+@@ -56,6 +60,8 @@ public class MediaSessionPlugin extends Plugin {
              service = binder.getService();
              Intent intent = new Intent(getActivity(), getActivity().getClass());
              service.connectAndInitialize(MediaSessionPlugin.this, intent);
@@ -41,7 +47,15 @@ index 6f54b7f..69b8ffd 100644
              updateServiceMetadata();
              updateServicePlaybackState();
              updateServicePositionState();
-@@ -187,6 +191,47 @@ public class MediaSessionPlugin extends Plugin {
+@@ -92,6 +98,7 @@ public class MediaSessionPlugin extends Plugin {
+         service.setArtist(artist);
+         service.setAlbum(album);
+         service.setArtwork(artwork);
++        service.setCarLyric(carLyric);
+         service.update();
+     }
+ 
+@@ -187,6 +194,68 @@ public class MediaSessionPlugin extends Plugin {
          call.resolve();
      }
  
@@ -80,6 +94,27 @@ index 6f54b7f..69b8ffd 100644
 +        call.resolve();
 +    }
 +
++    /**
++     * 车载歌词：因为 AVRCP 没有歌词字段，只能把当前歌词行覆写到 TITLE 上。
++     * 与 {@link #setMetadata} 分开是为了两件事：
++     * 1. 不碰通知栏（通知栏仍用 {@link #title}，即歌名）；
++     * 2. 不走封面下载逻辑（{@code setMetadata} 每次都会重新解码 artwork），
++     *    歌词按行刷新（约每 3-5 秒一次）时不能付这个代价。
++     *
++     * @param call {@code text} 为当前歌词行；传 null 或空串表示关闭覆写
++     */
++    @PluginMethod
++    public void setCarLyric(PluginCall call) {
++        final String text = call.getString("text");
++        carLyric = (text == null || text.trim().isEmpty()) ? null : text;
++
++        if (service != null) {
++            service.setCarLyric(carLyric);
++            service.update();
++        }
++        call.resolve();
++    }
++
 +    private boolean isSupportedPlaymode(String mode) {
 +        return MediaSessionService.PLAYMODE_LIST.equals(mode)
 +                || MediaSessionService.PLAYMODE_REPEAT.equals(mode)
@@ -90,22 +125,25 @@ index 6f54b7f..69b8ffd 100644
      public void setActionHandler(PluginCall call) {
          call.setKeepAlive(true);
 diff --git a/node_modules/@jofr/capacitor-media-session/android/src/main/java/io/github/jofr/capacitor/mediasessionplugin/MediaSessionService.java b/node_modules/@jofr/capacitor-media-session/android/src/main/java/io/github/jofr/capacitor/mediasessionplugin/MediaSessionService.java
-index cb0417f..b6fc595 100644
+index cb0417f..51a0caf 100644
 --- a/node_modules/@jofr/capacitor-media-session/android/src/main/java/io/github/jofr/capacitor/mediasessionplugin/MediaSessionService.java
 +++ b/node_modules/@jofr/capacitor-media-session/android/src/main/java/io/github/jofr/capacitor/mediasessionplugin/MediaSessionService.java
-@@ -21,9 +21,11 @@ import androidx.core.app.NotificationCompat;
+@@ -21,10 +21,14 @@ import androidx.core.app.NotificationCompat;
  import androidx.media.session.MediaButtonReceiver;
  import androidx.media.app.NotificationCompat.MediaStyle;
  
++import java.nio.charset.StandardCharsets;
 +import java.util.ArrayList;
  import java.util.Arrays;
  import java.util.HashMap;
  import java.util.HashSet;
 +import java.util.List;
  import java.util.Map;
++import java.util.Objects;
  import java.util.Set;
  
-@@ -38,10 +40,20 @@ public class MediaSessionService extends Service {
+ public class MediaSessionService extends Service {
+@@ -38,19 +42,40 @@ public class MediaSessionService extends Service {
      private MediaStyle notificationStyle;
      private final Map<String, NotificationCompat.Action> notificationActions = new HashMap<>();
      private final Map<String, Long> playbackStateActions = new HashMap<>();
@@ -120,6 +158,12 @@ index cb0417f..b6fc595 100644
 +    static final String EXTRA_CUSTOM_ACTION = "customAction";
 +    private static final int MAX_COMPACT_ACTIONS = 5;
 +
++    /**
++     * 车载歌词的字节上限。AVRCP 的属性值受 L2CAP MTU 限制，
++     * 240 字节给协议头留出余量（中文 UTF-8 每字 3 字节，约 80 字）。
++     */
++    private static final int MAX_CAR_LYRIC_BYTES = 240;
++
 +    /** 播放模式：与应用内一致（列表循环 → 单曲循环 → 随机播放） */
 +    static final String PLAYMODE_LIST = "list";
 +    static final String PLAYMODE_REPEAT = "repeat";
@@ -128,7 +172,11 @@ index cb0417f..b6fc595 100644
      private int playbackState = PlaybackStateCompat.STATE_NONE;
      private String title = "";
      private String artist = "";
-@@ -51,6 +63,9 @@ public class MediaSessionService extends Service {
+     private String album = "";
+     private Bitmap artwork = null;
++    /** 非 null 时覆写 AVRCP 的 TITLE 字段（车载歌词），不影响通知栏 */
++    private String carLyric = null;
+     private long duration = 0;
      private long position = 0;
      private float playbackSpeed = 1.0F;
  
@@ -138,7 +186,7 @@ index cb0417f..b6fc595 100644
      private boolean possibleActionsUpdate = true;
      private boolean playbackStateUpdate = false;
      private boolean mediaMetadataUpdate = false;
-@@ -153,10 +168,83 @@ public class MediaSessionService extends Service {
+@@ -153,10 +178,83 @@ public class MediaSessionService extends Service {
  
      @Override
      public int onStartCommand(Intent intent, int flags, int startId) {
@@ -222,7 +270,68 @@ index cb0417f..b6fc595 100644
      public void setPlaybackState(int playbackState) {
          if (this.playbackState != playbackState) {
              this.playbackState = playbackState;
-@@ -225,7 +313,8 @@ public class MediaSessionService extends Service {
+@@ -173,6 +271,60 @@ public class MediaSessionService extends Service {
+         }
+     }
+ 
++    /**
++     * 车载歌词：蓝牙 AVRCP 没有歌词字段，业界做法是把当前歌词行写进 TITLE。
++     *
++     * <p>「车机看到歌词、手机仍看到歌名」靠的是两条通道分离：TITLE 只被 AVRCP 读取，
++     * 而通知栏 / 锁屏 / 快捷设置的媒体卡片读的是 DISPLAY_* 字段（见 {@link #update()}）。
++     * 因此本方法只置 {@code mediaMetadataUpdate}，不重建通知。
++     *
++     * @param text 当前歌词行；传 null 或空串表示关闭覆写，TITLE 回退为歌名
++     */
++    public void setCarLyric(String text) {
++        final String next = (text == null || text.trim().isEmpty())
++                ? null
++                : truncateUtf8(text, MAX_CAR_LYRIC_BYTES);
++
++        if (Objects.equals(this.carLyric, next)) return;
++
++        this.carLyric = next;
++        mediaMetadataUpdate = true;
++    }
++
++    /**
++     * AVRCP 属性值受 L2CAP MTU 限制，按 UTF-8 字节截断并回退到字符边界，
++     * 避免中文被切成半个字符后车机显示乱码。
++     */
++    private static String truncateUtf8(String text, int maxBytes) {
++        final byte[] bytes = text.getBytes(StandardCharsets.UTF_8);
++        if (bytes.length <= maxBytes) return text;
++
++        int end = maxBytes;
++        while (end > 0 && (bytes[end] & 0xC0) == 0x80) {
++            end--;
++        }
++
++        return new String(bytes, 0, end, StandardCharsets.UTF_8);
++    }
++
++    /** 通知栏副标题：专辑缺失时不要留下 "歌手 - " 这样的空横杠 */
++    private String buildNotificationSubtitle() {
++        final boolean hasArtist = artist != null && !artist.trim().isEmpty();
++        final boolean hasAlbum = album != null && !album.trim().isEmpty();
++
++        if (hasArtist && hasAlbum) return artist + " - " + album;
++        if (hasArtist) return artist;
++        return hasAlbum ? album : "";
++    }
++
++    /** 屏幕显示的副标题：优先歌手，缺失时退回专辑（都没有则给空串） */
++    private String buildDisplaySubtitle() {
++        final boolean hasArtist = artist != null && !artist.trim().isEmpty();
++
++        if (hasArtist) return artist;
++        return album == null ? "" : album;
++    }
++
+     public void setArtist(String artist) {
+         if (!this.artist.equals(artist)) {
+             this.artist = artist;
+@@ -225,7 +377,8 @@ public class MediaSessionService extends Service {
            }
  
              long activePlaybackStateActions = 0;
@@ -232,7 +341,7 @@ index cb0417f..b6fc595 100644
  
              int notificationActionIndex = 0;
              int compactNotificationActionIndicesIndex = 0;
-@@ -238,13 +327,26 @@ public class MediaSessionService extends Service {
+@@ -238,13 +391,26 @@ public class MediaSessionService extends Service {
                          continue;
                      }
  
@@ -260,7 +369,7 @@ index cb0417f..b6fc595 100644
                              activeCompactViewActionIndices[compactNotificationActionIndicesIndex] = notificationActionIndex;
                              compactNotificationActionIndicesIndex++;
                          }
-@@ -253,8 +355,10 @@ public class MediaSessionService extends Service {
+@@ -253,8 +419,10 @@ public class MediaSessionService extends Service {
                  }
              }
  
@@ -273,6 +382,45 @@ index cb0417f..b6fc595 100644
              }
              if (notificationStyle != null) {
                if (compactNotificationActionIndicesIndex > 0) {
+@@ -276,8 +444,28 @@ public class MediaSessionService extends Service {
+         }
+ 
+         if (mediaMetadataUpdate && mediaMetadataBuilder != null) {
++            /*
++             * 车载歌词（TITLE 复用）与屏幕显示必须分开走两条通道，否则通知栏、
++             * 锁屏和快捷设置里的媒体卡片会一起变成歌词：
++             *
++             *   - AVRCP（车机）：packages/modules/Bluetooth 的
++             *     Metadata.Builder.fromMediaMetadata() 先用 getDescription() 打底，
++             *     再用原始 METADATA_KEY_TITLE 覆盖 —— 所以车机读的是 TITLE。
++             *   - SystemUI（通知栏媒体卡片 / 锁屏 / 快捷设置）：读
++             *     MediaMetadata.getDescription()，而该方法在 DISPLAY_TITLE 非空时
++             *     「只用 display 数据」，完全不看 TITLE。
++             *
++             * 官方 MediaSession 指南也是这么分工的：DISPLAY_* 负责显示，
++             * TITLE/ARTIST 作为 legacy 通道兜底。
++             * 因此 TITLE 放歌词、DISPLAY_TITLE 放歌名，两边互不干扰。
++             */
+             mediaMetadataBuilder
+-                    .putString(MediaMetadataCompat.METADATA_KEY_TITLE, title)
++                    // 车机（AVRCP）读这里：开启车载歌词时换成当前歌词行
++                    .putString(MediaMetadataCompat.METADATA_KEY_TITLE, carLyric != null ? carLyric : title)
++                    // 屏幕显示读这里：始终是歌名 / 歌手 / 专辑
++                    .putString(MediaMetadataCompat.METADATA_KEY_DISPLAY_TITLE, title)
++                    .putString(MediaMetadataCompat.METADATA_KEY_DISPLAY_SUBTITLE, buildDisplaySubtitle())
++                    .putString(MediaMetadataCompat.METADATA_KEY_DISPLAY_DESCRIPTION, album)
+                     .putString(MediaMetadataCompat.METADATA_KEY_ARTIST, artist)
+                     .putString(MediaMetadataCompat.METADATA_KEY_ALBUM, album)
+                     .putBitmap(MediaMetadataCompat.METADATA_KEY_ALBUM_ART, artwork)
+@@ -289,7 +477,7 @@ public class MediaSessionService extends Service {
+         if (notificationUpdate && notificationBuilder != null) {
+             notificationBuilder
+                     .setContentTitle(title)
+-                    .setContentText(artist + " - " + album)
++                    .setContentText(buildNotificationSubtitle())
+                     .setLargeIcon(artwork);
+             notificationManager.notify(NOTIFICATION_ID, notificationBuilder.build());
+             notificationUpdate = false;
 diff --git a/node_modules/@jofr/capacitor-media-session/android/src/main/res/drawable/ic_baseline_favorite_24.xml b/node_modules/@jofr/capacitor-media-session/android/src/main/res/drawable/ic_baseline_favorite_24.xml
 new file mode 100644
 index 0000000..7f7d98f
@@ -329,10 +477,10 @@ index 0000000..0e018a9
 +    <path android:fillColor="@android:color/white" android:pathData="M10.59,9.17L5.41,4 4,5.41l5.17,5.17 1.42,-1.41zM14.5,4l2.04,2.04L4,18.59 5.41,20 17.96,7.46 20,9.5V4h-5.5zM14.83,13.41l-1.41,1.41 3.38,3.38L14,21h5.5v-5.5l-2.04,2.04 -3.63,-3.63z"/>
 +</vector>
 diff --git a/node_modules/@jofr/capacitor-media-session/dist/esm/definitions.d.ts b/node_modules/@jofr/capacitor-media-session/dist/esm/definitions.d.ts
-index 4b36d38..028a71f 100644
+index 4b36d38..a130b02 100644
 --- a/node_modules/@jofr/capacitor-media-session/dist/esm/definitions.d.ts
 +++ b/node_modules/@jofr/capacitor-media-session/dist/esm/definitions.d.ts
-@@ -15,6 +15,21 @@ interface ActionDetails {
+@@ -15,11 +15,32 @@ interface ActionDetails {
      action: MediaSessionAction;
      seekTime?: number | null;
  }
@@ -354,10 +502,27 @@ index 4b36d38..028a71f 100644
  export interface PositionStateOptions {
      duration?: number;
      playbackRate?: number;
-@@ -50,5 +65,9 @@ export interface MediaSessionPlugin {
+     position?: number;
+ }
++export interface CarLyricOptions {
++    /**
++     * 当前歌词行。传 `null`（或空串）表示关闭覆写，AVRCP 的 TITLE 回退为歌名。
++     */
++    text: string | null;
++}
+ export interface MediaSessionPlugin {
+     /**
+      * Sets metadata of the currently playing media. Analogue to setting the
+@@ -50,5 +71,15 @@ export interface MediaSessionPlugin {
       * when using the Media Session API directly.
       */
      setPositionState(options: PositionStateOptions): Promise<void>;
++    /**
++     * 车载歌词（仅 Android 原生实现）。AVRCP 协议没有歌词字段，业界做法是把
++     * 当前歌词行覆写到 TITLE 上供车机显示；此调用**不影响通知栏与锁屏**。
++     * Web / iOS 无对应实现，调用前必须用平台判断守卫。
++     */
++    setCarLyric(options: CarLyricOptions): Promise<void>;
 +    /**
 +     * 更新自定义媒体控制按钮（like / playmode）的开关状态，用于刷新通知栏图标与文案。
 +     */

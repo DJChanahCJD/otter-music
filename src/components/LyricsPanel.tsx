@@ -9,20 +9,13 @@ import { MusicTrack } from "@/types/music";
 import { Play } from "lucide-react";
 import { useMusicStore, type LyricAlign } from "@/store/music-store";
 import { useShallow } from "zustand/react/shallow";
+import { findActiveLyricIndex, parseLrc, type LyricLine } from "@/lib/lyrics";
 
 interface LyricsPanelProps {
   track: MusicTrack | null;
   active?: boolean;
 }
 
-interface LyricLine {
-  time: number;
-  text: string;
-  ttext?: string;
-}
-
-const TIME_EXP = /\[(\d{2}):(\d{2})\.(\d{2,3})]/g;
-const MATCH_TOLERANCE = 0.5;
 const AUTO_SCROLL_DELAY = 2000;
 const PADDING_LINES = 2;
 
@@ -30,78 +23,6 @@ function formatTime(seconds: number): string {
   const mins = Math.floor(seconds / 60);
   const secs = Math.floor(seconds % 60);
   return `${mins}:${secs.toString().padStart(2, "0")}`;
-}
-
-function parseSimpleLrc(lrc: string): { time: number; text: string }[] {
-  const lines: { time: number; text: string }[] = [];
-
-  for (const line of lrc.split("\n")) {
-    const timeMatches = [...line.matchAll(TIME_EXP)];
-
-    if (timeMatches.length > 0) {
-      const text = line.replace(TIME_EXP, "").trim();
-
-      if (text) {
-        for (const m of timeMatches) {
-          const time =
-            Number(m[1]) * 60 +
-            Number(m[2]) +
-            Number(m[3].padEnd(3, "0")) / 1000;
-
-          lines.push({ time, text });
-        }
-      }
-    }
-  }
-
-  return lines.sort((a, b) => a.time - b.time);
-}
-
-function parseLrc(lrc: string, tLrc?: string): LyricLine[] {
-  const lLines = parseSimpleLrc(lrc);
-
-  if (!tLrc) {
-    return lLines;
-  }
-
-  const tLines = parseSimpleLrc(tLrc);
-  const result: LyricLine[] = [];
-  let tIdx = 0;
-
-  for (const line of lLines) {
-    let ttext: string | undefined;
-
-    while (
-      tIdx < tLines.length &&
-      tLines[tIdx].time < line.time - MATCH_TOLERANCE
-    ) {
-      tIdx++;
-    }
-
-    let bestMatchIdx = -1;
-    let minDiff = MATCH_TOLERANCE;
-
-    for (let i = tIdx; i < tLines.length; i++) {
-      const diff = Math.abs(tLines[i].time - line.time);
-
-      if (tLines[i].time > line.time + MATCH_TOLERANCE) {
-        break;
-      }
-
-      if (diff <= MATCH_TOLERANCE && diff < minDiff) {
-        minDiff = diff;
-        bestMatchIdx = i;
-      }
-    }
-
-    if (bestMatchIdx !== -1) {
-      ttext = tLines[bestMatchIdx].text;
-    }
-
-    result.push({ ...line, ttext });
-  }
-
-  return result;
 }
 
 const LyricLineView = memo(function LyricLineView({
@@ -195,10 +116,7 @@ export function LyricsPanel({ track, active = true }: LyricsPanelProps) {
 
   const activeIndex =
     lyrics.length > 0
-      ? Math.max(
-          0,
-          lyrics.findLastIndex((line) => currentTime >= line.time + lyricOffset)
-        )
+      ? Math.max(0, findActiveLyricIndex(lyrics, currentTime, lyricOffset))
       : 0;
 
   const lineRefs = useRef<(HTMLDivElement | null)[]>([]);

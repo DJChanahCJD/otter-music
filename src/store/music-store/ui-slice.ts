@@ -38,6 +38,8 @@ export interface UiSlice {
   lyricAlign: LyricAlign;
   lyricFontSize: number;
   lyricOffset: number;
+  /** 蓝牙车载歌词：把当前歌词行覆写到 AVRCP 的 TITLE 上供车机显示 */
+  carLyricEnabled: boolean;
   playbackSpeed: number;
   isFullScreenPlayer: boolean;
   setQuality: (quality: string) => void;
@@ -64,6 +66,7 @@ export interface UiSlice {
   setLyricAlign: (align: LyricAlign) => void;
   setLyricFontSize: (size: number) => void;
   setLyricOffset: (offset: number) => void;
+  setCarLyricEnabled: (enable: boolean) => void;
   setPlaybackSpeed: (speed: number) => void;
   setIsFullScreenPlayer: (isFullScreen: boolean) => void;
 }
@@ -93,6 +96,7 @@ export const createUiSlice: StateCreator<MusicState, [], [], UiSlice> = (
   lyricAlign: "center",
   lyricFontSize: 18,
   lyricOffset: -0.5,
+  carLyricEnabled: false,
   playbackSpeed: 1.0,
   isFullScreenPlayer: false,
   setQuality: (quality) => set({ quality }),
@@ -122,6 +126,7 @@ export const createUiSlice: StateCreator<MusicState, [], [], UiSlice> = (
   setLyricAlign: (lyricAlign) => set({ lyricAlign }),
   setLyricFontSize: (lyricFontSize) => set({ lyricFontSize }),
   setLyricOffset: (lyricOffset) => set({ lyricOffset }),
+  setCarLyricEnabled: (carLyricEnabled) => set({ carLyricEnabled }),
   setPlaybackSpeed: (playbackSpeed) => set({ playbackSpeed }),
   setIsFullScreenPlayer: (isFullScreenPlayer) => set({ isFullScreenPlayer }),
 });

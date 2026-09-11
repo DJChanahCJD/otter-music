@@ -86,6 +86,7 @@ export const useMusicStore = create<MusicState>()(
         lyricAlign: state.lyricAlign,
         lyricFontSize: state.lyricFontSize,
         lyricOffset: state.lyricOffset,
+        carLyricEnabled: state.carLyricEnabled,
         downloadQuality: state.downloadQuality,
         embedCover: state.embedCover,
         embedLyric: state.embedLyric,
