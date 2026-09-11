@@ -11,7 +11,6 @@ const mockFeed: PodcastFeed = {
       id: "ep1",
       title: "Episode 1",
       audioUrl: "https://example.com/ep1.mp3",
-      desc: "First episode",
       pubDate: "Mon, 01 Jan 2024 00:00:00 GMT",
       coverUrl: "https://example.com/cover.jpg",
     },

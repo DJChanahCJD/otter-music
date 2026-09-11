@@ -14,6 +14,7 @@ import { writeClipboardText } from "@/lib/clipboard";
 import { usePodcastStore } from "@/store/podcast-store";
 import { forceHttps } from "@otter-music/shared";
 import { MusicTrack } from "@/types/music";
+import type { PodcastFeed } from "@/types/podcast";
 import { useDetailPage } from "@/hooks/useDetailPage";
 
 interface PodcastDetailPageProps {
@@ -31,6 +32,24 @@ interface PodcastDetailData {
   creator?: string;
   trackCount: number;
   rssUrl: string;
+}
+
+/**
+ * 将 RSS 单集转换为播放列表曲目
+ * @param feed 解析后的 RSS feed
+ * @param coverUrl 已归一化的封面地址
+ */
+function toTracks(feed: PodcastFeed, coverUrl: string): MusicTrack[] {
+  return feed.episodes.map((ep) => ({
+    id: ep.audioUrl || ep.id,
+    name: ep.title,
+    artist: [feed.name],
+    album: ep.pubDate ? formatDateZN(ep.pubDate) : "",
+    pic_id: coverUrl,
+    url_id: forceHttps(ep.audioUrl) || "",
+    lyric_id: "_podcast",
+    source: "podcast" as const,
+  }));
 }
 
 export function PodcastDetailPage({
@@ -54,19 +73,9 @@ export function PodcastDetailPage({
         );
         if (!source) throw new Error("Podcast not found");
 
+        // 一次性完整解析全部单集，渲染层交给虚拟列表
         const feed = await parsePodcastRss(source.rssUrl, signal);
         const coverUrl = forceHttps(feed.coverUrl || source.coverUrl || "");
-
-        const podcastTracks = feed.episodes.map((ep) => ({
-          id: ep.audioUrl || ep.id,
-          name: ep.title,
-          artist: [feed.name],
-          album: ep.pubDate ? formatDateZN(ep.pubDate) : "",
-          pic_id: coverUrl,
-          url_id: forceHttps(ep.audioUrl) || "",
-          lyric_id: "_podcast",
-          source: "podcast" as const,
-        }));
 
         return {
           detail: {
@@ -77,7 +86,7 @@ export function PodcastDetailPage({
             creator: source.author,
             rssUrl: source.rssUrl,
           },
-          tracks: podcastTracks,
+          tracks: toTracks(feed, coverUrl),
         };
       },
       [id]
@@ -95,6 +104,7 @@ export function PodcastDetailPage({
     }
   };
 
+  // 全部单集直接交给虚拟列表，不做渲染层分页
   const filteredTracks = useMemo(
     () => filterTracks(tracks, searchQuery),
     [tracks, searchQuery]
@@ -106,7 +116,7 @@ export function PodcastDetailPage({
         coverUrl: detail.coverImgUrl,
         description: detail.description,
         creator: detail.creator,
-        countDesc: `最近 ${detail.trackCount} 集`,
+        countDesc: `共 ${detail.trackCount} 集`,
         fallbackIcon: <Podcast className="h-8 w-8 text-muted-foreground/50" />,
       }
     : undefined;

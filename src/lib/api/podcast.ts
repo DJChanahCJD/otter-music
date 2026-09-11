@@ -193,7 +193,7 @@ const fetchPodcastRssDirect = async (
  * 解析播客 RSS
  * - 原生端：优先 CapacitorHttp 直连；直连不可达时回退后端代理
  * - Web 端：后端代理（RSS 源通常不支持 CORS）
- * - 解析结果按 rssUrl 缓存 15 分钟，减少重复请求并支持弱网回退
+ * - 解析结果按 rssUrl 缓存 30 分钟，减少重复请求并支持弱网回退
  */
 export const parsePodcastRss = async (
   rssUrl: string,

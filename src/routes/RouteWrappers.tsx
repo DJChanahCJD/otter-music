@@ -305,7 +305,9 @@ export const PodcastDetailRoute = withSuspense(() => {
   const { currentTrackId, isPlaying } = usePlaybackState();
 
   return (
+    // key 绑定播客 id：切换播客时重新挂载，重置分页、搜索等内部状态
     <PodcastDetailPage
+      key={id ?? "none"}
       id={id || null}
       onBack={() => navigate(-1)}
       onPlay={(track, list) => handlePlay(track, list, "podcast")}

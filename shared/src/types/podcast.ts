@@ -13,7 +13,6 @@ export interface PodcastEpisode {
   id: string;
   title: string;
   audioUrl: string | null;
-  desc: string;
   pubDate: string | null;
   coverUrl: string | null;
 }

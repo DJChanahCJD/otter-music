@@ -1,7 +1,5 @@
 import type { PodcastFeed, PodcastEpisode } from "@otter-music/shared";
 
-const MAX_EPISODES = 50;
-
 const HTML_ENTITY_MAP: Record<string, string> = {
   nbsp: " ",
   amp: "&",
@@ -49,7 +47,9 @@ function getTextContent(el: Element | null): string {
 }
 
 /**
- * 从 RSS/Atom XML 解析播客数据
+ * 从 RSS/Atom XML 解析播客数据（始终完整解析，不做截断）
+ * @param xmlText 原始 XML 文本
+ * @param feedUrl 用于把相对 URL 解析为绝对 URL 的源地址
  */
 export function parseRssXml(xmlText: string, feedUrl: string): PodcastFeed {
   const parser = new DOMParser();
@@ -78,10 +78,11 @@ export function parseRssXml(xmlText: string, feedUrl: string): PodcastFeed {
     feed.description = stripHtml(
       getTextContent(doc.querySelector("feed > subtitle"))
     );
-    feed.link = normalizeUrl(
-      getTextContent(doc.querySelector("feed > link[rel='alternate']")),
-      feedUrl
-    );
+    // Atom 的链接在 href 属性上（textContent 为空）；rel 缺省时按 alternate 处理
+    const atomLink =
+      doc.querySelector("feed > link[rel='alternate'][href]") ||
+      doc.querySelector("feed > link[href]:not([rel])");
+    feed.link = normalizeUrl(atomLink?.getAttribute("href") || "", feedUrl);
 
     // Atom 封面
     const logo = doc.querySelector("feed > logo, feed > icon");
@@ -98,13 +99,8 @@ export function parseRssXml(xmlText: string, feedUrl: string): PodcastFeed {
 
     // 解析条目
     const entries = doc.querySelectorAll("feed > entry");
-    for (
-      let i = 0;
-      i < entries.length && feed.episodes.length < MAX_EPISODES;
-      i++
-    ) {
-      const entry = entries[i];
-      const episode = parseAtomEntry(entry, feedUrl, feed.coverUrl);
+    for (let i = 0; i < entries.length; i++) {
+      const episode = parseAtomEntry(entries[i], feedUrl, feed.coverUrl);
       if (episode) feed.episodes.push(episode);
     }
   } else {
@@ -137,15 +133,16 @@ export function parseRssXml(xmlText: string, feedUrl: string): PodcastFeed {
       }
     }
 
+    // RSS 2.0 标准封面 <image><url>...</url></image>
+    if (!feed.coverUrl) {
+      const url = getTextContent(doc.querySelector("channel > image > url"));
+      if (url) feed.coverUrl = normalizeUrl(url, feedUrl);
+    }
+
     // 解析条目
     const items = doc.querySelectorAll("channel > item");
-    for (
-      let i = 0;
-      i < items.length && feed.episodes.length < MAX_EPISODES;
-      i++
-    ) {
-      const item = items[i];
-      const episode = parseRssItem(item, feedUrl, feed.coverUrl);
+    for (let i = 0; i < items.length; i++) {
+      const episode = parseRssItem(items[i], feedUrl, feed.coverUrl);
       if (episode) feed.episodes.push(episode);
     }
   }
@@ -181,13 +178,6 @@ function parseRssItem(
 
   if (!audioUrl) return null;
 
-  // 描述
-  const desc =
-    getTextContent(item.querySelector("description")) ||
-    getTextContent(item.querySelector("content\\:encoded")) ||
-    getTextContent(item.querySelector("summary")) ||
-    "";
-
   // 发布日期
   const pubDate =
     getTextContent(item.querySelector("pubDate")) ||
@@ -209,7 +199,6 @@ function parseRssItem(
     id: id.slice(0, 200),
     title: stripHtml(title),
     audioUrl,
-    desc: stripHtml(desc).slice(0, 1000),
     pubDate,
     coverUrl,
   };
@@ -243,12 +232,6 @@ function parseAtomEntry(
 
   if (!audioUrl) return null;
 
-  // 描述
-  const desc =
-    getTextContent(entry.querySelector("summary")) ||
-    getTextContent(entry.querySelector("content")) ||
-    "";
-
   // 发布日期
   const pubDate =
     getTextContent(entry.querySelector("published")) ||
@@ -270,7 +253,6 @@ function parseAtomEntry(
     id: id.slice(0, 200),
     title: stripHtml(title),
     audioUrl,
-    desc: stripHtml(desc).slice(0, 1000),
     pubDate,
     coverUrl,
   };
