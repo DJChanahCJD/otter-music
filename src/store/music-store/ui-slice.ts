@@ -93,7 +93,7 @@ export const createUiSlice: StateCreator<MusicState, [], [], UiSlice> = (
   coverSize: 328,
   coverRadius: 24,
   showSourceBadge: true,
-  lyricAlign: "center",
+  lyricAlign: "left",
   lyricFontSize: 18,
   lyricOffset: -0.5,
   carLyricEnabled: false,
