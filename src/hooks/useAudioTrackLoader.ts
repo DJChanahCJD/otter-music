@@ -130,7 +130,9 @@ export function useAudioTrackLoader(
       const audio = audioRef.current!;
       const prev = prevTrackRef.current;
 
-      const isRecovery = prev.recoveryKey !== urlRecoveryKey;
+      // prev.recoveryKey 为 undefined说明是本 effect 首次运行，非错误恢复
+      const isRecovery =
+        prev.recoveryKey !== undefined && prev.recoveryKey !== urlRecoveryKey;
       const isSameTrack = prev.id === trackId && prev.source === source;
       const qualityChanged = isSameTrack && prev.quality !== quality;
       const skipQualityReload =
@@ -260,6 +262,11 @@ export function useAudioTrackLoader(
           throw err;
         }
       } catch (err: unknown) {
+        // 清理失效缓存（置于 requestId 守卫前：audio error 触发的恢复流程
+        // 会使本请求失效，但失效缓存仍需删除，避免恢复/重试再次命中死链）
+        useOfflineStore.getState().removeRecord(trackId);
+        useUrlCacheStore.getState().delete(trackKey);
+
         if (requestId !== requestIdRef.current) return;
 
         const errorMsg = err instanceof Error ? err.message : String(err);
@@ -283,12 +290,6 @@ export function useAudioTrackLoader(
         }
 
         useSourceQualityStore.getState().recordFail(source);
-
-        // 离线时清理过期信息
-        if (!navigator.onLine) {
-          useOfflineStore.getState().removeRecord(trackId);
-          useUrlCacheStore.getState().delete(trackKey);
-        }
 
         fallbackStageRef.current.stage = "final";
         audio.src = "";
