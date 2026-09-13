@@ -10,6 +10,7 @@ import { revokeAll } from "@/lib/utils/blob-registry";
 import { stopBilibiliProxyServer } from "@/lib/bilibili/bilibili-native-player";
 import { App as CapacitorApp } from "@capacitor/app";
 import { IS_NATIVE } from "@/lib/api/config";
+import { preloadRouteChunks } from "@/routes/preload";
 export default function App() {
   // Sync Logic
   const { syncKey } = useSyncStore();
@@ -38,9 +39,13 @@ export default function App() {
       setTimeout(() => cleanupCache(), 5000);
     }
 
+    // 首屏空闲后预取高频 tab 的 chunk，减少首次切换时的白屏
+    const cancelPreload = preloadRouteChunks();
+
     const handleBeforeUnload = () => revokeAll();
     window.addEventListener("beforeunload", handleBeforeUnload);
     return () => {
+      cancelPreload();
       window.removeEventListener("beforeunload", handleBeforeUnload);
       revokeAll();
     };

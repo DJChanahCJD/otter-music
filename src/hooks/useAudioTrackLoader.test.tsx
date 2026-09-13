@@ -6,6 +6,7 @@ import { useMusicStore } from "@/store/music-store";
 import { useOfflineStore } from "@/store/offline-store";
 import { useUrlCacheStore } from "@/store/url-cache-store";
 import { resolveTrackUrl } from "@/lib/audio-resolver";
+import { getProxyUrl } from "@/lib/api";
 import toast from "react-hot-toast";
 import type { MusicTrack } from "@/types/music";
 
@@ -235,6 +236,44 @@ describe("useAudioTrackLoader", () => {
     // 旧请求虽被守卫拦截（不触发失败 UI），但失效缓存仍被清理
     expect(useUrlCacheStore.getState().urlMap[TRACK_KEY]).toBeUndefined();
     expect(toast.error).not.toHaveBeenCalled();
+    cleanup();
+  });
+
+  it("网络层播放失败时回退代理线路，且不重复请求 URL", async () => {
+    const PROXY_URL = "https://proxy.example.com/audio";
+    vi.mocked(getProxyUrl).mockReturnValueOnce(PROXY_URL);
+
+    const { audio, cleanup } = await setup((a) => {
+      a.play = vi
+        .fn<() => Promise<void>>()
+        .mockRejectedValueOnce(
+          Object.assign(new Error("NETWORK_FAIL"), { mediaErrorCode: 2 })
+        )
+        .mockResolvedValueOnce(undefined);
+    });
+    await flushAsync();
+
+    expect(toast).toHaveBeenCalledWith("已切换备用线路", {
+      icon: "🌐",
+      id: "proxy-notice",
+    });
+    expect(getProxyUrl).toHaveBeenCalledWith(MOCK_URL);
+    expect(audio.play).toHaveBeenCalledTimes(2);
+    // 代理回退复用 remoteUrlRef 中的远程 URL，不重新触发 URL 解析
+    expect(resolveTrackUrl).toHaveBeenCalledTimes(1);
+    cleanup();
+  });
+
+  it("连续失败达到上限时停止播放而非无限跳下一首", async () => {
+    const skipToNext = vi.spyOn(useMusicStore.getState(), "skipToNext");
+
+    const { cleanup } = await setup((a) => {
+      a.play = vi.fn().mockRejectedValue(new Error("PLAY_FAIL"));
+    });
+    await flushAsync();
+
+    expect(useMusicStore.getState().isPlaying).toBe(false);
+    expect(skipToNext).not.toHaveBeenCalled();
     cleanup();
   });
 });

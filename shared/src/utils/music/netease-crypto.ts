@@ -1,6 +1,34 @@
-import forge from "node-forge/lib/forge";
-import "node-forge/lib/aes";
-import "node-forge/lib/rsa";
+/**
+ * 网易云 weapi / eapi 签名。
+ *
+ * node-forge 体积约 80KB，而签名只在真正发起网易云接口请求时才需要。
+ * 因此这里对 forge 做**动态 import**，让打包器把它拆成独立 chunk：
+ * 首屏（搜索、播放、本地音乐）完全不加载加密代码，只有首次调用
+ * `weapi` / `eapi` 时才按需拉取。
+ *
+ * 代价是 `weapi` / `eapi` 变成异步。为保持老调用方兼容，首次调用后
+ * 模块级缓存 forge 实例，后续调用只多一个微任务开销。
+ */
+
+type ForgeModule = typeof import("node-forge/lib/forge");
+
+let forgePromise: Promise<ForgeModule> | null = null;
+
+/** 按需加载 node-forge（含 AES / RSA 扩展），并缓存实例 */
+function loadForge(): Promise<ForgeModule> {
+  if (!forgePromise) {
+    forgePromise = (async () => {
+      const [forge] = await Promise.all([
+        import("node-forge/lib/forge"),
+        import("node-forge/lib/aes"),
+        import("node-forge/lib/rsa"),
+      ]);
+      // forge 的 CJS 默认导出在 ESM 互操作下可能是 default 包装
+      return (forge.default ?? forge) as ForgeModule;
+    })();
+  }
+  return forgePromise;
+}
 
 const NONCE = "0CoJUm6Qyw8W8jud";
 const PUB_KEY = "010001";
@@ -19,6 +47,7 @@ function createSecretKey(size: number): string {
 }
 
 function aesEncrypt(
+  forge: ForgeModule,
   text: string,
   secKey: string,
   algo: "AES-CBC" | "AES-ECB",
@@ -39,7 +68,12 @@ function aesEncrypt(
   return cipher.output.data; // Binary string
 }
 
-function rsaEncrypt(text: string, pubKey: string, modulus: string): string {
+function rsaEncrypt(
+  forge: ForgeModule,
+  text: string,
+  pubKey: string,
+  modulus: string
+): string {
   const reversedText = text.split("").reverse().join("");
   const n = new forge.jsbn.BigInteger(modulus, 16);
   const e = new forge.jsbn.BigInteger(pubKey, 16);
@@ -48,19 +82,20 @@ function rsaEncrypt(text: string, pubKey: string, modulus: string): string {
   return enc;
 }
 
-export function weapi(object: unknown) {
+export async function weapi(object: unknown) {
+  const forge = await loadForge();
   const text = JSON.stringify(object);
   const secKey = createSecretKey(16);
 
   // First encryption
-  const enc1 = aesEncrypt(text, NONCE, "AES-CBC");
+  const enc1 = aesEncrypt(forge, text, NONCE, "AES-CBC");
   const b64enc1 = forge.util.encode64(enc1);
 
   // Second encryption
-  const enc2 = aesEncrypt(b64enc1, secKey, "AES-CBC");
+  const enc2 = aesEncrypt(forge, b64enc1, secKey, "AES-CBC");
   const b64enc2 = forge.util.encode64(enc2);
 
-  const encSecKey = rsaEncrypt(secKey, PUB_KEY, MODULUS);
+  const encSecKey = rsaEncrypt(forge, secKey, PUB_KEY, MODULUS);
 
   return {
     params: b64enc2,
@@ -68,7 +103,8 @@ export function weapi(object: unknown) {
   };
 }
 
-export function eapi(url: string, object: unknown) {
+export async function eapi(url: string, object: unknown) {
+  const forge = await loadForge();
   const text = typeof object === "object" ? JSON.stringify(object) : object;
   const message = `nobody${url}use${text}md5forencrypt`;
   const digest = forge.md5
@@ -78,7 +114,7 @@ export function eapi(url: string, object: unknown) {
     .toHex();
   const data = `${url}-36cd479b6b5-${text}-36cd479b6b5-${digest}`;
 
-  const enc = aesEncrypt(data, EAPI_KEY, "AES-ECB");
+  const enc = aesEncrypt(forge, data, EAPI_KEY, "AES-ECB");
   const hex = forge.util.bytesToHex(enc).toUpperCase();
 
   return {

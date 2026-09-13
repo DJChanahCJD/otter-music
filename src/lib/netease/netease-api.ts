@@ -193,7 +193,7 @@ async function requestWeapi<T = unknown>(
   const finalCookie = resolveRequestCookie(cookie);
   const headers = buildHeaders(finalCookie, PC_USER_AGENT);
   const params = new URLSearchParams(
-    weapi(data) as Record<string, string>
+    (await weapi(data)) as Record<string, string>
   ).toString();
 
   const { data: resData, setCookie } = await crossFetch(url, {

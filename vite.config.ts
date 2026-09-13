@@ -89,6 +89,15 @@ function createBilibiliProxyPlugin(
   };
 }
 
+/**
+ * 按包名匹配 node_modules 依赖，避免用 id.includes("react") 这类宽泛判断。
+ * 旧规则会把 react-router-dom / react-hot-toast / radix-ui 等一并塞进
+ * react-vendor，导致该 chunk 被无关依赖撑大、失去按需加载意义。
+ */
+function matchPackage(id: string, pkg: string): boolean {
+  return id.includes(`/node_modules/${pkg}/`);
+}
+
 // https://vite.dev/config/
 export default defineConfig({
   define: {
@@ -366,14 +375,41 @@ export default defineConfig({
         entryFileNames: "assets/[name]-[hash].js",
         assetFileNames: "assets/[name]-[hash].[ext]",
         manualChunks: (id) => {
-          if (id.includes("node_modules")) {
-            if (id.includes("react") || id.includes("react-dom"))
-              return "react-vendor";
-            if (id.includes("lucide-react")) return "lucide-vendor";
-            if (id.includes("@radix-ui")) return "radix-vendor";
-            if (id.includes("date-fns")) return "date-fns-vendor";
-            if (id.includes("@capacitor")) return "capacitor-vendor";
+          if (!id.includes("node_modules")) return;
+
+          // React 内核：必须保持同 chunk，拆开会导致运行时重复实例
+          if (
+            matchPackage(id, "react") ||
+            matchPackage(id, "react-dom") ||
+            matchPackage(id, "scheduler") ||
+            matchPackage(id, "use-sync-external-store")
+          ) {
+            return "react-vendor";
           }
+
+          // 路由与状态：随首屏加载
+          if (
+            matchPackage(id, "react-router") ||
+            matchPackage(id, "react-router-dom") ||
+            matchPackage(id, "zustand")
+          ) {
+            return "router-vendor";
+          }
+
+          // UI 基础库
+          if (matchPackage(id, "lucide-react")) return "lucide-vendor";
+          if (matchPackage(id, "radix-ui")) return "radix-vendor";
+          if (matchPackage(id, "vaul")) return "vaul-vendor";
+          if (matchPackage(id, "react-hot-toast") || matchPackage(id, "sonner"))
+            return "toast-vendor";
+
+          // 原生桥接
+          if (matchPackage(id, "@capacitor")) return "capacitor-vendor";
+
+          // 加密：仅在首次调用 weapi/eapi 时按需加载
+          if (matchPackage(id, "node-forge")) return "forge-vendor";
+
+          if (matchPackage(id, "date-fns")) return "date-fns-vendor";
         },
       },
     },

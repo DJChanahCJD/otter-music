@@ -74,7 +74,7 @@ async function requestWeapi<T = any>(
   data: any,
   cookie: string = ""
 ) {
-  const encData = weapi(data);
+  const encData = await weapi(data);
   const params = new URLSearchParams(encData as any).toString();
   const fakeIp = getRandomDomesticIp();
 
@@ -106,7 +106,7 @@ async function requestEapi<T = any>(
   data: any,
   cookie: string = ""
 ) {
-  const encData = eapi(path, data);
+  const encData = await eapi(path, data);
   const params = new URLSearchParams(encData as any).toString();
   const fakeIp = getRandomDomesticIp();
 
