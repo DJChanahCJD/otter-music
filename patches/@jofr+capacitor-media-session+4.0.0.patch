@@ -187,7 +187,7 @@ index 6f54b7f..0c325e7 100644
          if (service != null) { service.updatePossibleActions(); };
      }
 diff --git a/node_modules/@jofr/capacitor-media-session/android/src/main/java/io/github/jofr/capacitor/mediasessionplugin/MediaSessionService.java b/node_modules/@jofr/capacitor-media-session/android/src/main/java/io/github/jofr/capacitor/mediasessionplugin/MediaSessionService.java
-index cb0417f..652ec90 100644
+index cb0417f..8816841 100644
 --- a/node_modules/@jofr/capacitor-media-session/android/src/main/java/io/github/jofr/capacitor/mediasessionplugin/MediaSessionService.java
 +++ b/node_modules/@jofr/capacitor-media-session/android/src/main/java/io/github/jofr/capacitor/mediasessionplugin/MediaSessionService.java
 @@ -21,10 +21,14 @@ import androidx.core.app.NotificationCompat;
@@ -413,7 +413,18 @@ index cb0417f..652ec90 100644
      public void setArtist(String artist) {
          if (!this.artist.equals(artist)) {
              this.artist = artist;
-@@ -225,12 +387,15 @@ public class MediaSessionService extends Service {
+@@ -219,18 +381,26 @@ public class MediaSessionService extends Service {
+ 
+     @SuppressLint("RestrictedApi")
+     public void update() {
++        // Service 刚绑定尚未 connectAndInitialize（或已解绑）时 mediaSession 为 null。
++        // 桥线程（HandlerThread）与主线程的绑定回调存在竞态，此处必须兜底；
++        // 挂起的更新标志保留，初始化完成后的首次 update() 会一并生效。
++        if (mediaSession == null) return;
++
+         if (possibleActionsUpdate) {
+           if (notificationBuilder != null) {
+             notificationBuilder.mActions.clear();
            }
  
              long activePlaybackStateActions = 0;
@@ -431,7 +442,7 @@ index cb0417f..652ec90 100644
                      if (actionName.equals("play") && playbackState != PlaybackStateCompat.STATE_PAUSED) {
                          continue;
                      }
-@@ -238,13 +403,26 @@ public class MediaSessionService extends Service {
+@@ -238,13 +408,26 @@ public class MediaSessionService extends Service {
                          continue;
                      }
  
@@ -459,7 +470,7 @@ index cb0417f..652ec90 100644
                              activeCompactViewActionIndices[compactNotificationActionIndicesIndex] = notificationActionIndex;
                              compactNotificationActionIndicesIndex++;
                          }
-@@ -253,8 +431,10 @@ public class MediaSessionService extends Service {
+@@ -253,8 +436,10 @@ public class MediaSessionService extends Service {
                  }
              }
  
@@ -472,7 +483,7 @@ index cb0417f..652ec90 100644
              }
              if (notificationStyle != null) {
                if (compactNotificationActionIndicesIndex > 0) {
-@@ -276,8 +456,28 @@ public class MediaSessionService extends Service {
+@@ -276,8 +461,28 @@ public class MediaSessionService extends Service {
          }
  
          if (mediaMetadataUpdate && mediaMetadataBuilder != null) {
@@ -502,7 +513,7 @@ index cb0417f..652ec90 100644
                      .putString(MediaMetadataCompat.METADATA_KEY_ARTIST, artist)
                      .putString(MediaMetadataCompat.METADATA_KEY_ALBUM, album)
                      .putBitmap(MediaMetadataCompat.METADATA_KEY_ALBUM_ART, artwork)
-@@ -289,7 +489,7 @@ public class MediaSessionService extends Service {
+@@ -289,7 +494,7 @@ public class MediaSessionService extends Service {
          if (notificationUpdate && notificationBuilder != null) {
              notificationBuilder
                      .setContentTitle(title)
