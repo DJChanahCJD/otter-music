@@ -46,6 +46,17 @@ const bilibiliTrack: MusicTrack = {
   source: "bilibili",
 };
 
+const higequTrack: MusicTrack = {
+  id: "higequ_228908",
+  name: "晴天",
+  artist: ["周杰伦"],
+  album: "叶惠美",
+  pic_id: "higequ_228908",
+  url_id: "228908",
+  lyric_id: "higequ_228908",
+  source: "higequ",
+};
+
 const alistTrack: MusicTrack = {
   id: "alist:missing-server:/music/test.mp3",
   name: "test",
@@ -101,6 +112,22 @@ describe("MusicProviderFactory", () => {
       "https://y.gtimg.cn/music/photo_new/T002R800x800M000abc.jpg"
     );
     await expect(provider.getLyric(qqTrack)).resolves.toBeNull();
+  });
+
+  it("creates a provider for Hi歌曲 tracks", async () => {
+    const provider = MusicProviderFactory.getProvider("higequ");
+    expect(provider.source).toBe("higequ");
+
+    // 非法 rid 直接返回 null（不触发播放页抓取），避免测试依赖真实网络
+    await expect(
+      provider.getUrl({ ...higequTrack, id: "invalid", url_id: "" })
+    ).resolves.toBeNull();
+    await expect(
+      provider.getPic({ ...higequTrack, pic_id: "invalid" })
+    ).resolves.toBeNull();
+    await expect(
+      provider.getLyric({ ...higequTrack, lyric_id: "invalid" })
+    ).resolves.toBeNull();
   });
 
   it("creates a provider for Alist tracks", async () => {

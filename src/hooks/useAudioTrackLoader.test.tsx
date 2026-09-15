@@ -52,6 +52,18 @@ const TRACK = {
   duration: 180,
 } as unknown as MusicTrack;
 
+/** 单一品质音源样本（站点恒定 128kbps mp3，切音质无流可换） */
+const HIGEQU_TRACK = {
+  id: "higequ_228908",
+  source: "higequ",
+  name: "晴天",
+  artist: ["周杰伦"],
+  album: "叶惠美",
+  pic_id: "higequ_228908",
+  url_id: "228908",
+  lyric_id: "higequ_228908",
+} as unknown as MusicTrack;
+
 /** 创建 jsdom 可用的 audio 桩：load 后异步派发 canplay 模拟媒体就绪 */
 const createAudio = () => {
   const audio = document.createElement("audio");
@@ -274,6 +286,41 @@ describe("useAudioTrackLoader", () => {
 
     expect(useMusicStore.getState().isPlaying).toBe(false);
     expect(skipToNext).not.toHaveBeenCalled();
+    cleanup();
+  });
+
+  it("单一品质音源切换音质时静默跳过重载（higequ，与 B 站同逻辑）", async () => {
+    useMusicStore.setState({ queue: [HIGEQU_TRACK], currentIndex: 0 });
+
+    const { cleanup } = await setup();
+    await flushAsync();
+    expect(resolveTrackUrl).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      useMusicStore.getState().setQuality("128");
+    });
+    await flushAsync();
+
+    // 音质未实际切换：不重新解析 URL，也不进入 loading
+    expect(resolveTrackUrl).toHaveBeenCalledTimes(1);
+    expect(useMusicStore.getState().isLoading).toBe(false);
+    cleanup();
+  });
+
+  it("多品质音源切换音质时按新码率重新解析（对照组）", async () => {
+    const { cleanup } = await setup();
+    await flushAsync();
+    expect(resolveTrackUrl).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      useMusicStore.getState().setQuality("128");
+    });
+    await flushAsync();
+
+    expect(resolveTrackUrl).toHaveBeenCalledTimes(2);
+    expect(resolveTrackUrl).toHaveBeenLastCalledWith(TRACK, 128, {
+      forceRefresh: false,
+    });
     cleanup();
   });
 });

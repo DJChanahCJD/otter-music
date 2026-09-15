@@ -37,6 +37,7 @@ export const searchOptions: Record<string, string> = {
   migu: "Migu",
   bilibili: "B站",
   qq: "QQ音乐",
+  higequ: "Higequ",
 };
 
 export const sourceLabels: Record<string, string> = {
@@ -47,6 +48,7 @@ export const sourceLabels: Record<string, string> = {
   migu: "Migu",
   bilibili: "B站",
   qq: "QQ",
+  higequ: "Higequ",
   alist: "Alist",
 };
 
@@ -82,6 +84,11 @@ export const aggregatedSourceOptions: {
     label: "QQ音乐",
     description: "QQ音乐官方",
   },
+  {
+    value: "higequ",
+    label: "Higequ",
+    description: "Hi歌曲音乐网（higequ.com），固定 128kbps MP3",
+  },
 ];
 
 export const sourceBadgeStyles: Record<string, string> = {
@@ -96,6 +103,8 @@ export const sourceBadgeStyles: Record<string, string> = {
   migu: "text-pink-500 border-pink-500/30 bg-pink-500/5 hover:bg-pink-500/10",
   bilibili:
     "text-pink-500/70 border-pink-500/20 bg-pink-500/5 hover:bg-pink-500/10",
+  higequ:
+    "text-violet-500/70 border-violet-500/20 bg-violet-500/5 hover:bg-violet-500/10",
   default:
     "text-muted-foreground/70 border-border bg-muted/30 hover:bg-muted/50",
 };
@@ -114,6 +123,7 @@ export const DEFAULT_SOURCE_CONFIGS: SourceConfig[] = [
   { source: "kuwo", enabled: false, visible: true },
   { source: "migu", enabled: false, visible: true },
   { source: "qq", enabled: false, visible: true },
+  { source: "higequ", enabled: false, visible: true },
 ];
 
 export type MusicSource =
@@ -126,6 +136,7 @@ export type MusicSource =
   | "bilibili"
   | "migu"
   | "qq"
+  | "higequ"
   | "fivesing"
   | "tk"
   | "wy"

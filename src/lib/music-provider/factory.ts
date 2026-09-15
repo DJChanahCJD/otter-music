@@ -12,6 +12,7 @@ import { NeteaseProvider } from "./providers/netease-provider";
 import { QqApiProvider } from "./providers/qq-api-provider";
 import { NeteaseApiProvider } from "./providers/netease-api-provider";
 import { BilibiliApiProvider } from "./providers/bilibili-api-provider";
+import { HigequProvider } from "./providers/higequ-provider";
 import { getAggregatedSourcesForSearch } from "@/hooks/use-aggregated-sources";
 
 export class MusicProviderFactory {
@@ -64,6 +65,9 @@ export class MusicProviderFactory {
         break;
       case "bilibili":
         provider = new BilibiliApiProvider();
+        break;
+      case "higequ":
+        provider = new HigequProvider();
         break;
       default:
         throw new Error(`不支持的音乐源: ${source}`);
