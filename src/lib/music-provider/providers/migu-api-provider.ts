@@ -4,6 +4,7 @@ import {
   getMiguSongUrl,
   searchMiguSongs,
 } from "@/lib/migu/migu-api";
+import { normalizeMiguImageUrl } from "@otter-music/shared";
 import {
   MusicTrack,
   SearchIntent,
@@ -34,9 +35,10 @@ export class MiguApiProvider implements IMusicProvider {
 
   /**
    * 返回导入时已保存的封面地址。
+   * 兼容历史数据：早期版本把咪咕的相对路径（/data/oss/...）直接存进 pic_id，此处补全 CDN 域名。
    */
   async getPic(track: MusicTrack, _size?: number): Promise<string | null> {
-    return track.pic_id || null;
+    return normalizeMiguImageUrl(track.pic_id) || null;
   }
 
   /**

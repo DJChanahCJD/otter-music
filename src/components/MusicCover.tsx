@@ -107,6 +107,8 @@ export function MusicCover({
           "w-full h-full bg-muted flex items-center justify-center shrink-0",
           className
         )}
+        // 与 <img> 分支保持一致：拦掉 WebView 原生长按菜单/title 提示，避免手势被系统接管后 click 丢失
+        onContextMenu={(e) => e.preventDefault()}
       >
         {fallbackIcon || (
           <Music2 className={cn("text-muted-foreground/50", iconClassName)} />

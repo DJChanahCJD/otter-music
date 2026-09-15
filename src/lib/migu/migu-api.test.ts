@@ -12,6 +12,7 @@ import {
   convertMiguSongToMusicTrack,
   convertMiguV3SearchSongToMusicTrack,
   fetchMiguPlaylistDetail,
+  normalizeMiguImageUrl,
   parseMiguPlaylistInfoResponse,
   parseMiguPlaylistSongsResponse,
   parseMiguSongUrlResponse,
@@ -210,6 +211,29 @@ describe("getMiguLyric", () => {
   });
 });
 
+describe("normalizeMiguImageUrl", () => {
+  it("补全相对路径的 CDN 域名", () => {
+    expect(normalizeMiguImageUrl("/data/oss/resource/00/5u/7q/a.webp")).toBe(
+      "https://d.musicapp.migu.cn/data/oss/resource/00/5u/7q/a.webp"
+    );
+  });
+
+  it("协议相对路径补 https，http 强制 https", () => {
+    expect(normalizeMiguImageUrl("//d.musicapp.migu.cn/a.webp")).toBe(
+      "https://d.musicapp.migu.cn/a.webp"
+    );
+    expect(normalizeMiguImageUrl("http://d.musicapp.migu.cn/a.webp")).toBe(
+      "https://d.musicapp.migu.cn/a.webp"
+    );
+  });
+
+  it("空值返回空字符串", () => {
+    expect(normalizeMiguImageUrl("")).toBe("");
+    expect(normalizeMiguImageUrl(undefined)).toBe("");
+    expect(normalizeMiguImageUrl(null)).toBe("");
+  });
+});
+
 describe("convertMiguSongToMusicTrack", () => {
   it("converts Migu songs to MusicTrack", () => {
     const track = convertMiguSongToMusicTrack({
@@ -235,6 +259,19 @@ describe("convertMiguSongToMusicTrack", () => {
       artist_ids: ["112"],
       album_id: "1139846638",
     });
+  });
+
+  it("补全歌单歌曲封面的相对路径", () => {
+    const track = convertMiguSongToMusicTrack({
+      copyrightId: "1",
+      contentId: "2",
+      songName: "Song",
+      albumImgs: [{ img: "/data/oss/resource/00/41/zf/a.webp" }],
+    });
+
+    expect(track.pic_id).toBe(
+      "https://d.musicapp.migu.cn/data/oss/resource/00/41/zf/a.webp"
+    );
   });
 
   it("splits singer fallback", () => {
@@ -274,6 +311,18 @@ describe("convertMiguV3SearchSongToMusicTrack", () => {
       artist_ids: ["112"],
       album_id: "1142521343",
     });
+  });
+
+  it("补全 V3 接口返回的相对路径封面", () => {
+    const track = convertMiguV3SearchSongToMusicTrack({
+      copyrightId: "1",
+      contentId: "2",
+      img3: "/data/oss/resource/00/5u/7q/a.webp",
+    });
+
+    expect(track.pic_id).toBe(
+      "https://d.musicapp.migu.cn/data/oss/resource/00/5u/7q/a.webp"
+    );
   });
 
   it("handles missing fields gracefully", () => {

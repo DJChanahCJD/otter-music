@@ -8,6 +8,8 @@ import toast from "react-hot-toast";
 
 /** 触摸结束后浏览器补发模拟鼠标事件的时间窗口（ms） */
 const EMULATED_MOUSE_WINDOW = 700;
+/** 长按触发后拦截紧随 click 的时间窗口（ms）：超时自动失效，避免残留状态吞掉后续点击 */
+const LONG_PRESS_CLICK_WINDOW = 700;
 
 export function usePlayerActions(
   currentTrack: MusicTrack | null,
@@ -16,8 +18,8 @@ export function usePlayerActions(
 ) {
   const pressTimerRef = useRef<NodeJS.Timeout | null>(null);
   const coverPressTimerRef = useRef<NodeJS.Timeout | null>(null);
-  /** 长按封面是否已触发，用于在随后的 click 里拦截歌词切换 */
-  const coverLongPressedRef = useRef(false);
+  /** 长按触发时间戳（0 = 无待拦截的 click），用于拦截长按后紧随的那次 click */
+  const coverLongPressAtRef = useRef(0);
   /** 最近一次 touchend 时间，用于忽略浏览器补发的模拟鼠标事件 */
   const coverTouchEndAtRef = useRef(0);
 
@@ -101,9 +103,10 @@ export function usePlayerActions(
   /** 封面长按触发外部回调（例如预览大图） */
   const handleCoverPressStart = useCallback(() => {
     clearCoverPress();
-    coverLongPressedRef.current = false;
+    // 新手势开始即解除上一次长按的 click 拦截，避免残留状态吞掉本次点击
+    coverLongPressAtRef.current = 0;
     coverPressTimerRef.current = setTimeout(() => {
-      coverLongPressedRef.current = true;
+      coverLongPressAtRef.current = Date.now();
       onCoverLongPress?.();
     }, 500);
   }, [clearCoverPress, onCoverLongPress]);
@@ -124,10 +127,12 @@ export function usePlayerActions(
     handleCoverPressStart();
   }, [handleCoverPressStart]);
 
-  /** 长按已触发时拦截本次 click，避免顺带切换歌词 */
+  /**
+   * 长按事件若浏览器未补发 click（如 WebView 原生长按菜单接管手势），
+   * 时间窗口失效即自动放行，保证后续点击仍能切换歌词
+   */
   const handleCoverClick = useCallback((e: React.MouseEvent) => {
-    if (coverLongPressedRef.current) {
-      coverLongPressedRef.current = false;
+    if (Date.now() - coverLongPressAtRef.current < LONG_PRESS_CLICK_WINDOW) {
       e.stopPropagation();
     }
   }, []);

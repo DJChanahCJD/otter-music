@@ -119,6 +119,39 @@ describe("usePlayerActions 封面长按", () => {
     actions.cleanup();
   });
 
+  it("长按后浏览器未补发 click（原生长按菜单接管手势）时，后续点击不再被拦截", () => {
+    const onCoverLongPress = vi.fn();
+    const actions = renderActions(onCoverLongPress);
+
+    actions.touchStart();
+    actions.advance(500);
+    actions.touchEnd();
+    // WebView 原生长按菜单吞掉此次 click：拦截窗口过期后必须放行，否则封面点不动
+    actions.advance(800);
+
+    expect(onCoverLongPress).toHaveBeenCalledTimes(1);
+    expect(actions.click()).not.toHaveBeenCalled();
+
+    actions.cleanup();
+  });
+
+  it("新手势开始后，上一次长按不再拦截本次 click", () => {
+    const onCoverLongPress = vi.fn();
+    const actions = renderActions(onCoverLongPress);
+
+    actions.touchStart();
+    actions.advance(500);
+    actions.touchEnd();
+
+    // 立即再次按下（模拟长按后马上点一次）
+    actions.touchStart();
+    actions.touchEnd();
+
+    expect(actions.click()).not.toHaveBeenCalled();
+
+    actions.cleanup();
+  });
+
   it("鼠标长按（无触摸）同样触发回调并拦截 click", () => {
     const onCoverLongPress = vi.fn();
     const actions = renderActions(onCoverLongPress);

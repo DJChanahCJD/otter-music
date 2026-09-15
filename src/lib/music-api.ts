@@ -159,7 +159,8 @@ export const musicApi = {
     size: number = 800
   ): Promise<string | null> {
     if (idOrUrl.startsWith("http") && source !== "bilibili") return idOrUrl;
-    const key = `pic:${source}:${idOrUrl}:${size}`;
+    // v2：咪咕封面由相对路径改为补全 CDN 域名，旧缓存需作废，避免继续命中失效地址
+    const key = `pic:v2:${source}:${idOrUrl}:${size}`;
     return cachedFetch<string | null>(
       key,
       async () => {

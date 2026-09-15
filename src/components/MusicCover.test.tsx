@@ -256,6 +256,46 @@ describe("MusicCover preview exit stack integration", () => {
   });
 });
 
+describe("MusicCover 默认封面长按", () => {
+  let container: HTMLDivElement | undefined;
+  let root: Root | undefined;
+
+  beforeEach(() => {
+    (
+      globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT?: boolean }
+    ).IS_REACT_ACT_ENVIRONMENT = true;
+  });
+
+  afterEach(() => {
+    if (root) act(() => root?.unmount());
+    container?.remove();
+    root = undefined;
+    container = undefined;
+  });
+
+  it("无封面占位层拦截 contextmenu，避免 WebView 原生长按菜单接管手势", () => {
+    container = document.createElement("div");
+    document.body.appendChild(container);
+    root = createRoot(container);
+    act(() => {
+      root!.render(<MusicCover src={null} alt="cover" />);
+    });
+
+    const placeholder = container.firstElementChild as HTMLElement;
+    expect(placeholder).toBeTruthy();
+
+    const event = new MouseEvent("contextmenu", {
+      bubbles: true,
+      cancelable: true,
+    });
+    act(() => {
+      placeholder.dispatchEvent(event);
+    });
+
+    expect(event.defaultPrevented).toBe(true);
+  });
+});
+
 describe("MusicCover native save", () => {
   let container: HTMLDivElement | undefined;
   let root: Root | undefined;

@@ -15,6 +15,21 @@ import type {
 
 export const MIGU_PAGE_SIZE = 50;
 
+/** 咪咕图片 CDN 域名：接口返回的歌曲封面常为 `/data/oss/...` 相对路径，需补全主机 */
+const MIGU_CDN_ORIGIN = "https://d.musicapp.migu.cn";
+
+/**
+ * 归一化咪咕图片地址：相对路径补全 CDN 域名，协议相对补 https，其余强制 https
+ * @param url 接口原始图片字段（可能是相对路径、协议相对路径或完整地址）
+ * @returns 可直接用于 <img src> 的绝对地址；入参为空时返回空字符串
+ */
+export function normalizeMiguImageUrl(url?: string | null): string {
+  if (!url) return "";
+  if (url.startsWith("//")) return `https:${url}`;
+  if (url.startsWith("/")) return `${MIGU_CDN_ORIGIN}${url}`;
+  return forceHttps(url);
+}
+
 // ============================================================
 // URL / 路径构建
 // ============================================================
@@ -122,7 +137,7 @@ export function convertMiguSongToMusicTrack(song: MiguSongRaw): MusicTrack {
     name: song.songName || "未知歌曲",
     artist: normalizeArtists(song),
     album: song.album || "",
-    pic_id: coverUrl,
+    pic_id: normalizeMiguImageUrl(coverUrl),
     url_id: encodedId,
     lyric_id: forceHttps(song.lrcUrl || ""),
     source: "migu",
@@ -171,10 +186,11 @@ export async function fetchMiguPlaylistDetail(
 
   return {
     name: info?.title || `咪咕歌单 ${playlistId}`,
-    coverUrl:
+    coverUrl: normalizeMiguImageUrl(
       info?.imgItem?.img ||
-      songs.find((song) => song.albumImgs?.length)?.albumImgs?.[0]?.img ||
-      "",
+        songs.find((song) => song.albumImgs?.length)?.albumImgs?.[0]?.img ||
+        ""
+    ),
     trackCount: total || songs.length,
     songs,
   };
@@ -211,7 +227,7 @@ export function convertMiguV3SearchSongToMusicTrack(
     artist: (song.singerList || []).map((s) => s.name || "").filter(Boolean),
     album: song.album || "",
     // 优先使用 img3 > img2 > img1，获取最大可用封面
-    pic_id: forceHttps(song.img3 || song.img2 || song.img1 || ""),
+    pic_id: normalizeMiguImageUrl(song.img3 || song.img2 || song.img1),
     url_id: encodedId,
     lyric_id: forceHttps(song.ext?.lrcUrl || ""),
     source: "migu",
