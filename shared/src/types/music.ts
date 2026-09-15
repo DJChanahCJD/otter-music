@@ -87,7 +87,7 @@ export const aggregatedSourceOptions: {
   {
     value: "higequ",
     label: "Higequ",
-    description: "Hi歌曲音乐网（higequ.com），固定 128kbps MP3",
+    description: "Hi歌曲音乐网（仅标准音质）",
   },
 ];
 

@@ -29,7 +29,10 @@ const HIGEQU_UA =
 // 网络层（环境路由：原生直连 / Web 走 /proxy）
 // ============================================================
 
-async function fetchHigequHtml(path: string): Promise<string | null> {
+async function fetchHigequHtml(
+  path: string,
+  signal?: AbortSignal
+): Promise<string | null> {
   const url = `${HIGEQU_BASE}${path}`;
 
   try {
@@ -43,20 +46,26 @@ async function fetchHigequHtml(path: string): Promise<string | null> {
         readTimeout: NETWORK_TIMEOUT,
       });
       if (res.status >= 400) return null;
-      return typeof res.data === "string" ? res.data : JSON.stringify(res.data);
+      return typeof res.data === "string" ? res.data : String(res.data ?? "");
     }
 
-    const res = await fetchWithTimeout(getProxyUrl(url), {}, NETWORK_TIMEOUT);
+    // 传入 signal 参数支持取消请求
+    const res = await fetchWithTimeout(
+      getProxyUrl(url),
+      { signal },
+      NETWORK_TIMEOUT
+    );
     if (!res.ok) return null;
     return await res.text();
   } catch (e) {
+    if ((e as Error)?.name === "AbortError") return null;
     logger.warn(LOG_TAG, `请求失败：${url}`, e);
     return null;
   }
 }
 
 // ============================================================
-// 搜索结果解析
+// 工具函数 & 搜索解析
 // ============================================================
 
 export interface HigequSearchItem {
@@ -69,7 +78,7 @@ export interface HigequSearchItem {
 }
 
 const cleanText = (el: Element | null): string =>
-  el?.textContent?.replace(/\s+/g, " ").trim() ?? "";
+  el?.textContent?.trim().replace(/\s+/g, " ") ?? "";
 
 /**
  * 站点用 `&` 连接多歌手（如 `五月天&周杰伦`）。
@@ -99,10 +108,12 @@ export function parseHigequSearchHtml(html: string): {
   const doc = new DOMParser().parseFromString(html, "text/html");
   const items: HigequSearchItem[] = [];
 
-  doc.querySelectorAll(".result-item[data-rid]").forEach((el) => {
+  const elements = doc.querySelectorAll(".result-item[data-rid]");
+  for (let i = 0; i < elements.length; i++) {
+    const el = elements[i];
     const rid = el.getAttribute("data-rid")?.trim();
     const name = cleanText(el.querySelector(".result-title"));
-    if (!rid || !name) return;
+    if (!rid || !name) continue;
 
     items.push({
       rid,
@@ -113,7 +124,7 @@ export function parseHigequSearchHtml(html: string): {
         ""
       ),
     });
-  });
+  }
 
   const nextButton = doc.querySelector("#next-page");
 
@@ -151,7 +162,8 @@ export async function searchHigequSongs(
 
   const safePage = Number.isFinite(page) && page >= 1 ? Math.floor(page) : 1;
   const html = await fetchHigequHtml(
-    `/s/${encodeURIComponent(trimmed)}/${safePage}/`
+    `/s/${encodeURIComponent(trimmed)}/${safePage}/`,
+    signal
   );
   if (!html) return { items: [], hasMore: false };
 
@@ -160,41 +172,38 @@ export async function searchHigequSongs(
 }
 
 // ============================================================
-// 播放页解析（音频直链 / 封面 / 歌词）
+// 播放页解析 & 带防重刷缓存机制
 // ============================================================
 
 export interface HigequSongDetail {
   rid: string;
-  /** 音频直链，来自页面内联 base64 解码 */
   audioUrl: string;
   coverUrl: string;
-  /** 由页面内联歌词行重建的 LRC 文本 */
   lyric: string;
 }
 
-/** 播放页解析结果缓存：一次播放最多只触发一次播放页请求 */
-const detailCache = new Map<string, { at: number; value: HigequSongDetail }>();
+// 缓存管理：支持 TTL 清理及在请求中（In-Flight）合并
 const DETAIL_CACHE_TTL = 10 * 60 * 1000;
+const detailCache = new Map<string, { at: number; value: HigequSongDetail }>();
+const pendingRequests = new Map<string, Promise<HigequSongDetail | null>>();
 
-/** 把秒数格式化为 LRC 时间戳 `[mm:ss.xx]`（与 src/lib/lyrics.ts 的解析口径一致） */
 function formatLrcTime(seconds: number): string {
   const safe = Math.max(0, seconds);
   const minutes = Math.floor(safe / 60);
-  const secs = Math.round((safe - minutes * 60) * 100) / 100;
-  return `${String(minutes).padStart(2, "0")}:${secs.toFixed(2).padStart(5, "0")}`;
+  const secs = (safe % 60).toFixed(2);
+  return `${String(minutes).padStart(2, "0")}:${secs.padStart(5, "0")}`;
 }
 
-/** 从页面原始 HTML 的内联脚本中取出 base64 音频地址 */
 function parseInlineAudioUrl(html: string): string {
-  const match = html.match(/let\s+code\s*=\s*"([^"]*)"/);
+  // 支持单双引号及多余空格匹配
+  const match = html.match(/let\s+code\s*=\s*["']([^"']+)["']/);
   const code = match?.[1];
   if (!code) return "";
 
   try {
     const decoded = atob(code);
-    return /^https?:\/\//.test(decoded) ? decoded : "";
+    return /^https?:\/\//i.test(decoded) ? decoded : "";
   } catch {
-    // base64 不合法视为无直链
     return "";
   }
 }
@@ -208,12 +217,15 @@ export function parseHigequPlayerHtml(
     doc.querySelector("#album-cover")?.getAttribute("src")?.trim() ?? "";
 
   const lyricLines: string[] = [];
-  doc.querySelectorAll(".lyric-line[data-time]").forEach((el) => {
+  const lineEls = doc.querySelectorAll(".lyric-line[data-time]");
+
+  for (let i = 0; i < lineEls.length; i++) {
+    const el = lineEls[i];
     const seconds = Number(el.getAttribute("data-time"));
     const text = cleanText(el);
-    if (!Number.isFinite(seconds) || !text) return;
+    if (!Number.isFinite(seconds) || !text) continue;
     lyricLines.push(`[${formatLrcTime(seconds)}]${text}`);
-  });
+  }
 
   return {
     audioUrl: parseInlineAudioUrl(html),
@@ -232,20 +244,44 @@ export async function getHigequSongDetail(
   const key = rid.trim();
   if (!key) return null;
 
+  // 1. 命中内存有效缓存直接返回
   const cached = detailCache.get(key);
-  if (cached && Date.now() - cached.at < DETAIL_CACHE_TTL) return cached.value;
-
-  const html = await fetchHigequHtml(`/player/${encodeURIComponent(key)}/`);
-  if (!html) return null;
-
-  const value: HigequSongDetail = { rid: key, ...parseHigequPlayerHtml(html) };
-  detailCache.set(key, { at: Date.now(), value });
-
-  if (!value.audioUrl) {
-    logger.warn(LOG_TAG, `播放页未取到音频直链：${key}`);
+  if (cached) {
+    if (Date.now() - cached.at < DETAIL_CACHE_TTL) {
+      return cached.value;
+    }
+    detailCache.delete(key); // 过期剔除
   }
 
-  return value;
+  // 2. 请求去重：同一 rid 若在请求中，复用 Promise
+  if (pendingRequests.has(key)) {
+    return pendingRequests.get(key)!;
+  }
+
+  const reqPromise = (async () => {
+    try {
+      const html = await fetchHigequHtml(`/player/${encodeURIComponent(key)}/`);
+      if (!html) return null;
+
+      const value: HigequSongDetail = {
+        rid: key,
+        ...parseHigequPlayerHtml(html),
+      };
+
+      detailCache.set(key, { at: Date.now(), value });
+
+      if (!value.audioUrl) {
+        logger.warn(LOG_TAG, `播放页未取到音频直链：${key}`);
+      }
+
+      return value;
+    } finally {
+      pendingRequests.delete(key);
+    }
+  })();
+
+  pendingRequests.set(key, reqPromise);
+  return reqPromise;
 }
 
 /** 从 `higequ_123` / `123` 形式的 ID 中取出纯数字 rid，非法输入返回 null */
