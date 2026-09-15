@@ -46,3 +46,4 @@ tsconfig.tsbuildinfo
 .trae/
 .claude/
 openspec/
+.workbuddy/
