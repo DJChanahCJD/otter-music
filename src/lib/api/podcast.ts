@@ -94,6 +94,229 @@ export const searchPodcast = async (
   return appleSearchPodcast(normalizedKeyword);
 };
 
+/** 小宇宙播客页 URL 前缀，用于复用 rssUrl 字段存储 */
+const XYZ_PODCAST_PREFIX = "https://www.xiaoyuzhoufm.com/podcast/";
+
+/** 小宇宙详情页直连超时（毫秒） */
+const XYZ_FETCH_TIMEOUT = 10000;
+
+/**
+ * 小宇宙播客页 __NEXT_DATA__ 中的播客结构（仅声明用到的字段）
+ */
+type XyzPodcastData = {
+  pid?: string;
+  title?: string;
+  author?: string;
+  description?: string;
+  brief?: string;
+  image?: { picUrl?: string };
+  episodes?: XyzEpisodeData[];
+};
+
+type XyzEpisodeData = {
+  eid?: string;
+  title?: string;
+  pubDate?: string;
+  enclosure?: { url?: string };
+  media?: { source?: { url?: string } };
+  image?: { picUrl?: string };
+};
+
+/**
+ * 从链接中提取小宇宙播客 pid
+ * 支持 https://www.xiaoyuzhoufm.com/podcast/{pid} 及带查询参数的变体
+ * @param url 用户输入或存储的链接
+ * @returns pid，非小宇宙播客链接时返回 null
+ */
+export const parseXyzPid = (url: string): string | null => {
+  const matched = url
+    .trim()
+    .match(/xiaoyuzhoufm\.com\/podcast\/([0-9a-fA-F]{24})/);
+  return matched ? matched[1] : null;
+};
+
+/**
+ * 将小宇宙播客数据转为 RSS XML 字符串
+ * 复用 parseRssXml 解析链路，避免为小宇宙单独维护一套解析逻辑
+ * @param data 小宇宙 __NEXT_DATA__ 中的播客对象
+ * @param pid 播客 pid，用于生成 guid
+ */
+const xyzToRssXml = (data: XyzPodcastData, pid: string): string => {
+  // XML 转义，避免标题/描述中的 & < > 破坏结构
+  const esc = (v: string | undefined | null): string =>
+    (v ?? "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
+
+  const cover = data.image?.picUrl;
+  const episodes = (data.episodes ?? [])
+    .map((ep) => {
+      // 优先 enclosure.url，回退 media.source.url
+      const audioUrl = ep.enclosure?.url || ep.media?.source?.url;
+      if (!audioUrl || !ep.title) return null;
+      return [
+        "<item>",
+        `<title>${esc(ep.title)}</title>`,
+        `<enclosure url="${esc(audioUrl)}" type="audio/mp4"/>`,
+        `<guid isPermaLink="false">${esc(ep.eid || audioUrl)}</guid>`,
+        ep.pubDate
+          ? `<pubDate>${esc(new Date(ep.pubDate).toUTCString())}</pubDate>`
+          : "",
+        ep.image?.picUrl
+          ? `<itunes:image href="${esc(ep.image.picUrl)}"/>`
+          : "",
+        "</item>",
+      ].join("");
+    })
+    .filter(Boolean)
+    .join("");
+
+  return [
+    '<?xml version="1.0" encoding="UTF-8"?>',
+    '<rss xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd" version="2.0">',
+    "<channel>",
+    `<title>${esc(data.title)}</title>`,
+    `<description>${esc(data.brief || data.description)}</description>`,
+    `<link>${XYZ_PODCAST_PREFIX}${pid}</link>`,
+    cover ? `<itunes:image href="${esc(cover)}"/>` : "",
+    episodes,
+    "</channel>",
+    "</rss>",
+  ].join("");
+};
+
+/**
+ * 拉取小宇宙播客详情页并解析为 PodcastFeed
+ * 原生端 CapacitorHttp 直连（绕过 WebView CORS）；Web 端因无代理支持直接拒绝
+ * @param pid 小宇宙播客 pid
+ * @param signal 中断信号
+ */
+const fetchXyzPodcastFeed = async (
+  pid: string,
+  signal?: AbortSignal
+): Promise<{ feed: PodcastFeed; author: string; brief: string }> => {
+  const data = await fetchXyzPodcastData(pid, signal);
+  const feed = parseRssXml(
+    xyzToRssXml(data, pid),
+    `${XYZ_PODCAST_PREFIX}${pid}`
+  );
+  if (!feed.name) feed.name = data.title ?? "";
+
+  return {
+    feed,
+    author: data.author?.trim() ?? "",
+    brief: data.brief || data.description || "",
+  };
+};
+
+/**
+ * 拉取并解析小宇宙播客页的 __NEXT_DATA__
+ * @param pid 小宇宙播客 pid
+ * @param signal 中断信号
+ */
+const fetchXyzPodcastData = async (
+  pid: string,
+  signal?: AbortSignal
+): Promise<XyzPodcastData> => {
+  if (!IS_NATIVE) {
+    throw new Error("小宇宙订阅仅支持 Android 端");
+  }
+
+  const { CapacitorHttp } = await import("@capacitor/core");
+
+  const res = await CapacitorHttp.request({
+    method: "GET",
+    url: `${XYZ_PODCAST_PREFIX}${pid}`,
+    headers: {
+      accept: "text/html,application/xhtml+xml",
+      // 小宇宙对非浏览器 UA 可能返回不同内容，跟随浏览器标识
+      "user-agent":
+        "Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36",
+    },
+    connectTimeout: XYZ_FETCH_TIMEOUT,
+    readTimeout: XYZ_FETCH_TIMEOUT,
+    signal,
+  } as HttpOptions & { signal?: AbortSignal });
+
+  if (res.status >= 400) {
+    throw new Error(`小宇宙播客页请求失败: HTTP ${res.status}`);
+  }
+
+  const html = typeof res.data === "string" ? res.data : String(res.data);
+
+  // 从 __NEXT_DATA__ 提取播客数据
+  const matched = html.match(
+    /<script id="__NEXT_DATA__"[^>]*>([\s\S]*?)<\/script>/
+  );
+  if (!matched) {
+    throw new Error("小宇宙页面结构已变化，无法解析");
+  }
+
+  let data: XyzPodcastData;
+  try {
+    const parsed = JSON.parse(matched[1]) as {
+      props?: { pageProps?: { podcast?: XyzPodcastData } };
+    };
+    data = parsed.props?.pageProps?.podcast ?? {};
+  } catch {
+    throw new Error("小宇宙页面数据解析失败");
+  }
+
+  if (!data.pid || !data.title) {
+    throw new Error("未找到播客信息");
+  }
+
+  return data;
+};
+
+/**
+ * 将小宇宙播客页链接解析为可订阅项
+ * 用于「粘贴链接订阅」入口，不依赖小宇宙搜索接口
+ * @param pid 小宇宙播客 pid
+ * @param signal 中断信号
+ */
+export const resolveXyzPodcast = async (
+  pid: string,
+  signal?: AbortSignal
+): Promise<SearchPodcastItem> => {
+  const { feed, author, brief } = await fetchXyzPodcastFeed(pid, signal);
+
+  return {
+    source: "xyz",
+    id: pid,
+    title: feed.name,
+    author,
+    description: brief || null,
+    cover: feed.coverUrl,
+    // 复用 rssUrl 字段存储小宇宙播客页链接，parsePodcastRss 据此分发
+    rssUrl: `${XYZ_PODCAST_PREFIX}${pid}`,
+    url: `${XYZ_PODCAST_PREFIX}${pid}`,
+  };
+};
+
+/**
+ * 将用户粘贴的播客链接解析为可订阅项
+ * 支持小宇宙播客页链接；其他链接（含普通 RSS）返回 null 交由通用 RSS 流程处理
+ * @param input 用户输入的链接
+ * @param signal 中断信号
+ */
+export const resolvePodcastUrl = async (
+  input: string,
+  signal?: AbortSignal
+): Promise<SearchPodcastItem | null> => {
+  const url = input.trim();
+  if (!url) return null;
+
+  const xyzPid = parseXyzPid(url);
+  if (xyzPid) {
+    return resolveXyzPodcast(xyzPid, signal);
+  }
+
+  return null;
+};
+
 /**
  * 通过后端代理获取 RSS 并解析
  */
@@ -205,6 +428,13 @@ export const parsePodcastRss = async (
   }
 
   const fetcher = async (): Promise<PodcastFeed | null> => {
+    // 小宇宙播客页链接：走详情页解析，不依赖 RSS
+    const xyzPid = parseXyzPid(normalizedUrl);
+    if (xyzPid) {
+      const { feed } = await fetchXyzPodcastFeed(xyzPid, signal);
+      return feed;
+    }
+
     if (IS_NATIVE) {
       try {
         // 原生端：直连 RSS 源

@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/drawer";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MusicCover } from "@/components/MusicCover";
-import { searchPodcast } from "@/lib/api";
+import { searchPodcast, resolvePodcastUrl } from "@/lib/api";
 import { usePodcastStore } from "@/store/podcast-store";
 import type { SearchPodcastItem } from "@/types/podcast";
 import { cn } from "@/lib/utils";
@@ -78,6 +78,34 @@ export function PodcastAdd({ open, onOpenChange }: PodcastAddProps) {
   const handleAddRss = async () => {
     const urlStr = rss.url.trim();
     if (!urlStr) return toast("请输入 RSS 地址");
+
+    // 小宇宙播客页链接：走详情页解析，自动补全标题/作者/封面
+    if (urlStr.includes("xiaoyuzhoufm.com")) {
+      if (activeRssSet.has(urlStr)) return toast("该播客已订阅");
+
+      setRss((r) => ({ ...r, loading: true }));
+      try {
+        const item = await resolvePodcastUrl(urlStr);
+        if (!item || !item.rssUrl) {
+          return toast.error("未能解析该小宇宙播客，请确认链接是否正确");
+        }
+        if (activeRssSet.has(item.rssUrl)) return toast("该播客已订阅");
+
+        addRssSource(
+          rss.name.trim() || item.title,
+          item.rssUrl,
+          item.author || undefined,
+          item.cover || undefined,
+          item.description || undefined
+        );
+        toast.success("订阅成功");
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : "解析小宇宙播客失败");
+      } finally {
+        setRss((r) => ({ ...r, loading: false }));
+      }
+      return;
+    }
 
     try {
       const url = new URL(urlStr);
@@ -213,7 +241,7 @@ export function PodcastAdd({ open, onOpenChange }: PodcastAddProps) {
           <TabsContent value="rss" className="mt-3 space-y-2.5">
             <Input
               className="h-10 rounded-xl border-none bg-muted/50"
-              placeholder="RSS 链接，如 https://example.com/feed.xml"
+              placeholder="小宇宙播客链接或 RSS 地址"
               inputMode="url"
               value={rss.url}
               onChange={(e) => setRss((r) => ({ ...r, url: e.target.value }))}
@@ -221,7 +249,7 @@ export function PodcastAdd({ open, onOpenChange }: PodcastAddProps) {
             />
             <Input
               className="h-10 rounded-xl border-none bg-muted/50"
-              placeholder="播客名称（可选，默认取域名）"
+              placeholder="播客名称（可选，默认取标题）"
               value={rss.name}
               onChange={(e) => setRss((r) => ({ ...r, name: e.target.value }))}
             />
