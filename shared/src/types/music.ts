@@ -38,6 +38,7 @@ export const searchOptions: Record<string, string> = {
   bilibili: "B站",
   qq: "QQ音乐",
   higequ: "Higequ",
+  jamendo: "Jamendo",
 };
 
 export const sourceLabels: Record<string, string> = {
@@ -90,6 +91,11 @@ export const aggregatedSourceOptions: {
     label: "Higequ",
     description: "Hi歌曲音乐网（仅标准音质）",
   },
+  {
+    value: "jamendo",
+    label: "Jamendo",
+    description: "国外独立音乐人授权平台",
+  },
 ];
 
 export const sourceBadgeStyles: Record<string, string> = {
@@ -106,6 +112,8 @@ export const sourceBadgeStyles: Record<string, string> = {
     "text-pink-500/70 border-pink-500/20 bg-pink-500/5 hover:bg-pink-500/10",
   higequ:
     "text-violet-500/70 border-violet-500/20 bg-violet-500/5 hover:bg-violet-500/10",
+  jamendo:
+    "text-[#d84868]/70 border-[#d84868]/20 bg-[#d84868]/5 hover:bg-[#d84868]/10",
   default:
     "text-muted-foreground/70 border-border bg-muted/30 hover:bg-muted/50",
 };
@@ -125,7 +133,6 @@ export const DEFAULT_SOURCE_CONFIGS: SourceConfig[] = [
   { source: "migu", enabled: false, visible: true },
   { source: "qq", enabled: false, visible: true },
   { source: "higequ", enabled: false, visible: true },
-  // Jamendo 默认休眠：未配置 client_id 且对用户不可见，仅作实验性接入
   { source: "jamendo", enabled: false, visible: false },
 ];
 

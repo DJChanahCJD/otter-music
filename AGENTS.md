@@ -79,7 +79,8 @@ Android 原生返回键与 Web 端 Esc 由 `RootLayout` 统一拦截，转发到
 
 - **必须**实现 `searchArtist` 和 `searchAlbum`（最低限度委托给 `this.search`）。`MusicTrackMobileMenu` 据此决定歌手/专辑搜索是否限定在当前音源（`searchSource = track.source`）还是回退到聚合搜索（`"all"`）。
 - `getArtistDetail`/`getAlbumDetail`/`getSongDetail` 为可选能力，仅在音源有独立详情页路由时才需实现。当前详情页（`NeteaseDetail`）耦合网易云 API，其他音源无需实现这些方法，走搜索回退即可。
-- **单一音质音源**（只有一档音频流，如 higequ、B站、本地、播客）：`getUrl` 忽略 `br`，并把音源名加入 `src/hooks/useAudioTrackLoader.ts` 的 `skipQualityReload` 列表，让切音质静默跳过重载，避免多余请求与播放中断。
+- **单一音质音源**（只有一档音频流，如 higequ、jamendo、B站、本地、播客）：`getUrl` 忽略 `br`，并把音源名加入 `src/hooks/useAudioTrackLoader.ts` 的 `skipQualityReload` 列表，让切音质静默跳过重载，避免多余请求与播放中断。
+- **免鉴权优先**：新音源优先复用站点自身的网页接口（如 jamendo、higequ 的页面/站点接口），不引入需要注册 `client_id` 或额外签名的开发者 API；接口细节（签名头、分页参数、直链模板）写在 `src/lib/<source>/` 的模块注释里，不在根文档重复。
 
 ## 媒体会话与车机歌词（Android）
 

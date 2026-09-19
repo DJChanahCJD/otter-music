@@ -313,10 +313,7 @@ export function PodcastAdd({ open, onOpenChange }: PodcastAddProps) {
                         size="sm"
                         variant={subscribed ? "secondary" : "default"}
                         disabled={noRss}
-                        className={cn(
-                          "h-7 shrink-0 rounded-full text-xs",
-                          noRss && "text-muted-foreground"
-                        )}
+                        className={cn("h-7 shrink-0 rounded-full text-xs")}
                         onClick={() =>
                           subscribed
                             ? handleRemoveSource(subscribed)
