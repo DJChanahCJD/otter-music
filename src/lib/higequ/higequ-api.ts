@@ -152,6 +152,10 @@ export function convertHigequSearchItemToMusicTrack(
   };
 }
 
+/**
+ * 搜索 Hi歌曲音乐网。结果带 2 分钟短 TTL + LRU 缓存，
+ * 相同关键词/页码的重复查询直接返回缓存。
+ */
 export async function searchHigequSongs(
   keyword: string,
   page = 1,
@@ -161,6 +165,18 @@ export async function searchHigequSongs(
   if (!trimmed || signal?.aborted) return { items: [], hasMore: false };
 
   const safePage = Number.isFinite(page) && page >= 1 ? Math.floor(page) : 1;
+  const cacheKey = `${trimmed}::${safePage}`;
+
+  // 命中有效缓存直接返回（刷新 LRU 顺序）
+  const cached = searchCache.get(cacheKey);
+  if (cached && Date.now() - cached.at < SEARCH_CACHE_TTL) {
+    searchCache.delete(cacheKey);
+    searchCache.set(cacheKey, cached);
+    return { items: cached.items, hasMore: cached.hasMore };
+  } else if (cached) {
+    searchCache.delete(cacheKey); // 过期剔除
+  }
+
   const html = await fetchHigequHtml(
     `/s/${encodeURIComponent(trimmed)}/${safePage}/`,
     signal
@@ -168,7 +184,19 @@ export async function searchHigequSongs(
   if (!html) return { items: [], hasMore: false };
 
   const { items, hasMore } = parseHigequSearchHtml(html);
-  return { items: items.map(convertHigequSearchItemToMusicTrack), hasMore };
+  const result = {
+    items: items.map(convertHigequSearchItemToMusicTrack),
+    hasMore,
+  };
+
+  // LRU 容量上限：超限时淘汰最久未写入条目
+  if (!searchCache.has(cacheKey) && searchCache.size >= SEARCH_CACHE_MAX) {
+    const oldestKey = searchCache.keys().next().value;
+    if (oldestKey !== undefined) searchCache.delete(oldestKey);
+  }
+  searchCache.set(cacheKey, { at: Date.now(), ...result });
+
+  return result;
 }
 
 // ============================================================
@@ -182,10 +210,22 @@ export interface HigequSongDetail {
   lyric: string;
 }
 
-// 缓存管理：支持 TTL 清理及在请求中（In-Flight）合并
+// 缓存管理：TTL + LRU 容量上限，及在请求中（In-Flight）合并
 const DETAIL_CACHE_TTL = 10 * 60 * 1000;
+const DETAIL_CACHE_MAX = 50;
 const detailCache = new Map<string, { at: number; value: HigequSongDetail }>();
 const pendingRequests = new Map<string, Promise<HigequSongDetail | null>>();
+
+const SEARCH_CACHE_TTL = 2 * 60 * 1000;
+const SEARCH_CACHE_MAX = 30;
+const searchCache = new Map<
+  string,
+  {
+    at: number;
+    items: MusicTrack[];
+    hasMore: boolean;
+  }
+>();
 
 function formatLrcTime(seconds: number): string {
   const safe = Math.max(0, seconds);
@@ -244,10 +284,12 @@ export async function getHigequSongDetail(
   const key = rid.trim();
   if (!key) return null;
 
-  // 1. 命中内存有效缓存直接返回
+  // 1. 命中内存有效缓存直接返回（命中时刷新 LRU 顺序）
   const cached = detailCache.get(key);
   if (cached) {
     if (Date.now() - cached.at < DETAIL_CACHE_TTL) {
+      detailCache.delete(key);
+      detailCache.set(key, cached);
       return cached.value;
     }
     detailCache.delete(key); // 过期剔除
@@ -268,6 +310,11 @@ export async function getHigequSongDetail(
         ...parseHigequPlayerHtml(html),
       };
 
+      // 3. LRU 容量上限：超限时淘汰最久未写入条目
+      if (!detailCache.has(key) && detailCache.size >= DETAIL_CACHE_MAX) {
+        const oldestKey = detailCache.keys().next().value;
+        if (oldestKey !== undefined) detailCache.delete(oldestKey);
+      }
       detailCache.set(key, { at: Date.now(), value });
 
       if (!value.audioUrl) {
