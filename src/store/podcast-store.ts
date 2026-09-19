@@ -7,8 +7,26 @@ import { DEFAULT_RSS_SOURCES, type PodcastRssSource } from "@/types/podcast";
 
 interface PodcastState {
   rssSources: PodcastRssSource[];
-  addRssSource: (name: string, rssUrl: string, author?: string, coverUrl?: string, description?: string) => string;
-  updateRssSource: (id: string, data: Pick<PodcastRssSource, "name" | "rssUrl" | "author" | "coverUrl" | "description">) => void;
+  addRssSource: (
+    name: string,
+    rssUrl: string,
+    author?: string,
+    coverUrl?: string,
+    description?: string
+  ) => string;
+  addRssSources: (
+    items: Pick<
+      PodcastRssSource,
+      "name" | "rssUrl" | "author" | "coverUrl" | "description"
+    >[]
+  ) => string[];
+  updateRssSource: (
+    id: string,
+    data: Pick<
+      PodcastRssSource,
+      "name" | "rssUrl" | "author" | "coverUrl" | "description"
+    >
+  ) => void;
   removeRssSource: (id: string) => void;
   resetDefaultRssSources: () => void;
   setRssSources: (sources: PodcastRssSource[]) => void;
@@ -35,16 +53,36 @@ export const usePodcastStore = create<PodcastState>()(
         const id = uuidv4();
         set((state) => ({
           rssSources: [
-            markUpdate({ id, name, rssUrl, author, coverUrl, description, is_deleted: false }),
+            markUpdate({
+              id,
+              name,
+              rssUrl,
+              author,
+              coverUrl,
+              description,
+              is_deleted: false,
+            }),
             ...state.rssSources,
           ],
         }));
         return id;
       },
+      // 批量订阅（OPML 导入）：一次 set 完成写入，避免逐条持久化
+      addRssSources: (items) => {
+        const created = items.map((item) =>
+          markUpdate({ id: uuidv4(), ...item, is_deleted: false })
+        );
+        set((state) => ({
+          rssSources: [...created, ...state.rssSources],
+        }));
+        return created.map((item) => item.id);
+      },
       updateRssSource: (id, data) =>
         set((state) => ({
           rssSources: state.rssSources.map((item) =>
-            item.id === id ? markUpdate({ ...item, ...data, is_deleted: false }) : item
+            item.id === id
+              ? markUpdate({ ...item, ...data, is_deleted: false })
+              : item
           ),
         })),
       removeRssSource: (id) =>

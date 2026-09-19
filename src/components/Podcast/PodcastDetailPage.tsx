@@ -77,6 +77,16 @@ export function PodcastDetailPage({
         const feed = await parsePodcastRss(source.rssUrl, signal);
         const coverUrl = forceHttps(feed.coverUrl || source.coverUrl || "");
 
+        // OPML 批量导入的订阅没有封面/简介，首次打开时用 RSS 元数据补齐（不覆盖已有值）
+        if (!source.coverUrl || !source.description) {
+          usePodcastStore.getState().updateRssSource(source.id, {
+            name: source.name,
+            rssUrl: source.rssUrl,
+            coverUrl: source.coverUrl || feed.coverUrl || undefined,
+            description: source.description || feed.description || undefined,
+          });
+        }
+
         return {
           detail: {
             name: feed.name,
