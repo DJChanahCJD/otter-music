@@ -81,6 +81,13 @@ Android 原生返回键与 Web 端 Esc 由 `RootLayout` 统一拦截，转发到
 - `getArtistDetail`/`getAlbumDetail`/`getSongDetail` 为可选能力，仅在音源有独立详情页路由时才需实现。当前详情页（`NeteaseDetail`）耦合网易云 API，其他音源无需实现这些方法，走搜索回退即可。
 - **单一音质音源**（只有一档音频流，如 higequ、B站、本地、播客）：`getUrl` 忽略 `br`，并把音源名加入 `src/hooks/useAudioTrackLoader.ts` 的 `skipQualityReload` 列表，让切音质静默跳过重载，避免多余请求与播放中断。
 
+## 媒体会话与车机歌词（Android）
+
+系统媒体控件（通知栏/锁屏/蓝牙）的原生实现**不在 `android/` 下**，而在第三方插件补丁 `patches/@jofr+capacitor-media-session+4.0.0.patch`（`MediaSessionPlugin` / `MediaSessionService` / `MediaSessionCallback` / `definitions.d.ts` + 通知按钮图标）。改这里的代码必须走上面的 patch-package 流程，只改 `node_modules` 不算完成。
+
+- **车机歌词**（iOS/Android 通用做法，不是本项目自创）：AVRCP 协议没有歌词字段，故把当前歌词行写进 `TITLE`（`MediaSessionService#setCarLyric`）。`src/hooks/useCarLyric.ts` 只覆写蓝牙端读取的 MediaMetadata，通知栏与锁屏仍显示歌名；总开关为 store 的 `carLyricEnabled`（设置项 `CarLyricSetting`）。
+- 插件代理按原生上报的方法表（`cap.PluginHeaders`）转发：未同步原生改动时 `MediaSession.setCarLyric` 是 `undefined`，**直接调用会同步抛 TypeError，`.catch` 接不住**。调用前必须先过 `isCarLyricSupported()` 探测。
+
 ## 其他
 
 - dnd-kit拖拽排序需要确保`touch-none select-none`,避免移动端选中逻辑拦截了拖拽逻辑
