@@ -49,6 +49,7 @@ export const sourceLabels: Record<string, string> = {
   bilibili: "B站",
   qq: "QQ",
   higequ: "Higequ",
+  jamendo: "Jamendo",
   alist: "Alist",
 };
 
@@ -124,6 +125,8 @@ export const DEFAULT_SOURCE_CONFIGS: SourceConfig[] = [
   { source: "migu", enabled: false, visible: true },
   { source: "qq", enabled: false, visible: true },
   { source: "higequ", enabled: false, visible: true },
+  // Jamendo 默认休眠：未配置 client_id 且对用户不可见，仅作实验性接入
+  { source: "jamendo", enabled: false, visible: false },
 ];
 
 export type MusicSource =
@@ -137,6 +140,7 @@ export type MusicSource =
   | "migu"
   | "qq"
   | "higequ"
+  | "jamendo"
   | "fivesing"
   | "tk"
   | "wy"

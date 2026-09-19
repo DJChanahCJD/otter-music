@@ -57,6 +57,17 @@ const higequTrack: MusicTrack = {
   source: "higequ",
 };
 
+const jamendoTrack: MusicTrack = {
+  id: "jamendo_1474237",
+  name: "Test Song",
+  artist: ["Artist"],
+  album: "Album",
+  pic_id: "https://example.com/jamendo-cover.jpg",
+  url_id: "1474237",
+  lyric_id: "jamendo_1474237",
+  source: "jamendo",
+};
+
 const alistTrack: MusicTrack = {
   id: "alist:missing-server:/music/test.mp3",
   name: "test",
@@ -128,6 +139,31 @@ describe("MusicProviderFactory", () => {
     await expect(
       provider.getLyric({ ...higequTrack, lyric_id: "invalid" })
     ).resolves.toBeNull();
+  });
+
+  it("creates a provider for Jamendo tracks", async () => {
+    const provider = MusicProviderFactory.getProvider("jamendo");
+    expect(provider.source).toBe("jamendo");
+
+    // 空搜索词直接返回空页，不发请求
+    await expect(provider.search("  ", 1, 20)).resolves.toEqual({
+      items: [],
+      hasMore: false,
+    });
+    // 音频直链由 ID 模板拼出（无需请求接口）
+    await expect(provider.getUrl(jamendoTrack)).resolves.toBe(
+      "https://prod-1.storage.jamendo.com/?trackid=1474237&format=mp32"
+    );
+    // 封面在搜索结果中已是直链，直接透传
+    await expect(provider.getPic(jamendoTrack)).resolves.toBe(
+      jamendoTrack.pic_id
+    );
+    // 非法 ID 返回 null
+    await expect(
+      provider.getUrl({ ...jamendoTrack, id: "invalid", url_id: "invalid" })
+    ).resolves.toBeNull();
+    // Jamendo 无歌词能力
+    await expect(provider.getLyric(jamendoTrack)).resolves.toBeNull();
   });
 
   it("creates a provider for Alist tracks", async () => {

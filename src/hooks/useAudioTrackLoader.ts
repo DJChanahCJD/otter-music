@@ -135,11 +135,11 @@ export function useAudioTrackLoader(
         prev.recoveryKey !== undefined && prev.recoveryKey !== urlRecoveryKey;
       const isSameTrack = prev.id === trackId && prev.source === source;
       const qualityChanged = isSameTrack && prev.quality !== quality;
-      // 单一品质音源没有多档码率流可换（本地文件、B站、播客、Hi歌曲），
+      // 单一品质音源没有多档码率流可换（本地文件、B站、播客、Hi歌曲、Jamendo），
       // 音质切换静默跳过：重载只会带来多余请求与 loading 闪烁，音频流其实不变
       const skipQualityReload =
         qualityChanged &&
-        ["local", "bilibili", "podcast", "higequ"].includes(source);
+        ["local", "bilibili", "podcast", "higequ", "jamendo"].includes(source);
 
       // 无需重新加载的场景
       if (
