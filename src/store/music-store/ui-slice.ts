@@ -40,6 +40,12 @@ export interface UiSlice {
   lyricOffset: number;
   /** 蓝牙车载歌词：把当前歌词行覆写到 AVRCP 的 TITLE 上供车机显示 */
   carLyricEnabled: boolean;
+  /** 桌面歌词：悬浮在其他应用上方的歌词条（Android 悬浮窗） */
+  desktopLyricEnabled: boolean;
+  /** 桌面歌词字号（单位 sp），默认与原生初始字号一致 */
+  desktopLyricFontSize: number;
+  /** 桌面歌词字色（hex，如 "#FFFFFF"），默认与原生初始颜色一致 */
+  desktopLyricColor: string;
   playbackSpeed: number;
   isFullScreenPlayer: boolean;
   setQuality: (quality: string) => void;
@@ -67,6 +73,9 @@ export interface UiSlice {
   setLyricFontSize: (size: number) => void;
   setLyricOffset: (offset: number) => void;
   setCarLyricEnabled: (enable: boolean) => void;
+  setDesktopLyricEnabled: (enable: boolean) => void;
+  setDesktopLyricFontSize: (size: number) => void;
+  setDesktopLyricColor: (color: string) => void;
   setPlaybackSpeed: (speed: number) => void;
   setIsFullScreenPlayer: (isFullScreen: boolean) => void;
 }
@@ -97,6 +106,9 @@ export const createUiSlice: StateCreator<MusicState, [], [], UiSlice> = (
   lyricFontSize: 18,
   lyricOffset: -0.5,
   carLyricEnabled: false,
+  desktopLyricEnabled: false,
+  desktopLyricFontSize: 15,
+  desktopLyricColor: "#FFFFFF",
   playbackSpeed: 1.0,
   isFullScreenPlayer: false,
   setQuality: (quality) => set({ quality }),
@@ -127,6 +139,10 @@ export const createUiSlice: StateCreator<MusicState, [], [], UiSlice> = (
   setLyricFontSize: (lyricFontSize) => set({ lyricFontSize }),
   setLyricOffset: (lyricOffset) => set({ lyricOffset }),
   setCarLyricEnabled: (carLyricEnabled) => set({ carLyricEnabled }),
+  setDesktopLyricEnabled: (desktopLyricEnabled) => set({ desktopLyricEnabled }),
+  setDesktopLyricFontSize: (desktopLyricFontSize) =>
+    set({ desktopLyricFontSize }),
+  setDesktopLyricColor: (desktopLyricColor) => set({ desktopLyricColor }),
   setPlaybackSpeed: (playbackSpeed) => set({ playbackSpeed }),
   setIsFullScreenPlayer: (isFullScreenPlayer) => set({ isFullScreenPlayer }),
 });

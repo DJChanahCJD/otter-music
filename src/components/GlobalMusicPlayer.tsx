@@ -13,6 +13,7 @@ import { useSleepTimer } from "@/hooks/useSleepTimer";
 import { useAudioPreloader } from "@/hooks/useAudioPreloader";
 import { useAudioRouteSafety } from "@/hooks/useAudioRouteSafety";
 import { useCarLyric } from "@/hooks/useCarLyric";
+import { useDesktopLyric } from "@/hooks/useDesktopLyric";
 
 export function GlobalMusicPlayer() {
   const audioRef = useAudioElement();
@@ -35,6 +36,7 @@ export function GlobalMusicPlayer() {
   useAudioRouteSafety(audioRef);
   useMediaSessionIntegration(audioRef, coverUrl);
   useCarLyric();
+  useDesktopLyric();
   useAudioPreloader(audioRef);
 
   return (

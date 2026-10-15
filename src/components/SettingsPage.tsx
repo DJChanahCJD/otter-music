@@ -40,6 +40,7 @@ import { DataBackup } from "./settings/DataBackup";
 import { WebDavBackup } from "./settings/WebDavBackup";
 import { LyricStyleSetting } from "./settings/LyricStyleSetting";
 import { CarLyricSetting } from "./settings/CarLyricSetting";
+import { DesktopLyricSetting } from "./settings/DesktopLyricSetting";
 import { useState } from "react";
 import { IS_NATIVE } from "@/lib/api/config";
 
@@ -161,6 +162,7 @@ export function SettingsPage({ onBack }: SettingsPageProps) {
           <FullScreenPlayerSetting />
           <LyricStyleSetting />
           <CarLyricSetting />
+          <DesktopLyricSetting />
         </SettingsSection>
 
         <SettingsSection title="账号数据">

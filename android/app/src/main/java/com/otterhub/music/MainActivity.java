@@ -23,6 +23,7 @@ public class MainActivity extends BridgeActivity {
         registerPlugin(BilibiliProxyPlugin.class);
         registerPlugin(AudioRoutePlugin.class);
         registerPlugin(WebViewLoginPlugin.class);
+        registerPlugin(DesktopLyricPlugin.class);
         super.onCreate(savedInstanceState);
         useTransientSystemBars();
     }
