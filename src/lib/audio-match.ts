@@ -56,16 +56,30 @@ function scoreAutoMatchCandidate(
 }
 
 /**
+ * 检测网易云试听片段（音频时长可能是浮点型）
+ * @param duration 音频时长（秒）
+ * @param src 当前音频元素 src
+ */
+export function isNeteaseSampleClip(duration: number, src: string): boolean {
+  return (
+    [30, 45, 60].some((d) => Math.abs(duration - d) < 1) ||
+    src.includes("jdusicrep-ts")
+  );
+}
+
+/**
  * 自动匹配免费源逻辑
  * @param track 需要匹配的歌曲
  * @param targetSource 可选，指定目标音源（仅搜索该音源）
  * @param pagePath 可选，当前页面路径（手动换源时传入，用于判断同步范围）
+ * @param shouldAbort 可选，中止检查回调：搜索完成后、修改状态前调用，返回 true 则静默中止换源
  * @returns 是否匹配并切换成功
  */
 export async function handleAutoMatch(
   track: MusicTrack,
   targetSource?: MusicSource,
-  pagePath?: string
+  pagePath?: string,
+  shouldAbort?: () => boolean
 ): Promise<boolean> {
   if (track.source && EXCLUDED_FOR_SEARCH.includes(track.source)) {
     return false;
@@ -119,6 +133,21 @@ export async function handleAutoMatch(
 
     if (!match) {
       toast.error("未找到可用音源", { id: toastId });
+      return false;
+    }
+
+    // 搜索耗时期间原音源可能已恢复正常（如流式加载时临时时长被纠正为完整时长），
+    // 此时不应覆盖队列曲目
+    if (shouldAbort?.()) {
+      logger.info(
+        "audio-match",
+        "Auto match aborted: original source playing normally",
+        {
+          trackId: track.id,
+          source: track.source,
+        }
+      );
+      toast.dismiss(toastId);
       return false;
     }
 

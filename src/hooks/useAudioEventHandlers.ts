@@ -7,7 +7,7 @@ import { useHistoryStore } from "@/store/history-store";
 import { useOfflineStore } from "@/store/offline-store";
 import { MediaSession } from "@jofr/capacitor-media-session";
 import toast from "react-hot-toast";
-import { handleAutoMatch } from "@/lib/audio-match";
+import { handleAutoMatch, isNeteaseSampleClip } from "@/lib/audio-match";
 import { logger } from "@/lib/logger";
 
 const PAUSE_CONFIRM_DELAY_MS = 200;
@@ -69,13 +69,10 @@ export function useAudioEventHandlers(
         state.setDuration(duration);
 
         // 检测网易云试听片段（音频时长可能是浮点型）
-        const isNeteaseSample =
-          [30, 45, 60].some((d) => Math.abs(duration - d) < 1) ||
-          audio.src.includes("jdusicrep-ts");
         if (
           state.enableAutoMatch &&
           track?.source === "_netease" &&
-          isNeteaseSample
+          isNeteaseSampleClip(duration, audio.src)
         ) {
           const am = autoMatchRef.current;
           if (am.index !== state.currentIndex) am.count = 0; // 重置计数
@@ -83,7 +80,18 @@ export function useAudioEventHandlers(
           if (am.count < MAX_AUTO_MATCH_PER_TRACK) {
             am.index = state.currentIndex;
             am.count++;
-            void handleAutoMatch(track);
+            // 搜索耗时期间原音源可能已恢复正常播放（临时时长被纠正为完整时长），
+            // 此时中止换源，避免误覆盖可正常播放的源
+            void handleAutoMatch(track, undefined, undefined, () => {
+              const musicState = useMusicStore.getState();
+              const current = musicState.queue[musicState.currentIndex];
+              if (current?.id !== track.id) return false;
+              return (
+                !audio.paused &&
+                !audio.error &&
+                !isNeteaseSampleClip(audio.duration || 0, audio.src)
+              );
+            });
           }
         }
       },

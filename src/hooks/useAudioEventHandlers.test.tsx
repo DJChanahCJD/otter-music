@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createRoot } from "react-dom/client";
 import { act } from "react";
 import { useAudioEventHandlers } from "./useAudioEventHandlers";
+import { handleAutoMatch } from "@/lib/audio-match";
 import { useMusicStore } from "@/store/music-store";
 import { useAppStore } from "@/store/app-store";
 import { useOfflineStore } from "@/store/offline-store";
@@ -29,6 +30,9 @@ vi.mock("react-hot-toast", () => ({
 
 vi.mock("@/lib/audio-match", () => ({
   handleAutoMatch: vi.fn(),
+  isNeteaseSampleClip: (duration: number, src: string) =>
+    [30, 45, 60].some((d) => Math.abs(duration - d) < 1) ||
+    src.includes("jdusicrep-ts"),
 }));
 
 describe("useAudioEventHandlers pause confirm", () => {
@@ -417,5 +421,121 @@ describe("useAudioEventHandlers offline stream cache recording", () => {
     cleanup();
 
     expect(useOfflineStore.getState().records["track-1"]).toBeUndefined();
+  });
+});
+
+describe("useAudioEventHandlers passive auto match abort", () => {
+  beforeEach(() => {
+    (
+      globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT?: boolean }
+    ).IS_REACT_ACT_ENVIRONMENT = true;
+    vi.useFakeTimers();
+    vi.clearAllMocks();
+
+    useMusicStore.setState({
+      queue: [
+        {
+          id: "track-1",
+          name: "Test Track",
+          artist: ["Test Artist"],
+          album: "Test Album",
+          source: "_netease",
+          url_id: "123",
+          pic_id: "",
+          lyric_id: "",
+        },
+      ],
+      currentIndex: 0,
+      isPlaying: true,
+      isLoading: false,
+      isRepeat: false,
+      enableAutoMatch: true,
+    });
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  const setup = () => {
+    const audio = document.createElement("audio");
+
+    const paused = false;
+    Object.defineProperty(audio, "paused", {
+      configurable: true,
+      get: () => paused,
+    });
+
+    const audioRef = {
+      current: audio,
+    } as React.RefObject<HTMLAudioElement | null>;
+    const isSwitchingTrackRef = { current: false };
+    const hasRecordedRef = { current: true };
+
+    const container = document.createElement("div");
+    document.body.appendChild(container);
+    const root = createRoot(container);
+
+    function TestHarness() {
+      useAudioEventHandlers(audioRef, isSwitchingTrackRef, hasRecordedRef);
+      return null;
+    }
+
+    act(() => {
+      root.render(<TestHarness />);
+    });
+
+    const cleanup = () => {
+      act(() => {
+        root.unmount();
+      });
+      container.remove();
+    };
+
+    return { audio, cleanup };
+  };
+
+  it("triggers auto match with abort check on netease sample clip", () => {
+    const { audio, cleanup } = setup();
+    Object.defineProperty(audio, "duration", {
+      configurable: true,
+      value: 30,
+    });
+    audio.src = "https://example.com/sample.mp3";
+    audio.dispatchEvent(new Event("durationchange"));
+
+    expect(handleAutoMatch).toHaveBeenCalledTimes(1);
+    const abortCheck = (handleAutoMatch as ReturnType<typeof vi.fn>).mock
+      .calls[0][3] as () => boolean;
+    expect(typeof abortCheck).toBe("function");
+
+    // 搜索返回时：原音源仍在播放且时长已纠正为完整时长 → 中止换源
+    Object.defineProperty(audio, "duration", {
+      configurable: true,
+      value: 240,
+    });
+    expect(abortCheck()).toBe(true);
+
+    // 时长仍是试听片段 → 不中止
+    Object.defineProperty(audio, "duration", {
+      configurable: true,
+      value: 30,
+    });
+    expect(abortCheck()).toBe(false);
+
+    cleanup();
+  });
+
+  it("does not trigger auto match when duration is a full length", () => {
+    const { audio, cleanup } = setup();
+    Object.defineProperty(audio, "duration", {
+      configurable: true,
+      value: 240,
+    });
+    audio.src = "https://example.com/full.mp3";
+    audio.dispatchEvent(new Event("durationchange"));
+
+    expect(handleAutoMatch).not.toHaveBeenCalled();
+    cleanup();
   });
 });
