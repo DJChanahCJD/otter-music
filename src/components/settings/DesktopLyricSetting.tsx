@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { PictureInPicture2 } from "lucide-react";
 import { useShallow } from "zustand/react/shallow";
@@ -33,11 +33,28 @@ const COLOR_PRESETS = [
 export function DesktopLyricSetting() {
   const location = useLocation();
   // 双击悬浮歌词跳转而来时（location.state 标记）默认展开
-  const [expanded, setExpanded] = useState(
-    () =>
-      (location.state as { expandDesktopLyric?: boolean } | null)
-        ?.expandDesktopLyric === true
-  );
+  const fromDeepLink =
+    (location.state as { expandDesktopLyric?: boolean } | null)
+      ?.expandDesktopLyric === true;
+  const [expanded, setExpanded] = useState(fromDeepLink);
+
+  // 深链进入时把整项滚动到视口中央：SettingItem 自带的 scrollIntoView 在
+  // 展开动画（200ms）完成前就计算位置，条目只能勉强贴到屏幕底部边缘，
+  // 展开内容看不到；等动画结束后再居中滚动即可完整呈现
+  const itemRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!fromDeepLink) return;
+
+    const timer = window.setTimeout(() => {
+      itemRef.current?.scrollIntoView({
+        block: "center",
+        behavior: "smooth",
+      });
+    }, 250);
+    return () => window.clearTimeout(timer);
+    // 仅在深链挂载时执行一次，用户手动展开不走此逻辑
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const {
     desktopLyricEnabled,
@@ -96,66 +113,68 @@ export function DesktopLyricSetting() {
   if (!IS_NATIVE) return null;
 
   return (
-    <SettingItem
-      icon={PictureInPicture2}
-      title="桌面歌词"
-      subtitle="其他应用上方悬浮 · 本应用内自动隐藏 · 双击歌词进设置"
-      onClick={() => setExpanded((v) => !v)}
-      showChevron
-      isExpanded={expanded}
-      action={
-        // 阻止冒泡：点开关不应触发整行的展开/收起
-        <span onClick={(e) => e.stopPropagation()}>
-          <Switch
-            checked={desktopLyricEnabled}
-            onCheckedChange={handleCheckedChange}
-          />
-        </span>
-      }
-      expandedContent={
-        // 阻止冒泡：点色板/拖滑杆不应触发整行的展开收起（否则一点就折叠）
-        <div className="space-y-4" onClick={(e) => e.stopPropagation()}>
-          {/* 字色 */}
-          <div className="flex items-center justify-between gap-4">
-            <span className="text-xs text-muted-foreground">颜色</span>
-
-            <div className="flex items-center gap-2.5">
-              {COLOR_PRESETS.map((color) => (
-                <button
-                  key={color}
-                  type="button"
-                  aria-label={`歌词颜色 ${color}`}
-                  onClick={() => setDesktopLyricColor(color)}
-                  style={{ backgroundColor: color }}
-                  className={cn(
-                    "h-5 w-5 rounded-full border border-black/10 transition-all",
-                    desktopLyricColor === color &&
-                      "ring-2 ring-primary ring-offset-2 ring-offset-background"
-                  )}
-                />
-              ))}
-            </div>
-          </div>
-
-          {/* 字号 */}
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="text-xs text-muted-foreground">字号</span>
-              <span className="text-xs tabular-nums text-muted-foreground">
-                {desktopLyricFontSize}px
-              </span>
-            </div>
-
-            <Slider
-              value={[desktopLyricFontSize]}
-              onValueChange={([value]) => setDesktopLyricFontSize(value)}
-              min={12}
-              max={28}
-              step={1}
+    <div ref={itemRef}>
+      <SettingItem
+        icon={PictureInPicture2}
+        title="桌面歌词"
+        subtitle="其他应用上方悬浮"
+        onClick={() => setExpanded((v) => !v)}
+        showChevron
+        isExpanded={expanded}
+        action={
+          // 阻止冒泡：点开关不应触发整行的展开/收起
+          <span onClick={(e) => e.stopPropagation()}>
+            <Switch
+              checked={desktopLyricEnabled}
+              onCheckedChange={handleCheckedChange}
             />
+          </span>
+        }
+        expandedContent={
+          // 阻止冒泡：点色板/拖滑杆不应触发整行的展开收起（否则一点就折叠）
+          <div className="space-y-4" onClick={(e) => e.stopPropagation()}>
+            {/* 字色 */}
+            <div className="flex items-center justify-between gap-4">
+              <span className="text-xs text-muted-foreground">颜色</span>
+
+              <div className="flex items-center gap-2.5">
+                {COLOR_PRESETS.map((color) => (
+                  <button
+                    key={color}
+                    type="button"
+                    aria-label={`歌词颜色 ${color}`}
+                    onClick={() => setDesktopLyricColor(color)}
+                    style={{ backgroundColor: color }}
+                    className={cn(
+                      "h-5 w-5 rounded-full border border-black/10 transition-all",
+                      desktopLyricColor === color &&
+                        "ring-2 ring-primary ring-offset-2 ring-offset-background"
+                    )}
+                  />
+                ))}
+              </div>
+            </div>
+
+            {/* 字号 */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-muted-foreground">字号</span>
+                <span className="text-xs tabular-nums text-muted-foreground">
+                  {desktopLyricFontSize}px
+                </span>
+              </div>
+
+              <Slider
+                value={[desktopLyricFontSize]}
+                onValueChange={([value]) => setDesktopLyricFontSize(value)}
+                min={12}
+                max={28}
+                step={1}
+              />
+            </div>
           </div>
-        </div>
-      }
-    />
+        }
+      />
+    </div>
   );
 }
