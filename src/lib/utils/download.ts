@@ -312,6 +312,45 @@ async function downloadNative(
   }
 }
 
+/** 原生端内嵌时整个音频会以 base64 往返 Capacitor 桥，Java 与 WebView 各持有多份副本，
+ *  内存放大数倍。超过该大小直接跳过，避免 OutOfMemoryError（无损 FLAC 常见 30~50MB）。 */
+const NATIVE_EMBED_MAX_BYTES = 10 * 1024 * 1024;
+
+/**
+ * 读取文件头判断是否为真正的 MP3（ID3v2 头或 MPEG 帧同步）。
+ * 无损音质（如网易云 999）可能返回 FLAC，但 track.audioFormat 未标记，
+ * 若按 mp3 处理会读取整文件并在 JS 侧写入 ID3，既 OOM 又会写坏文件。
+ */
+async function isMp3File(filePath: string): Promise<boolean> {
+  const head = await Filesystem.readFile({
+    path: filePath,
+    directory: STORAGE_CONFIG.BASE_DIR,
+    offset: 0,
+    length: 12,
+  });
+
+  const binary = atob((head.data as string).replace(/\s+/g, ""));
+
+  // "ID3"（ID3v2 标签头）
+  if (
+    binary.length >= 3 &&
+    binary.charCodeAt(0) === 0x49 &&
+    binary.charCodeAt(1) === 0x44 &&
+    binary.charCodeAt(2) === 0x33
+  ) {
+    return true;
+  }
+
+  // MPEG 帧同步：0xFF 后跟 111xxxxx
+  if (binary.length >= 2) {
+    return (
+      binary.charCodeAt(0) === 0xff && (binary.charCodeAt(1) & 0xe0) === 0xe0
+    );
+  }
+
+  return false;
+}
+
 async function embedMetadataNative(
   filePath: string,
   track: MusicTrack,
@@ -328,6 +367,23 @@ async function embedMetadataNative(
   }
 
   try {
+    // 先做体积与真实格式探测，避免把大文件读进 JS 后才触发 50MB 的旧阈值
+    const stat = await Filesystem.stat({
+      path: filePath,
+      directory: STORAGE_CONFIG.BASE_DIR,
+    });
+    if (stat.size > NATIVE_EMBED_MAX_BYTES) {
+      logger.warn(
+        "download",
+        `文件过大 (${(stat.size / 1024 / 1024).toFixed(1)}MB)，跳过元数据嵌入`
+      );
+      return;
+    }
+    if (!(await isMp3File(filePath))) {
+      logger.warn("download", "非 MP3 文件，跳过元数据嵌入", { filePath });
+      return;
+    }
+
     if (toastId) toast.loading("正在写入元数据...", { id: toastId });
 
     const readResult = await Filesystem.readFile({
