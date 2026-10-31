@@ -77,8 +77,12 @@ Android 原生返回键与 Web 端 Esc 由 `RootLayout` 统一拦截，转发到
 
 `IMusicProvider` 定义了核心能力（`search`/`getUrl`/`getPic`/`getLyric`）和可选扩展能力。新增音源时：
 
-- **必须**实现 `searchArtist` 和 `searchAlbum`（最低限度委托给 `this.search`）。`MusicTrackMobileMenu` 据此决定歌手/专辑搜索是否限定在当前音源（`searchSource = track.source`）还是回退到聚合搜索（`"all"`）。
+- **必须**实现 `searchArtist` 和 `searchAlbum`（最低限度委托给 `this.search`）。这两个方法当前只作为"支持站内搜索"的能力标志，由 `src/lib/music-provider/search-source.ts` 的 `resolveFallbackSearchSource` 读取：歌手/专辑跳转回退到搜索页时锁定单音源（优先取条目自身音源，不可搜则回退网易云），不再默认走聚合搜索——聚合需等待全部音源返回，会明显拖慢跳转。
 - `getArtistDetail`/`getAlbumDetail`/`getSongDetail` 为可选能力，仅在音源有独立详情页路由时才需实现。当前详情页（`NeteaseDetail`）耦合网易云 API，其他音源无需实现这些方法，走搜索回退即可。
+- **唯一的跨源回退页**是 `QqAlbumDetail`（路由 `/qq-album/:mid`），仅在网易云专辑取不到内容时启用：
+  1. `MusicTrackMobileMenu` 跳 `/netease-album/:id` 时通过 route state 带上 `albumFallback: { name, artist }`；
+  2. `NeteaseDetail` 加载失败（`error`）时用该校验词经 QQ `smartbox_new.fcg` 解析 albummid（精确名优先、包含匹配兜底，且要求歌手一致），再取专辑详情：优先旧版 `fcg_v8_album_info_cp.fcg`（单请求含元信息+全部曲目），失败或无曲目时退回 `musicu.fcg` 的 `req_0`+`req_1`；
+  3. 解析不到则保留原错误页；点击时若连专辑 ID 都拿不到，则在菜单里直接尝试 QQ（仍失败则走默认单音源搜索，不做聚合）。
 - **单一音质音源**（只有一档音频流，如 higequ、jamendo、B站、本地、播客）：`getUrl` 忽略 `br`，并把音源名加入 `src/hooks/useAudioTrackLoader.ts` 的 `skipQualityReload` 列表，让切音质静默跳过重载，避免多余请求与播放中断。
 - **免鉴权优先**：新音源优先复用站点自身的网页接口（如 jamendo、higequ 的页面/站点接口），不引入需要注册 `client_id` 或额外签名的开发者 API；接口细节（签名头、分页参数、直链模板）写在 `src/lib/<source>/` 的模块注释里，不在根文档重复。
 

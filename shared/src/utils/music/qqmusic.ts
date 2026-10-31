@@ -1,5 +1,10 @@
 import type { MusicTrack, SearchPageResult } from "../../types/music";
 import type {
+  QqAlbumDetail,
+  QqAlbumInfoResponse,
+  QqAlbumInfoSongRaw,
+  QqAlbumMusicuResponse,
+  QqAlbumSongInfoRaw,
   QqPlaylistResponse,
   QqSongRaw,
   QqSearchSongRaw,
@@ -271,4 +276,205 @@ export function decodeQqHtmlEntities(text: string): string {
     .replace(/&gt;/g, ">")
     .replace(/&quot;/g, '"')
     .replace(/&apos;/g, "'");
+}
+
+// ─────────────────────────────────────
+// 专辑（详情 + 曲目 / 名称解析）
+// ─────────────────────────────────────
+
+/** 专辑曲目单页上限：绝大多数专辑一次取完，避免额外分页 */
+const QQ_ALBUM_SONG_PAGE_SIZE = 100;
+
+/** smartbox 名称解析接口域名 */
+export const QQ_SMARTBOX_BASE_URL = "https://c.y.qq.com";
+
+/**
+ * 构建 QQ 专辑详情 musicu 请求体。
+ * req_0 取专辑元信息、req_1 取曲目，一次请求并行返回。
+ */
+export function buildQqAlbumMusicuData(albumMid: string) {
+  return {
+    comm: { ct: 24, cv: 0, uin: "0", format: "json" },
+    req_0: {
+      module: "music.musichallAlbum.AlbumInfoServer",
+      method: "GetAlbumDetail",
+      param: { AlbumMid: albumMid },
+    },
+    req_1: {
+      module: "music.musichallAlbum.AlbumSongList",
+      method: "GetAlbumSongList",
+      param: {
+        albumMid,
+        begin: 0,
+        num: QQ_ALBUM_SONG_PAGE_SIZE,
+        order: 2,
+      },
+    },
+  };
+}
+
+/**
+ * 构建 QQ 专辑详情请求路径（不含域名/代理前缀）。
+ */
+export function buildQqAlbumApiPath(albumMid: string): string {
+  const data = encodeURIComponent(
+    JSON.stringify(buildQqAlbumMusicuData(albumMid))
+  );
+  return `/cgi-bin/musicu.fcg?data=${data}`;
+}
+
+/**
+ * 构建 smartbox 名称解析请求路径（不含域名/代理前缀）。
+ * 注意：key 只传专辑名。实测把歌手一起拼进去会让 album 分组直接返回 0 条
+ * （smartbox 对多词组合只走单曲匹配），歌手校验放在调用方做。
+ */
+export function buildQqSmartboxApiPath(albumName: string): string {
+  return (
+    "/splcloud/fcgi-bin/smartbox_new.fcg" +
+    `?key=${encodeURIComponent(albumName)}` +
+    "&format=json&inCharset=utf-8&outCharset=utf-8&platform=yqq"
+  );
+}
+
+/**
+ * 按 albummid 拼接封面 URL。
+ */
+export function buildQqAlbumCoverUrl(albumMid: string, size = 800): string {
+  if (!albumMid) return "";
+  return `https://y.gtimg.cn/music/photo_new/T002R${size}x${size}M000${albumMid}.jpg`;
+}
+
+/**
+ * 将 QQ 专辑曲目对象转换为 MusicTrack。
+ */
+export function convertQqAlbumSongToMusicTrack(
+  song: QqAlbumSongInfoRaw
+): MusicTrack {
+  const songmid = song.mid || "";
+  return {
+    id: `qq_${songmid}`,
+    name: song.name || "",
+    artist: (song.singer || [])
+      .map((s) => s.name || "")
+      .filter((name) => !!name),
+    album: song.album?.name || "",
+    pic_id: buildQqAlbumCoverUrl(song.album?.mid || ""),
+    url_id: songmid,
+    lyric_id: songmid,
+    source: "qq",
+    fee: song.pay?.pay_play === 1 ? 1 : undefined,
+  };
+}
+
+/**
+ * 解析 musicu 专辑响应。
+ * 编码异常或专辑不存在时抛错，交由调用方回退到默认搜索。
+ */
+export function parseQqAlbumResponse(
+  json: QqAlbumMusicuResponse,
+  albumMid: string
+): QqAlbumDetail {
+  if (json.code !== 0) {
+    throw new Error(`QQ 专辑接口返回异常: code=${json.code}`);
+  }
+
+  const basic = json.req_0?.data?.basicInfo;
+  const mid = basic?.albumMid || albumMid;
+  const name = basic?.albumName;
+  if (!name) throw new Error("QQ 专辑不存在或已下架");
+
+  const tracks = (json.req_1?.data?.songList ?? [])
+    .map((item) => item.songInfo)
+    .filter((info): info is QqAlbumSongInfoRaw => !!info?.mid)
+    .map(convertQqAlbumSongToMusicTrack);
+
+  return {
+    albumMid: mid,
+    name,
+    coverUrl: buildQqAlbumCoverUrl(mid),
+    creator:
+      (json.req_0?.data?.singer?.singerList ?? [])
+        .map((s) => s.name || "")
+        .filter((n) => !!n)
+        .join(" / ") || undefined,
+    description: basic?.desc || undefined,
+    publishDate: basic?.publishDate || undefined,
+    trackCount: json.req_1?.data?.totalNum ?? tracks.length,
+    tracks,
+  };
+}
+
+/**
+ * 构建 QQ 旧版专辑接口请求路径（不含域名/代理前缀）。
+ * 该接口参数简单、单请求即返回专辑元信息 + 全部曲目（按音轨顺序），
+ * 作为 musicu 之外的第二条通路。
+ */
+export function buildQqAlbumInfoApiPath(albumMid: string): string {
+  const params = new URLSearchParams({
+    albummid: albumMid,
+    g_tk: "5381",
+    uin: "0",
+    format: "json",
+    inCharset: "utf-8",
+    outCharset: "utf-8",
+    notice: "0",
+    platform: "h5",
+    needNewCode: "1",
+  });
+  return `/v8/fcg-bin/fcg_v8_album_info_cp.fcg?${params.toString()}`;
+}
+
+/**
+ * 将旧版专辑接口的曲目对象转换为 MusicTrack。
+ */
+export function convertQqAlbumInfoSongToMusicTrack(
+  song: QqAlbumInfoSongRaw
+): MusicTrack {
+  const songmid = song.songmid || "";
+  return {
+    id: `qq_${songmid}`,
+    name: song.songname || "",
+    artist: (song.singer || [])
+      .map((s) => s.name || "")
+      .filter((name) => !!name),
+    album: song.albumname || "",
+    pic_id: buildQqAlbumCoverUrl(song.albummid || ""),
+    url_id: songmid,
+    lyric_id: songmid,
+    source: "qq",
+    fee: song.pay?.payplay === 1 ? 1 : undefined,
+  };
+}
+
+/**
+ * 解析旧版专辑接口响应。
+ * 编码异常或专辑不存在时抛错，交由调用方切换通路。
+ */
+export function parseQqAlbumInfoResponse(
+  json: QqAlbumInfoResponse,
+  albumMid: string
+): QqAlbumDetail {
+  if (json.code !== 0) {
+    throw new Error(`QQ 专辑接口返回异常: code=${json.code}`);
+  }
+
+  const data = json.data;
+  const name = data?.name;
+  if (!name) throw new Error("QQ 专辑不存在或已下架");
+
+  const mid = data?.mid || albumMid;
+  const tracks = (data?.list ?? [])
+    .filter((song): song is QqAlbumInfoSongRaw => !!song.songmid)
+    .map(convertQqAlbumInfoSongToMusicTrack);
+
+  return {
+    albumMid: mid,
+    name,
+    coverUrl: buildQqAlbumCoverUrl(mid),
+    creator: data?.singername || undefined,
+    description: data?.desc || undefined,
+    publishDate: data?.aDate || undefined,
+    trackCount: data?.total_song_num ?? tracks.length,
+    tracks,
+  };
 }

@@ -42,6 +42,7 @@ import { useArtistAlbumSheet } from "@/hooks/useArtistAlbumSheet";
 import { useMarketSession } from "@/store/session/market-session";
 import { logger } from "@/lib/logger";
 import { useDetailPage } from "@/hooks/useDetailPage";
+import { resolveQqAlbumMid } from "@/lib/qqmusic/qqmusic-api";
 import { useImportPlaylist } from "@/hooks/useImportPlaylist";
 import { useExitLayer } from "@/hooks/useExitLayer";
 
@@ -170,6 +171,34 @@ export function NeteaseDetail({
       setHasMore(detail.trackCount > tracks.length);
     }
   }, [type, detail, tracks]);
+
+  /* ---------------- 网易云专辑加载失败 → QQ 音乐回退 ---------------- */
+
+  const albumFallback = navigationState?.albumFallback;
+  const [qqFallbacking, setQqFallbacking] = useState(false);
+  const qqFallbackTriedRef = useRef(false);
+
+  useEffect(() => {
+    if (!error || type !== "album" || !albumFallback?.name) return;
+    if (qqFallbackTriedRef.current) return;
+    qqFallbackTriedRef.current = true;
+    setQqFallbacking(true);
+
+    resolveQqAlbumMid(albumFallback.name, albumFallback.artist)
+      .then((mid) => {
+        if (mid) {
+          logger.info("NeteaseDetail", "专辑加载失败，回退到 QQ 音乐专辑页", {
+            album: albumFallback.name,
+            mid,
+          });
+          navigate(`/qq-album/${mid}`, { replace: true });
+          return;
+        }
+        // QQ 也解析不到：保留原有错误页，由用户自行返回
+        setQqFallbacking(false);
+      })
+      .catch(() => setQqFallbacking(false));
+  }, [error, type, albumFallback, navigate]);
 
   const onHeaderBack = () => {
     handleBack(onBack);
@@ -336,8 +365,8 @@ export function NeteaseDetail({
 
   return (
     <GenericDetailPage
-      loading={loading}
-      error={error}
+      loading={loading || qqFallbacking}
+      error={error && !qqFallbacking}
       title="详情"
       onBack={onHeaderBack}
       onRetry={retry}

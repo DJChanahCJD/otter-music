@@ -17,6 +17,7 @@ import {
   PodcastDetailRoute,
   BilibiliCollectionDetailRoute,
   BilibiliArtistDetailRoute,
+  QqAlbumDetailRoute,
   AlistBrowserRoute,
   BillboardChartRoute,
   AwardsChartRoute,
@@ -71,6 +72,10 @@ export const router = createBrowserRouter([
       {
         path: "netease-album/:id",
         element: <AlbumDetailRoute />,
+      },
+      {
+        path: "qq-album/:mid",
+        element: <QqAlbumDetailRoute />,
       },
       {
         path: "podcast/:id",

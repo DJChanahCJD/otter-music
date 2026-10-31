@@ -24,6 +24,8 @@ import {
 import { getAwardMeta } from "@/lib/awards/awards-meta";
 import { searchAlbums, searchArtists } from "@/lib/netease/netease-api";
 import { isArtistMatch, isNameMatch } from "@/lib/utils/music-key";
+import { DEFAULT_FALLBACK_SEARCH_SOURCE } from "@/lib/music-provider/search-source";
+import { resolveQqAlbumMid } from "@/lib/qqmusic/qqmusic-api";
 import { useMusicStore } from "@/store/music-store";
 import { useMarketSession } from "@/store/session/market-session";
 import type { SearchIntent } from "@/types/music";
@@ -191,7 +193,8 @@ export function AwardsChart({ awardId, year }: AwardsChartProps) {
       }
       setSearchQuery(keyword);
       setSearchIntent(intent);
-      setSearchSource("all");
+      // 获奖条目来自网易云，回退搜索锁定网易云单音源，避免聚合搜索等待全部音源
+      setSearchSource(DEFAULT_FALLBACK_SEARCH_SOURCE);
       setSearchResults([]);
       navigate("/search");
     },
@@ -229,7 +232,15 @@ export function AwardsChart({ awardId, year }: AwardsChartProps) {
               isArtistMatch([a.artistName], [artist])
           );
           if (hit) {
-            navigate(`/netease-album/${hit.id}`);
+            navigate(`/netease-album/${hit.id}`, {
+              state: { albumFallback: { name: title, artist } },
+            });
+            return;
+          }
+          // 网易云没有该专辑：回退到 QQ 音乐专辑页，仍失败则进入默认搜索
+          const qqMid = await resolveQqAlbumMid(title, artist);
+          if (qqMid) {
+            navigate(`/qq-album/${qqMid}`);
             return;
           }
         } else if (row.kind === "artist") {

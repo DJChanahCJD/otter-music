@@ -1,3 +1,5 @@
+import type { MusicTrack } from "./music";
+
 // ============================================================
 // 酷狗 (Kugou)
 // ============================================================
@@ -615,4 +617,109 @@ export interface QqVkeyResponse {
       midurlinfo: { purl: string; filename: string }[];
     };
   };
+}
+
+/** QQ 专辑歌手条目 */
+export interface QqAlbumSingerRaw {
+  id?: number;
+  mid?: string;
+  name?: string;
+}
+
+/** QQ musicu 专辑接口：req_0 专辑元信息 */
+export interface QqAlbumBasicInfoRaw {
+  albumMid?: string;
+  albumName?: string;
+  publishDate?: string;
+  language?: string;
+  genreNew?: string;
+  desc?: string;
+  company?: { name?: string };
+}
+
+/** QQ musicu 专辑接口：req_1 曲目条目 */
+export interface QqAlbumSongInfoRaw {
+  mid?: string;
+  name?: string;
+  interval?: number;
+  singer?: Array<{ mid?: string; name?: string }>;
+  album?: { mid?: string; name?: string };
+  pay?: { pay_play?: number };
+}
+
+/** QQ musicu 专辑接口：req_1 曲目列表 */
+export interface QqAlbumSongListRaw {
+  totalNum?: number;
+  songList?: Array<{ songInfo?: QqAlbumSongInfoRaw }>;
+}
+
+/** QQ 专辑详情接口（musicu.fcg 并行子请求）响应 */
+export interface QqAlbumMusicuResponse {
+  code: number;
+  req_0?: {
+    code: number;
+    data?: {
+      basicInfo?: QqAlbumBasicInfoRaw;
+      /** 注意：歌手在 data.singer 顶层，不在 basicInfo 里 */
+      singer?: { singerList?: QqAlbumSingerRaw[] };
+    };
+  };
+  req_1?: { code: number; data?: QqAlbumSongListRaw };
+}
+
+/** QQ 旧版专辑接口（fgc_v8_album_info_cp.fcg）曲目条目 */
+export interface QqAlbumInfoSongRaw {
+  songmid?: string;
+  songname?: string;
+  interval?: number;
+  singer?: QqAlbumSingerRaw[];
+  albummid?: string;
+  albumname?: string;
+  pay?: { payplay?: number };
+}
+
+/** QQ 旧版专辑接口响应（单请求含专辑元信息 + 全部曲目） */
+export interface QqAlbumInfoResponse {
+  code: number;
+  subcode?: number;
+  data?: {
+    mid?: string;
+    name?: string;
+    singername?: string;
+    singermid?: string;
+    aDate?: string;
+    desc?: string;
+    lan?: string;
+    genre?: string;
+    total_song_num?: number;
+    list?: QqAlbumInfoSongRaw[];
+  };
+}
+
+/** QQ smartbox 名称解析响应（仅用到专辑分组） */
+export interface QqSmartboxResponse {
+  code: number;
+  data?: {
+    album?: {
+      itemlist?: Array<{
+        id?: string;
+        mid?: string;
+        name?: string;
+        singer?: string;
+        pic?: string;
+      }>;
+    };
+  };
+}
+
+/** 归一化后的 QQ 专辑详情 */
+export interface QqAlbumDetail {
+  albumMid: string;
+  name: string;
+  coverUrl: string;
+  creator?: string;
+  description?: string;
+  publishDate?: string;
+  trackCount: number;
+  tracks: MusicTrack[];
 }

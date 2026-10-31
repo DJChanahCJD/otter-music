@@ -1,19 +1,29 @@
 import type { MusicTrack, SearchPageResult, SongLyric } from "@/types/music";
 import {
+  type QqAlbumDetail,
+  type QqAlbumInfoResponse,
+  type QqAlbumMusicuResponse,
   type QqPlaylistDetail,
+  type QqSmartboxResponse,
   type QqSosoSearchResponse,
   type QqVkeyResponse,
   QQ_API_URL,
   QQ_LYRIC_URL,
   QQ_REFERER,
   QQ_SEARCH_BASE_URL,
+  QQ_SMARTBOX_BASE_URL,
+  buildQqAlbumApiPath,
+  buildQqAlbumInfoApiPath,
   buildQqPlaylistApiPath,
   buildQqSearchApiPath,
+  buildQqSmartboxApiPath,
   buildVkeyRequestBody,
   convertQqSongToMusicTrack,
   decodeQqHtmlEntities,
   extractVkeyUrl,
   orderQqQualityKeys,
+  parseQqAlbumInfoResponse,
+  parseQqAlbumResponse,
   parseQqPlaylistResponse,
   parseQqSosoSearchResponse,
   qqBrToQualityKey,
@@ -21,6 +31,11 @@ import {
 import { IS_NATIVE } from "@/lib/api/config";
 import { useQqStore } from "@/store/qq-store";
 import { logger } from "@/lib/logger";
+import {
+  isNameMatch,
+  isArtistMatch,
+  isNameContainsMatch,
+} from "@/lib/utils/music-key";
 
 const NETWORK_TIMEOUT = 12000;
 
@@ -326,4 +341,153 @@ export async function getQqMusicLyric(
     lyric: decodeQqHtmlEntities(parsed.lyric),
     tlyric: parsed.trans ? decodeQqHtmlEntities(parsed.trans) : undefined,
   };
+}
+
+// --- QQ 专辑（网易云专辑跳转失败时的回退目标） ---
+
+/**
+ * 请求 QQ JSON 接口：原生直连，Web 走 Vite 代理。
+ */
+async function fetchQqJson<T>(nativeUrl: string, devUrl: string): Promise<T> {
+  if (IS_NATIVE) {
+    const { CapacitorHttp } = await import("@capacitor/core");
+    const res = await CapacitorHttp.request({
+      method: "GET",
+      url: nativeUrl,
+      headers: { Referer: QQ_REFERER, "User-Agent": QQ_USER_AGENT },
+    });
+    if (res.status >= 400) throw new Error(`HTTP ${res.status}`);
+    return (
+      typeof res.data === "string" ? JSON.parse(res.data) : res.data
+    ) as T;
+  }
+
+  const res = await fetchWithTimeout(devUrl);
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return (await res.json()) as T;
+}
+
+/**
+ * 获取 QQ 专辑详情与曲目。
+ * 两条通路互备：旧版 CGI（参数简单、单请求返回元信息+全部曲目）优先，
+ * 失败或无曲目时退回 musicu（req_0 专辑信息 + req_1 曲目并行子请求）。
+ */
+export async function getQqAlbum(albumMid: string): Promise<QqAlbumDetail> {
+  const legacyPath = buildQqAlbumInfoApiPath(albumMid);
+
+  try {
+    const legacy = parseQqAlbumInfoResponse(
+      await fetchQqJson<QqAlbumInfoResponse>(
+        `https://c.y.qq.com${legacyPath}`,
+        `/api/qqmusic-soso${legacyPath}`
+      ),
+      albumMid
+    );
+    if (legacy.tracks.length > 0) {
+      logger.info("qqmusic", "QQ 专辑已加载", {
+        albumMid,
+        via: "albumInfo",
+        tracks: legacy.tracks.length,
+      });
+      return legacy;
+    }
+    logger.warn("qqmusic", "QQ 旧版专辑接口无曲目，改用 musicu", { albumMid });
+  } catch (e) {
+    logger.warn("qqmusic", "QQ 旧版专辑接口失败，改用 musicu", e);
+  }
+
+  const musicuPath = buildQqAlbumApiPath(albumMid);
+  const album = parseQqAlbumResponse(
+    await fetchQqJson<QqAlbumMusicuResponse>(
+      `https://u.y.qq.com${musicuPath}`,
+      `/api/qqmusic-search${musicuPath}`
+    ),
+    albumMid
+  );
+  logger.info("qqmusic", "QQ 专辑已加载", {
+    albumMid,
+    via: "musicu",
+    tracks: album.tracks.length,
+  });
+  return album;
+}
+
+/**
+ * 用专辑名解析 albummid，命中项还需通过歌手校验。
+ * 解析失败时返回 null，由调用方回退到默认搜索。
+ */
+export async function resolveQqAlbumMid(
+  albumName: string,
+  artist?: string
+): Promise<string | null> {
+  const keyword = albumName.trim();
+  if (!keyword) return null;
+
+  const path = buildQqSmartboxApiPath(keyword);
+  let json: QqSmartboxResponse | null = null;
+
+  try {
+    if (IS_NATIVE) {
+      const { CapacitorHttp } = await import("@capacitor/core");
+      const res = await CapacitorHttp.request({
+        method: "GET",
+        url: `${QQ_SMARTBOX_BASE_URL}${path}`,
+        headers: { Referer: QQ_REFERER, "User-Agent": QQ_USER_AGENT },
+      });
+      if (res.status >= 400) return null;
+      json =
+        typeof res.data === "string"
+          ? (JSON.parse(res.data) as QqSmartboxResponse)
+          : (res.data as QqSmartboxResponse);
+    } else {
+      const res = await fetchWithTimeout(`/api/qqmusic-soso${path}`);
+      if (!res.ok) return null;
+      json = (await res.json()) as QqSmartboxResponse;
+    }
+  } catch (e) {
+    logger.warn("qqmusic", "QQ 专辑名称解析失败", e);
+    return null;
+  }
+
+  const items = json?.data?.album?.itemlist ?? [];
+
+  // smartbox 的 singer 可能是 "A/B" 形式的合唱串，拆开逐个比对
+  const matchesArtist = (singer?: string) => {
+    if (!artist) return true;
+    if (!singer) return false;
+    const names = singer
+      .split(/[/&、,，]/)
+      .map((n) => n.trim())
+      .filter((n) => !!n);
+    return isArtistMatch(names.length > 0 ? names : [singer], [artist]);
+  };
+
+  const pick = (
+    nameMatches: (a: string, b: string) => boolean,
+    needArtistMatch: boolean
+  ) =>
+    items.find(
+      (item) =>
+        !!item.mid &&
+        !!item.name &&
+        nameMatches(item.name, albumName) &&
+        (!needArtistMatch || matchesArtist(item.singer))
+    );
+
+  // 优先「名精确 + 歌手一致」；其次名包含；实在没有歌手信息才放宽
+  const hit =
+    pick(isNameMatch, true) ??
+    pick(isNameContainsMatch, true) ??
+    pick(isNameMatch, false) ??
+    pick(isNameContainsMatch, false);
+
+  if (!hit?.mid) {
+    logger.warn("qqmusic", "QQ 专辑未解析到 albummid", {
+      albumName,
+      artist,
+      candidates: items.length,
+    });
+    return null;
+  }
+  return hit.mid;
 }

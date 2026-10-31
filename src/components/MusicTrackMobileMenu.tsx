@@ -31,12 +31,16 @@ import {
 } from "@/types/music";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useMusicStore } from "@/store/music-store";
-import { MusicProviderFactory } from "@/lib/music-provider";
+import {
+  MusicProviderFactory,
+  resolveFallbackSearchSource,
+} from "@/lib/music-provider";
 import { IS_NATIVE } from "@/lib/api/config";
 import { MusicCommentsDrawer } from "./MusicCommentsDrawer";
 import { handleAutoMatch } from "@/lib/audio-match";
 import { getAllVisibleSourcesForSwitch } from "@/hooks/use-aggregated-sources";
 import { parseAlistTrackId } from "@/lib/alist/alist-api";
+import { resolveQqAlbumMid } from "@/lib/qqmusic/qqmusic-api";
 import {
   Dialog,
   DialogContent,
@@ -211,19 +215,42 @@ export function MusicTrackMobileMenu({
         }
       }
       if (type === "album" && provider.getAlbumDetail) {
-        const targetPath =
+        const isBilibiliAlbum =
           track.source === "bilibili" &&
           (id?.startsWith("bilibili_S_") ||
             id?.startsWith("bilibili_O_") ||
-            id?.startsWith("bilibili_V_"))
-            ? `/bilibili-collection/${id}`
-            : `/netease-album/${id}`;
-        navigate(targetPath);
+            id?.startsWith("bilibili_V_"));
+        const targetPath = isBilibiliAlbum
+          ? `/bilibili-collection/${id}`
+          : `/netease-album/${id}`;
+        // 带上专辑名与歌手，供网易云专辑页加载失败时回退到 QQ 音乐
+        navigate(
+          targetPath,
+          isBilibiliAlbum
+            ? undefined
+            : { state: { albumFallback: { name: keyword, artist } } }
+        );
         onOpenChange(false);
         onNavigate?.();
         return;
       }
     }
+
+    // 网易云专辑跳转失败（缺专辑 ID 或详情获取异常）：回退到 QQ 音乐专辑页；
+    // QQ 也解析不到时继续走默认的单音源搜索
+    if (
+      type === "album" &&
+      (track.source === "netease" || track.source === "_netease")
+    ) {
+      const qqAlbumMid = await resolveQqAlbumMid(keyword, artist);
+      if (qqAlbumMid) {
+        navigate(`/qq-album/${qqAlbumMid}`);
+        onOpenChange(false);
+        onNavigate?.();
+        return;
+      }
+    }
+
     let searchKeyword = keyword;
     if (type === "album" && artist) {
       searchKeyword = `${artist} ${keyword}`;
@@ -240,9 +267,8 @@ export function MusicTrackMobileMenu({
     } else {
       setSearchIntent(null);
     }
-    if (track.source && track.source !== "local") {
-      setSearchSource(provider.searchArtist ? track.source : "all");
-    }
+    // 回退搜索锁定单音源，避免聚合搜索等待全部音源返回
+    setSearchSource(resolveFallbackSearchSource(track.source));
     setSearchResults([]);
     navigate("/search");
     onOpenChange(false);

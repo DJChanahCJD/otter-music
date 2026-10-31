@@ -64,6 +64,11 @@ const BilibiliArtistDetail = lazy(() =>
     default: m.BilibiliArtistDetail,
   }))
 );
+const QqAlbumDetail = lazy(() =>
+  import("@/components/QqAlbumDetail").then((m) => ({
+    default: m.QqAlbumDetail,
+  }))
+);
 const AlistBrowser = lazy(() =>
   import("@/components/PlaylistMarket/Alist/AlistBrowser").then((m) => ({
     default: m.AlistBrowser,
@@ -345,6 +350,23 @@ export const BilibiliArtistDetailRoute = withSuspense(() => {
       id={id || null}
       onBack={() => navigate(-1)}
       onPlay={(track, list) => handlePlay(track, list, "bilibili_artist")}
+      currentTrackId={currentTrackId}
+      isPlaying={isPlaying}
+    />
+  );
+});
+
+export const QqAlbumDetailRoute = withSuspense(() => {
+  const { mid } = useParams<{ mid: string }>();
+  const navigate = useNavigate();
+  const { handlePlay } = usePlayHelper();
+  const { currentTrackId, isPlaying } = usePlaybackState();
+
+  return (
+    <QqAlbumDetail
+      albumMid={mid || null}
+      onBack={() => navigate(-1)}
+      onPlay={(track, list) => handlePlay(track, list, "qq_album")}
       currentTrackId={currentTrackId}
       isPlaying={isPlaying}
     />

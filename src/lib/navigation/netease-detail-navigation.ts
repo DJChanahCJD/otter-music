@@ -3,6 +3,8 @@ export interface ArtistAlbumSheetNavigationState {
   artistId?: string;
   artistName?: string;
   restoreAlbumSheet?: boolean;
+  /** 专辑页加载失败时用于回退到 QQ 音乐的检索词 */
+  albumFallback?: { name?: string; artist?: string };
 }
 
 const SHEET_RESTORE_KEY = "netease-album-sheet-restore";

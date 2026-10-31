@@ -167,10 +167,14 @@ export function ArtistAlbumSheet({
     }
   };
 
-  const handleAlbumClick = (albumId: number) => {
+  const handleAlbumClick = (album: ArtistAlbum) => {
     if (!artistId) return;
-    navigate(`/netease-album/${albumId}`, {
-      state: createArtistAlbumSheetState(artistId, artistName),
+    navigate(`/netease-album/${album.id}`, {
+      state: {
+        ...createArtistAlbumSheetState(artistId, artistName),
+        // 专辑页加载失败时用于回退到 QQ 音乐
+        albumFallback: { name: album.name, artist: artistName },
+      },
     });
   };
 
@@ -202,7 +206,7 @@ export function ArtistAlbumSheet({
               {albums.map((album, index) => (
                 <button
                   key={album.id}
-                  onClick={() => handleAlbumClick(album.id as number)}
+                  onClick={() => handleAlbumClick(album)}
                   className={cn(
                     "group flex flex-col gap-2 text-left outline-none animate-in fade-in slide-in-from-bottom-4 fill-mode-both",
                     "hover:translate-y-[-4px] transition-all"
