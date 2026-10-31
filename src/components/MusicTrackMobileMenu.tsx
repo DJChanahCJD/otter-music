@@ -213,13 +213,16 @@ export function MusicTrackMobileMenu({
           (id?.startsWith("bilibili_S_") ||
             id?.startsWith("bilibili_O_") ||
             id?.startsWith("bilibili_V_"));
+        const isQqAlbum = track.source === "qq";
         const targetPath = isBilibiliAlbum
           ? `/bilibili-collection/${id}`
-          : `/netease-album/${id}`;
+          : isQqAlbum
+            ? `/qq-album/${id}`
+            : `/netease-album/${id}`;
         // 带上专辑名与歌手，供网易云专辑页加载失败时回退到 QQ 音乐
         navigate(
           targetPath,
-          isBilibiliAlbum
+          isBilibiliAlbum || isQqAlbum
             ? undefined
             : { state: { albumFallback: { name: keyword, artist } } }
         );
@@ -229,11 +232,14 @@ export function MusicTrackMobileMenu({
       }
     }
 
-    // 网易云专辑跳转失败（缺专辑 ID 或详情获取异常）：回退到 QQ 音乐专辑页；
-    // QQ 也解析不到时继续走默认的单音源搜索
+    // 网易云专辑跳转失败（缺专辑 ID 或详情获取异常）、
+    // 或 QQ 歌曲缺少专辑 mid（旧数据）：用专辑名解析 albummid 后进 QQ 专辑页；
+    // 解析不到时继续走默认的单音源搜索
     if (
       type === "album" &&
-      (track.source === "netease" || track.source === "_netease")
+      (track.source === "netease" ||
+        track.source === "_netease" ||
+        track.source === "qq")
     ) {
       const qqAlbumMid = await resolveQqAlbumMid(keyword, artist);
       if (qqAlbumMid) {

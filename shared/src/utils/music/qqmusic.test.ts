@@ -70,6 +70,7 @@ describe("parseQqSosoSearchResponse", () => {
       artist: ["a"],
       album: "album",
       source: "qq",
+      album_id: "al",
     });
     expect(res.hasMore).toBe(true);
   });
@@ -270,6 +271,7 @@ describe("parseQqAlbumResponse", () => {
       name: "晴天",
       artist: ["周杰伦"],
       album: "叶惠美",
+      album_id: "000MkMni19ClKG",
       url_id: "0039MnYb0qxYhV",
       source: "qq",
       fee: 1,
@@ -344,6 +346,7 @@ describe("parseQqAlbumInfoResponse", () => {
       name: "Layers",
       artist: ["蔡依林"],
       album: "Pleasure",
+      album_id: "002S6zTQ4deh87",
       url_id: "0010EFJh2YexX5",
       source: "qq",
       fee: 1,

@@ -10,6 +10,7 @@ import {
   searchQqMusic,
   getQqMusicUrl,
   getQqMusicLyric,
+  getQqAlbum,
 } from "@/lib/qqmusic/qqmusic-api";
 
 export class QqApiProvider implements IMusicProvider {
@@ -41,6 +42,10 @@ export class QqApiProvider implements IMusicProvider {
     if (!songmid) return null;
     if (songmid.startsWith("qq_")) songmid = songmid.slice(3);
     return getQqMusicLyric(songmid);
+  }
+
+  async getAlbumDetail(albumMid: string) {
+    return getQqAlbum(albumMid);
   }
 
   async searchArtist(

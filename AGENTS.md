@@ -80,8 +80,9 @@ Android 原生返回键与 Web 端 Esc 由 `RootLayout` 统一拦截，转发到
 `IMusicProvider` 定义了核心能力（`search`/`getUrl`/`getPic`/`getLyric`）和可选扩展能力。新增音源时：
 
 - **必须**实现 `searchArtist` 和 `searchAlbum`（最低限度委托给 `this.search`）。这两个方法当前只作为"支持站内搜索"的能力标志，由 `src/lib/music-provider/search-source.ts` 的 `resolveFallbackSearchSource` 读取：歌手/专辑跳转回退到搜索页时锁定单音源（优先取条目自身音源，不可搜则回退网易云），不再默认走聚合搜索——聚合需等待全部音源返回，会明显拖慢跳转。
-- `getArtistDetail`/`getAlbumDetail`/`getSongDetail` 为可选能力，仅在音源有独立详情页路由时才需实现。当前详情页（`NeteaseDetail`）耦合网易云 API，其他音源无需实现这些方法，走搜索回退即可。
-- **唯一的跨源回退页**是 `QqAlbumDetail`（路由 `/qq-album/:mid`），仅在网易云专辑取不到内容时启用：
+- `getArtistDetail`/`getAlbumDetail`/`getSongDetail` 为可选能力，仅在音源有独立详情页路由时才需实现。当前详情页（`NeteaseDetail`）耦合网易云 API；QQ 音源只实现了 `getAlbumDetail`，对应自有页面 `QqAlbumDetail`（`/qq-album/:mid`）；其余能力不实现，走搜索回退。
+- **QQ 专辑跳转依赖数据层**：`shared/src/utils/music/qqmusic.ts` 的 4 个转换函数都会回填 `album_id`（albummid）。`MusicTrackMobileMenu` 按 `track.source === "qq"` 分流到 `/qq-album`；历史数据（无该字段）先用 `resolveQqAlbumMid` 按专辑名解析 albummid，仍失败才回退单音源搜索。QQ 歌手跳转仍走搜索页（`artist_ids` 未回填）。
+- **跨源回退页**同为 `QqAlbumDetail`（路由 `/qq-album/:mid`），网易云专辑取不到内容时启用：
   1. 跳 `/netease-album/:id` 时通过 route state 带上 `albumFallback: { name, artist }`，入口有四个：`MusicTrackMobileMenu`、`ArtistAlbumSheet`、`AwardsChart`、`BillboardEntryGrid`；
   2. `NeteaseDetail` 加载失败（`error`）时用该关键词经 QQ `smartbox_new.fcg` 解析 albummid（`resolveQqAlbumMid`，取舍顺序：精确名+歌手一致 → 名包含+歌手一致 → 仅名精确 → 仅名包含；后两级是给「网易云无版权、QQ 歌手署名不同」留的放宽，不要再收紧成必须歌手一致），再取专辑详情：优先旧版 `fcg_v8_album_info_cp.fcg`（单请求含元信息+全部曲目），失败或无曲目时退回 `musicu.fcg` 的 `req_0`+`req_1`；
   3. 解析不到则保留原错误页；`MusicTrackMobileMenu` 里连网易云专辑 ID 都拿不到时直接试 QQ（仍失败则走默认单音源搜索，不做聚合）。

@@ -38,9 +38,7 @@ describe("parseQqMusicUrl", () => {
       parseQqMusicUrl("https://y.qq.com/n/yqq/playlist/not-a-number.html")
     ).toBeNull();
     expect(
-      parseQqMusicUrl(
-        "https://i.y.qq.com/n2/m/share/details/taoge.html?id=abc"
-      )
+      parseQqMusicUrl("https://i.y.qq.com/n2/m/share/details/taoge.html?id=abc")
     ).toBeNull();
   });
 
@@ -81,7 +79,9 @@ describe("buildQqPlaylistApiPath", () => {
 
   it("starts with the correct API path", () => {
     const url = buildQqPlaylistApiPath("123");
-    expect(url).toMatch(/^\/qzone-music\/fcg-bin\/fcg_ucc_getcdinfo_byids_cp\.fcg\?/);
+    expect(url).toMatch(
+      /^\/qzone-music\/fcg-bin\/fcg_ucc_getcdinfo_byids_cp\.fcg\?/
+    );
   });
 
   it("works with the user's playlist id", () => {
@@ -110,7 +110,9 @@ describe("parseQqPlaylistResponse", () => {
   });
 
   it("parses JSONP responses", () => {
-    const result = parseQqPlaylistResponse('jsonCallback({"code":0,"cdlist":[]})');
+    const result = parseQqPlaylistResponse(
+      'jsonCallback({"code":0,"cdlist":[]})'
+    );
     expect(result).toEqual({ code: 0, cdlist: [] });
   });
 
@@ -158,6 +160,7 @@ describe("convertQqSongToMusicTrack", () => {
     });
 
     expect(track.artist).toEqual(["A", "B"]);
+    expect(track.album_id).toBe("mid1");
   });
 
   it("handles empty albummid", () => {

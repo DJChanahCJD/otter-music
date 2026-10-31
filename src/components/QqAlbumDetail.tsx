@@ -21,7 +21,8 @@ interface QqAlbumDetailProps {
 
 /**
  * QQ 音乐专辑详情页。
- * 仅作为网易云专辑跳转失败时的回退目标，因此保持只读（不提供导入/收藏）。
+ * 既是 QQ 歌曲的专辑跳转目标，也是网易云专辑取不到内容时的回退页，
+ * 因此保持只读（不提供导入/收藏）。
  */
 export function QqAlbumDetail({
   albumMid,

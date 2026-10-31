@@ -103,6 +103,7 @@ export function convertQqSongToMusicTrack(song: QqSongRaw): MusicTrack {
     lyric_id: song.songmid,
     source: "qq",
     fee: extractQqFee(song),
+    album_id: song.albummid || undefined,
   };
 }
 
@@ -187,6 +188,7 @@ export function convertQqSearchSongToMusicTrack(
     lyric_id: songmid,
     source: "qq",
     fee: extractQqFee(song),
+    album_id: albummid || undefined,
   };
 }
 
@@ -363,6 +365,7 @@ export function convertQqAlbumSongToMusicTrack(
     lyric_id: songmid,
     source: "qq",
     fee: song.pay?.pay_play === 1 ? 1 : undefined,
+    album_id: song.album?.mid || undefined,
   };
 }
 
@@ -443,6 +446,7 @@ export function convertQqAlbumInfoSongToMusicTrack(
     lyric_id: songmid,
     source: "qq",
     fee: song.pay?.payplay === 1 ? 1 : undefined,
+    album_id: song.albummid || undefined,
   };
 }
 
