@@ -113,20 +113,30 @@ async function fetchCoverData(track: MusicTrack): Promise<Uint8Array | null> {
 /** 原文与译文的分隔标记，提取时据此拆分还原。 */
 const TLYRIC_DELIMITER = "\n[TLYRIC]\n";
 
-/** 获取嵌入用的歌词文本，原文和译文用分隔符标记边界。 */
-async function fetchLyricText(track: MusicTrack): Promise<string | null> {
+/** 获取用于内嵌的歌词（原文 + 可选译文），无歌词返回 null。 */
+export async function fetchEmbedLyric(
+  track: MusicTrack
+): Promise<{ lyric: string; tlyric?: string } | null> {
   try {
     const result = await musicApi.getLyric(
       track.lyric_id || track.id,
       track.source
     );
-    if (!result) return null;
-    if (result.tlyric) {
-      return result.lyric + TLYRIC_DELIMITER + result.tlyric;
-    }
-    return result.lyric || null;
+    if (!result?.lyric) return null;
+    return result.tlyric
+      ? { lyric: result.lyric, tlyric: result.tlyric }
+      : { lyric: result.lyric };
   } catch (e) {
     logger.warn("id3-embed", "获取歌词失败", e);
     return null;
   }
+}
+
+/** 获取嵌入用的歌词文本，原文和译文用分隔符标记边界。 */
+async function fetchLyricText(track: MusicTrack): Promise<string | null> {
+  const result = await fetchEmbedLyric(track);
+  if (!result) return null;
+  return result.tlyric
+    ? result.lyric + TLYRIC_DELIMITER + result.tlyric
+    : result.lyric;
 }

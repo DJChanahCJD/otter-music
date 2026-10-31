@@ -12,7 +12,7 @@ import { MusicSource, MusicTrack } from "@/types/music";
 import type { AudioFormat } from "@otter-music/shared";
 import toast from "react-hot-toast";
 import { base64ToBlob } from "@/lib/utils/base64";
-import { LocalMusicFile } from "@/plugins/local-music";
+import { LocalMusicFile, LocalMusicPlugin } from "@/plugins/local-music";
 import { useDownloadStore } from "@/store/download-store";
 import { useMusicStore } from "@/store/music-store";
 
@@ -20,7 +20,7 @@ import { toastUtils } from "./toast";
 import { getProxyUrl, isProxyUrl, IS_NATIVE } from "@/lib/api/config";
 import { logger } from "@/lib/logger";
 import { processBatchIO } from "@/lib/utils";
-import { embedMetadata } from "./id3-embed";
+import { embedMetadata, fetchEmbedLyric } from "./id3-embed";
 import { getCachedBilibiliAudioFormat } from "@/lib/bilibili/bilibili-cache";
 
 /**
@@ -313,42 +313,64 @@ async function downloadNative(
 }
 
 /** 原生端内嵌时整个音频会以 base64 往返 Capacitor 桥，Java 与 WebView 各持有多份副本，
- *  内存放大数倍。超过该大小直接跳过，避免 OutOfMemoryError（无损 FLAC 常见 30~50MB）。 */
+ *  内存放大数倍。超过该大小直接跳过，避免 OutOfMemoryError。
+ *  FLAC 不受此限制：走原生流式重写 VORBIS_COMMENT，音频帧不经过 JS。 */
 const NATIVE_EMBED_MAX_BYTES = 10 * 1024 * 1024;
 
 /**
- * 读取文件头判断是否为真正的 MP3（ID3v2 头或 MPEG 帧同步）。
+ * 读取文件头判断真实容器格式。
  * 无损音质（如网易云 999）可能返回 FLAC，但 track.audioFormat 未标记，
- * 若按 mp3 处理会读取整文件并在 JS 侧写入 ID3，既 OOM 又会写坏文件。
+ * 若按扩展名走 MP3 分支会读取整文件并在 JS 侧写 ID3，既 OOM 又会写坏文件。
  */
-async function isMp3File(filePath: string): Promise<boolean> {
-  const head = await Filesystem.readFile({
-    path: filePath,
-    directory: STORAGE_CONFIG.BASE_DIR,
-    offset: 0,
-    length: 12,
-  });
+async function detectAudioContainer(
+  filePath: string
+): Promise<"mp3" | "flac" | null> {
+  try {
+    const head = await Filesystem.readFile({
+      path: filePath,
+      directory: STORAGE_CONFIG.BASE_DIR,
+      offset: 0,
+      length: 12,
+    });
 
-  const binary = atob((head.data as string).replace(/\s+/g, ""));
+    const binary = atob((head.data as string).replace(/\s+/g, ""));
+    const byteAt = (index: number) => binary.charCodeAt(index);
 
-  // "ID3"（ID3v2 标签头）
-  if (
-    binary.length >= 3 &&
-    binary.charCodeAt(0) === 0x49 &&
-    binary.charCodeAt(1) === 0x44 &&
-    binary.charCodeAt(2) === 0x33
-  ) {
-    return true;
+    // "fLaC"
+    if (
+      binary.length >= 4 &&
+      byteAt(0) === 0x66 &&
+      byteAt(1) === 0x4c &&
+      byteAt(2) === 0x61 &&
+      byteAt(3) === 0x43
+    ) {
+      return "flac";
+    }
+
+    // "ID3"（ID3v2 标签头）
+    if (
+      binary.length >= 3 &&
+      byteAt(0) === 0x49 &&
+      byteAt(1) === 0x44 &&
+      byteAt(2) === 0x33
+    ) {
+      return "mp3";
+    }
+
+    // MPEG 帧同步：0xFF 后跟 111xxxxx
+    if (
+      binary.length >= 2 &&
+      byteAt(0) === 0xff &&
+      (byteAt(1) & 0xe0) === 0xe0
+    ) {
+      return "mp3";
+    }
+
+    return null;
+  } catch (e) {
+    logger.warn("download", "读取文件头失败，跳过元数据嵌入", e, { filePath });
+    return null;
   }
-
-  // MPEG 帧同步：0xFF 后跟 111xxxxx
-  if (binary.length >= 2) {
-    return (
-      binary.charCodeAt(0) === 0xff && (binary.charCodeAt(1) & 0xe0) === 0xe0
-    );
-  }
-
-  return false;
 }
 
 async function embedMetadataNative(
@@ -356,18 +378,20 @@ async function embedMetadataNative(
   track: MusicTrack,
   toastId?: string
 ) {
-  const format: AudioFormat = track.audioFormat ?? "mp3";
+  // 以真实文件头判断容器：无损音质可能返回 FLAC，但 track.audioFormat 未标记
+  const container = await detectAudioContainer(filePath);
 
-  if (format !== "mp3") {
-    logger.warn(
-      "download",
-      `Skip native metadata embed for non-mp3 format: ${format}`
-    );
+  if (container === "flac") {
+    await embedLyricsToFlac(filePath, track, toastId);
+    return;
+  }
+  if (container !== "mp3") {
+    logger.warn("download", "非 MP3/FLAC 文件，跳过元数据嵌入", { filePath });
     return;
   }
 
   try {
-    // 先做体积与真实格式探测，避免把大文件读进 JS 后才触发 50MB 的旧阈值
+    // 先把大文件挡在 JS 侧之外，避免 base64 往返触发 OutOfMemoryError
     const stat = await Filesystem.stat({
       path: filePath,
       directory: STORAGE_CONFIG.BASE_DIR,
@@ -379,10 +403,6 @@ async function embedMetadataNative(
       );
       return;
     }
-    if (!(await isMp3File(filePath))) {
-      logger.warn("download", "非 MP3 文件，跳过元数据嵌入", { filePath });
-      return;
-    }
 
     if (toastId) toast.loading("正在写入元数据...", { id: toastId });
 
@@ -391,8 +411,7 @@ async function embedMetadataNative(
       directory: STORAGE_CONFIG.BASE_DIR,
     });
 
-    const mime = AUDIO_MIME[format] ?? "audio/mpeg";
-    const blob = base64ToBlob(readResult.data as string, mime);
+    const blob = base64ToBlob(readResult.data as string, "audio/mpeg");
 
     const store = useMusicStore.getState();
     const result = await embedMetadata(blob, track, {
@@ -409,6 +428,68 @@ async function embedMetadataNative(
     });
   } catch (e) {
     logger.warn("download", "Native 元数据嵌入失败", e);
+  }
+}
+
+/** 原生方法是否存在：未同步原生改动时方法为 undefined，直接调用会同步抛 TypeError。 */
+function isFlacLyricWriteSupported(): boolean {
+  const probe = LocalMusicPlugin as Partial<typeof LocalMusicPlugin>;
+  return typeof probe.writeEmbeddedLyrics === "function";
+}
+
+/**
+ * FLAC 内嵌歌词：交给原生流式重写 VORBIS_COMMENT，音频帧不经过 JS，
+ * 因此不受 MP3 路径的 base64 往返与 10MB 体积上限限制。
+ * 封面暂不支持（FLAC PICTURE 块需重建整文件，代价过高）。
+ */
+async function embedLyricsToFlac(
+  filePath: string,
+  track: MusicTrack,
+  toastId?: string
+) {
+  const store = useMusicStore.getState();
+  if (!store.embedLyric) return;
+
+  if (!isFlacLyricWriteSupported()) {
+    logger.warn("download", "当前安装包不支持 FLAC 歌词内嵌，请更新应用");
+    return;
+  }
+
+  try {
+    if (store.embedCover) {
+      logger.info("download", "FLAC 暂不支持内嵌封面，已跳过");
+    }
+
+    const embedLyric = await fetchEmbedLyric(track);
+    if (!embedLyric) {
+      logger.info("download", "无歌词，跳过 FLAC 歌词内嵌", { filePath });
+      return;
+    }
+
+    if (toastId) toast.loading("正在写入歌词...", { id: toastId });
+
+    // 原生侧需要绝对 URI（file:// 或 content://），filePath 是相对下载根目录的路径
+    const fileUri = await Filesystem.getUri({
+      directory: STORAGE_CONFIG.BASE_DIR,
+      path: filePath,
+    });
+
+    const result = await LocalMusicPlugin.writeEmbeddedLyrics({
+      localPath: fileUri.uri,
+      lyric: embedLyric.lyric,
+      tlyric: embedLyric.tlyric,
+    });
+
+    if (result.success) {
+      logger.info("download", "FLAC 歌词内嵌完成", { filePath });
+    } else {
+      logger.warn("download", "FLAC 歌词内嵌失败", {
+        filePath,
+        error: result.error,
+      });
+    }
+  } catch (e) {
+    logger.warn("download", "FLAC 歌词内嵌异常", e);
   }
 }
 

@@ -37,6 +37,11 @@ export interface EmbeddedLyricsResult {
   error?: string;
 }
 
+export interface WriteEmbeddedLyricsResult {
+  success: boolean;
+  error?: string;
+}
+
 export interface HasPermissionResult {
   hasPermission: boolean;
 }
@@ -82,6 +87,12 @@ export interface LocalMusicPlugin {
   getEmbeddedLyrics(options: {
     localPath: string;
   }): Promise<EmbeddedLyricsResult>;
+  /** FLAC 专用：原生流式重写 VORBIS_COMMENT 写入歌词，原文/译文用 [TLYRIC] 分隔 */
+  writeEmbeddedLyrics(options: {
+    localPath: string;
+    lyric: string;
+    tlyric?: string;
+  }): Promise<WriteEmbeddedLyricsResult>;
   openManageStorageSettings(): Promise<void>;
   hasAllStoragePermission(): Promise<HasPermissionResult>;
   deleteLocalMusic(options: { localPath: string }): Promise<DeleteResult>;

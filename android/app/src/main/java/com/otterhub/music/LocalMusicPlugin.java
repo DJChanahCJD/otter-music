@@ -39,10 +39,14 @@ import com.getcapacitor.annotation.CapacitorPlugin;
 import com.getcapacitor.annotation.Permission;
 import com.getcapacitor.annotation.PermissionCallback;
 
+import java.io.BufferedOutputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.ByteBuffer;
@@ -398,7 +402,7 @@ public class LocalMusicPlugin extends Plugin {
         });
     }
 
-    /** 读取 MP3 ID3v2 USLT 非同步歌词帧。 */
+    /** 读取内嵌歌词：MP3 走 ID3v2 USLT 帧，FLAC 走 VORBIS_COMMENT 的 LYRICS 系列键。 */
     @PluginMethod
     public void getEmbeddedLyrics(PluginCall call) {
         String localPath = call.getString("localPath");
@@ -409,7 +413,7 @@ public class LocalMusicPlugin extends Plugin {
 
         ioExecutor.execute(() -> {
             try {
-                String[] parts = extractUsltLyrics(localPath);
+                String[] parts = extractEmbeddedLyrics(localPath);
                 if (parts == null || !isValid(parts[0])) {
                     mainHandler.post(() -> resolveError(call, "No embedded lyrics"));
                     return;
@@ -422,6 +426,36 @@ public class LocalMusicPlugin extends Plugin {
                     result.put("tlyric", parts[1]);
                 }
                 mainHandler.post(() -> call.resolve(result));
+            } catch (Exception e) {
+                mainHandler.post(() -> resolveError(call, "Failed: " + e.getMessage()));
+            }
+        });
+    }
+
+    /**
+     * 把歌词写入 FLAC 的 VORBIS_COMMENT 块。
+     *
+     * 音频帧以流式方式复制到临时文件，内存占用与文件大小无关（只在内存里重建 Comment 条目），
+     * 成功后再替换原文件，失败时原文件保持不变。MP3 走 JS 侧 ID3 写入，不走此方法。
+     */
+    @PluginMethod
+    public void writeEmbeddedLyrics(PluginCall call) {
+        String localPath = call.getString("localPath");
+        String lyric = call.getString("lyric");
+        String tlyric = call.getString("tlyric");
+        if (!isValid(localPath)) {
+            resolveError(call, "localPath is required");
+            return;
+        }
+        if (!isValid(lyric)) {
+            resolveError(call, "lyric is required");
+            return;
+        }
+
+        ioExecutor.execute(() -> {
+            try {
+                writeFlacLyrics(localPath, lyric, tlyric);
+                mainHandler.post(() -> resolveSuccess(call, null, null));
             } catch (Exception e) {
                 mainHandler.post(() -> resolveError(call, "Failed: " + e.getMessage()));
             }
@@ -700,48 +734,344 @@ public class LocalMusicPlugin extends Plugin {
     /** 原文与译文的分隔标记，与 id3-embed.ts 中的 TLYRIC_DELIMITER 对应。 */
     private static final String TLYRIC_DELIMITER = "[TLYRIC]";
 
-    /** 从 ID3v2 tag 中提取首个 USLT 歌词帧，按分隔符拆分为 [lyric, tlyric]。 */
-    private String[] extractUsltLyrics(String localPath) throws IOException {
+    /** FLAC metadata block 中 VORBIS_COMMENT 的块类型。 */
+    private static final int FLAC_BLOCK_VORBIS_COMMENT = 4;
+
+    /** FLAC metadata block 中 PADDING 的块类型。 */
+    private static final int FLAC_BLOCK_PADDING = 1;
+
+    /** 歌词可能出现的 Vorbis Comment 键名，数组顺序即优先级。 */
+    private static final String[] FLAC_LYRIC_KEYS = {
+            "LYRICS", "UNSYNCEDLYRICS", "UNSYNCED LYRICS", "SYNCEDLYRICS", "LYRIC"
+    };
+
+    /** 单个 metadata block / tag 允许读取的上限，避免异常文件申请超大内存。 */
+    private static final int MAX_METADATA_BLOCK = 5 * 1024 * 1024;
+
+    /** 写入歌词后保留的 PADDING 块长度，符合 FLAC 惯例。 */
+    private static final int FLAC_WRITE_PADDING = 8 * 1024;
+
+    /** 流式复制音频帧的缓冲区大小，保证内存占用与文件大小无关。 */
+    private static final int COPY_BUFFER_SIZE = 64 * 1024;
+
+    /** 原文件没有 VORBIS_COMMENT 时使用的 vendor。 */
+    private static final String DEFAULT_VORBIS_VENDOR = "Otter Music";
+
+    /** 按文件魔数分派解析器，从内嵌 tag 中提取歌词并拆分为 [lyric, tlyric]。 */
+    private String[] extractEmbeddedLyrics(String localPath) throws IOException {
         try (InputStream input = openLocalInputStream(localPath)) {
             if (input == null) return null;
 
-            byte[] header = readExact(input, 10);
-            if (header == null || header[0] != 'I' || header[1] != 'D' || header[2] != '3') return null;
+            byte[] magic = readExact(input, 4);
+            if (magic == null) return null;
 
-            int majorVersion = header[3] & 0xFF;
-            int tagSize = readSynchsafeInt(header, 6);
-            if (tagSize <= 0 || tagSize > 5 * 1024 * 1024) return null;
+            if (magic[0] == 'f' && magic[1] == 'L' && magic[2] == 'a' && magic[3] == 'C') {
+                return splitLyricTranslation(extractFlacLyrics(input));
+            }
 
-            byte[] tag = readExact(input, tagSize);
-            if (tag == null) return null;
+            if (magic[0] == 'I' && magic[1] == 'D' && magic[2] == '3') {
+                byte[] rest = readExact(input, 6);
+                if (rest == null) return null;
 
-            int offset = skipExtendedHeaderIfNeeded(tag, majorVersion, header[5] & 0xFF);
-            while (offset + 10 <= tag.length) {
-                String frameId = new String(tag, offset, 4, StandardCharsets.ISO_8859_1);
-                if (frameId.trim().isEmpty()) break;
-
-                int frameSize = majorVersion >= 4
-                        ? readSynchsafeInt(tag, offset + 4)
-                        : readInt(tag, offset + 4);
-                if (frameSize <= 0 || offset + 10 + frameSize > tag.length) break;
-
-                if ("USLT".equals(frameId)) {
-                    String lyric = decodeUsltFrame(Arrays.copyOfRange(tag, offset + 10, offset + 10 + frameSize));
-                    if (!isValid(lyric)) return null;
-
-                    int delimIdx = lyric.indexOf(TLYRIC_DELIMITER);
-                    if (delimIdx >= 0) {
-                        String original = lyric.substring(0, delimIdx).trim();
-                        String translation = lyric.substring(delimIdx + TLYRIC_DELIMITER.length()).trim();
-                        return new String[]{ original, isValid(translation) ? translation : null };
-                    }
-                    return new String[]{ lyric, null };
-                }
-
-                offset += 10 + frameSize;
+                byte[] header = new byte[10];
+                System.arraycopy(magic, 0, header, 0, 4);
+                System.arraycopy(rest, 0, header, 4, 6);
+                return splitLyricTranslation(extractId3UsltLyric(header, input));
             }
         }
         return null;
+    }
+
+    /** 按 [TLYRIC] 标记拆分原词与译词；无有效歌词返回 null。 */
+    private String[] splitLyricTranslation(String lyric) {
+        if (!isValid(lyric)) return null;
+
+        int delimIdx = lyric.indexOf(TLYRIC_DELIMITER);
+        if (delimIdx < 0) return new String[]{ lyric, null };
+
+        String original = lyric.substring(0, delimIdx).trim();
+        String translation = lyric.substring(delimIdx + TLYRIC_DELIMITER.length()).trim();
+        return new String[]{ original, isValid(translation) ? translation : null };
+    }
+
+    /** 在已读取的 10 字节 ID3v2 头之后，提取首个 USLT 歌词帧正文。 */
+    private String extractId3UsltLyric(byte[] header, InputStream input) throws IOException {
+        int majorVersion = header[3] & 0xFF;
+        int tagSize = readSynchsafeInt(header, 6);
+        if (tagSize <= 0 || tagSize > MAX_METADATA_BLOCK) return null;
+
+        byte[] tag = readExact(input, tagSize);
+        if (tag == null) return null;
+
+        int offset = skipExtendedHeaderIfNeeded(tag, majorVersion, header[5] & 0xFF);
+        while (offset + 10 <= tag.length) {
+            String frameId = new String(tag, offset, 4, StandardCharsets.ISO_8859_1);
+            if (frameId.trim().isEmpty()) break;
+
+            int frameSize = majorVersion >= 4
+                    ? readSynchsafeInt(tag, offset + 4)
+                    : readInt(tag, offset + 4);
+            if (frameSize <= 0 || offset + 10 + frameSize > tag.length) break;
+
+            if ("USLT".equals(frameId)) {
+                return decodeUsltFrame(Arrays.copyOfRange(tag, offset + 10, offset + 10 + frameSize));
+            }
+
+            offset += 10 + frameSize;
+        }
+        return null;
+    }
+
+    /** 遍历 FLAC metadata block，返回 VORBIS_COMMENT 中优先级最高的歌词字段。 */
+    private String extractFlacLyrics(InputStream input) throws IOException {
+        boolean isLast = false;
+        while (!isLast) {
+            byte[] blockHeader = readExact(input, 4);
+            if (blockHeader == null) return null;
+
+            isLast = (blockHeader[0] & 0x80) != 0;
+            int blockType = blockHeader[0] & 0x7F;
+            int blockLength = ((blockHeader[1] & 0xFF) << 16)
+                    | ((blockHeader[2] & 0xFF) << 8)
+                    | (blockHeader[3] & 0xFF);
+
+            if (blockType == FLAC_BLOCK_VORBIS_COMMENT
+                    && blockLength > 0
+                    && blockLength <= MAX_METADATA_BLOCK) {
+                byte[] block = readExact(input, blockLength);
+                if (block == null) return null;
+
+                String lyric = parseVorbisCommentLyric(block);
+                if (isValid(lyric)) return lyric;
+                continue;
+            }
+
+            if (!skipFully(input, blockLength)) return null;
+        }
+        return null;
+    }
+
+    /** VORBIS_COMMENT 块解析结果。 */
+    private static final class VorbisComment {
+        final String vendor;
+        final List<String> entries;
+
+        VorbisComment(String vendor, List<String> entries) {
+            this.vendor = vendor;
+            this.entries = entries;
+        }
+    }
+
+    /** 解析 VORBIS_COMMENT 块正文；结构非法返回 null。 */
+    private VorbisComment parseVorbisComment(byte[] block) {
+        if (block.length < 4) return null;
+
+        int vendorLength = readLeInt(block, 0);
+        if (vendorLength < 0 || vendorLength > block.length - 4) return null;
+
+        int offset = 4;
+        String vendor = new String(block, offset, vendorLength, StandardCharsets.UTF_8);
+        offset += vendorLength;
+        if (offset + 4 > block.length) return null;
+
+        int commentCount = readLeInt(block, offset);
+        offset += 4;
+        if (commentCount < 0) return null;
+
+        List<String> entries = new ArrayList<>();
+        for (int i = 0; i < commentCount; i++) {
+            if (offset + 4 > block.length) break;
+
+            int entryLength = readLeInt(block, offset);
+            offset += 4;
+            if (entryLength < 0 || entryLength > block.length - offset) break;
+
+            entries.add(new String(block, offset, entryLength, StandardCharsets.UTF_8));
+            offset += entryLength;
+        }
+        return new VorbisComment(vendor, entries);
+    }
+
+    /** 返回 VORBIS_COMMENT 中优先级最高的歌词值；无匹配键返回 null。 */
+    private String parseVorbisCommentLyric(byte[] block) {
+        VorbisComment comment = parseVorbisComment(block);
+        if (comment == null) return null;
+
+        String best = null;
+        int bestRank = Integer.MAX_VALUE;
+        for (String entry : comment.entries) {
+            int equalsIdx = entry.indexOf('=');
+            if (equalsIdx <= 0) continue;
+
+            int rank = flacLyricKeyRank(entry.substring(0, equalsIdx).trim());
+            String value = entry.substring(equalsIdx + 1);
+            if (rank < 0 || rank >= bestRank || !isValid(value)) continue;
+
+            best = value;
+            bestRank = rank;
+        }
+        return best;
+    }
+
+    /** 将歌词（原文 + 可选译文）写入 FLAC 的 VORBIS_COMMENT。 */
+    private void writeFlacLyrics(String localPath, String lyric, String tlyric) throws IOException {
+        String payload = isValid(tlyric)
+                ? lyric + "\n" + TLYRIC_DELIMITER + "\n" + tlyric
+                : lyric;
+
+        if (localPath.startsWith(SCHEME_CONTENT)) {
+            File cacheTemp = new File(getContext().getCacheDir(), "otter-lyric-" + System.nanoTime() + ".flac");
+            try {
+                rewriteFlacFile(localPath, cacheTemp, payload);
+                try (InputStream in = new FileInputStream(cacheTemp);
+                     OutputStream out = getContext().getContentResolver()
+                             .openOutputStream(Uri.parse(localPath), "rwt")) {
+                    if (out == null) throw new IOException("Cannot open output stream");
+                    copyRemaining(in, out);
+                }
+            } finally {
+                cacheTemp.delete();
+            }
+            return;
+        }
+
+        File target = new File(resolvePlainPath(localPath));
+        if (!target.exists()) throw new IOException("File not found");
+
+        // 临时文件与目标同目录，renameTo 才是同一文件系统上的替换
+        File temp = new File(target.getParentFile(), target.getName() + ".tmp");
+        try {
+            rewriteFlacFile(target.getAbsolutePath(), temp, payload);
+            if (!temp.renameTo(target)) throw new IOException("Failed to replace file");
+        } catch (IOException | RuntimeException e) {
+            temp.delete();
+            throw e;
+        }
+    }
+
+    /** 重建 FLAC：替换 VORBIS_COMMENT 中的歌词，其余 metadata 块与音频帧原样流式复制。 */
+    private void rewriteFlacFile(String sourcePath, File targetFile, String lyric) throws IOException {
+        try (InputStream in = openLocalInputStream(sourcePath);
+             OutputStream out = new BufferedOutputStream(
+                     new FileOutputStream(targetFile), COPY_BUFFER_SIZE)) {
+            if (in == null) throw new IOException("Cannot open file");
+
+            byte[] magic = readExact(in, 4);
+            if (magic == null || magic[0] != 'f' || magic[1] != 'L' || magic[2] != 'a' || magic[3] != 'C') {
+                throw new IOException("Not a FLAC file");
+            }
+            out.write(magic);
+
+            VorbisComment sourceComment = null;
+            boolean isLast = false;
+            while (!isLast) {
+                byte[] blockHeader = readExact(in, 4);
+                if (blockHeader == null) throw new IOException("Truncated FLAC metadata");
+
+                isLast = (blockHeader[0] & 0x80) != 0;
+                int blockType = blockHeader[0] & 0x7F;
+                int blockLength = ((blockHeader[1] & 0xFF) << 16)
+                        | ((blockHeader[2] & 0xFF) << 8)
+                        | (blockHeader[3] & 0xFF);
+
+                if (blockType == FLAC_BLOCK_VORBIS_COMMENT) {
+                    if (blockLength > MAX_METADATA_BLOCK) throw new IOException("Vorbis comment too large");
+                    byte[] block = readExact(in, blockLength);
+                    if (block == null) throw new IOException("Truncated vorbis comment");
+                    sourceComment = parseVorbisComment(block);
+                    continue;
+                }
+
+                // 旧 PADDING 丢弃，统一在 metadata 末尾补一个新的
+                if (blockType == FLAC_BLOCK_PADDING) {
+                    if (!skipFully(in, blockLength)) throw new IOException("Truncated padding");
+                    continue;
+                }
+
+                writeBlockHeader(out, blockType, blockLength, false);
+                if (!copyExact(in, out, blockLength)) throw new IOException("Truncated FLAC block");
+            }
+
+            byte[] comment = buildVorbisComment(sourceComment, lyric);
+            writeBlockHeader(out, FLAC_BLOCK_VORBIS_COMMENT, comment.length, false);
+            out.write(comment);
+
+            writeBlockHeader(out, FLAC_BLOCK_PADDING, FLAC_WRITE_PADDING, true);
+            out.write(new byte[FLAC_WRITE_PADDING]);
+
+            copyRemaining(in, out);
+        }
+    }
+
+    /** 在原有条目基础上替换歌词键，保留 vendor 与其它字段。 */
+    private byte[] buildVorbisComment(VorbisComment source, String lyric) throws IOException {
+        String vendor = source != null && isValid(source.vendor) ? source.vendor : DEFAULT_VORBIS_VENDOR;
+
+        List<byte[]> entries = new ArrayList<>();
+        if (source != null) {
+            for (String entry : source.entries) {
+                int equalsIdx = entry.indexOf('=');
+                if (equalsIdx <= 0) continue;
+                if (flacLyricKeyRank(entry.substring(0, equalsIdx).trim()) >= 0) continue;
+                entries.add(entry.getBytes(StandardCharsets.UTF_8));
+            }
+        }
+        entries.add(("LYRICS=" + lyric).getBytes(StandardCharsets.UTF_8));
+
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        byte[] vendorBytes = vendor.getBytes(StandardCharsets.UTF_8);
+        writeLeInt(out, vendorBytes.length);
+        out.write(vendorBytes, 0, vendorBytes.length);
+        writeLeInt(out, entries.size());
+        for (byte[] entry : entries) {
+            writeLeInt(out, entry.length);
+            out.write(entry, 0, entry.length);
+        }
+        return out.toByteArray();
+    }
+
+    /** 写出 metadata block 头：last 标志 + 类型 + 24 位大端长度。 */
+    private void writeBlockHeader(OutputStream out, int blockType, int length, boolean isLast) throws IOException {
+        out.write((isLast ? 0x80 : 0) | (blockType & 0x7F));
+        out.write((length >> 16) & 0xFF);
+        out.write((length >> 8) & 0xFF);
+        out.write(length & 0xFF);
+    }
+
+    /** 写出小端 32 位整数。 */
+    private void writeLeInt(OutputStream out, int value) throws IOException {
+        out.write(value & 0xFF);
+        out.write((value >> 8) & 0xFF);
+        out.write((value >> 16) & 0xFF);
+        out.write((value >> 24) & 0xFF);
+    }
+
+    /** 复制指定长度的数据；源数据不足返回 false。 */
+    private boolean copyExact(InputStream in, OutputStream out, int length) throws IOException {
+        byte[] buffer = new byte[COPY_BUFFER_SIZE];
+        int remaining = length;
+        while (remaining > 0) {
+            int read = in.read(buffer, 0, Math.min(buffer.length, remaining));
+            if (read < 0) return false;
+            out.write(buffer, 0, read);
+            remaining -= read;
+        }
+        return true;
+    }
+
+    /** 复制输入流剩余全部内容。 */
+    private void copyRemaining(InputStream in, OutputStream out) throws IOException {
+        byte[] buffer = new byte[COPY_BUFFER_SIZE];
+        int read;
+        while ((read = in.read(buffer)) >= 0) out.write(buffer, 0, read);
+    }
+
+    /** 返回歌词键名的优先级，-1 表示不是歌词键。 */
+    private int flacLyricKeyRank(String key) {
+        for (int i = 0; i < FLAC_LYRIC_KEYS.length; i++) {
+            if (FLAC_LYRIC_KEYS[i].equalsIgnoreCase(key)) return i;
+        }
+        return -1;
     }
 
     /** 打开普通文件路径、file URI 或 content URI 对应的输入流。 */
@@ -765,12 +1095,35 @@ public class LocalMusicPlugin extends Plugin {
         return data;
     }
 
+    /** 跳过指定字节数；流提前结束时返回 false。 */
+    private boolean skipFully(InputStream input, int length) throws IOException {
+        int remaining = length;
+        while (remaining > 0) {
+            long skipped = input.skip(remaining);
+            if (skipped > 0) {
+                remaining -= (int) skipped;
+                continue;
+            }
+            if (input.read() < 0) return false;
+            remaining--;
+        }
+        return true;
+    }
+
     /** 读取 ID3 synchsafe 整数。 */
     private int readSynchsafeInt(byte[] data, int offset) {
         return ((data[offset] & 0x7F) << 21)
                 | ((data[offset + 1] & 0x7F) << 14)
                 | ((data[offset + 2] & 0x7F) << 7)
                 | (data[offset + 3] & 0x7F);
+    }
+
+    /** 读取小端 32 位整数（Vorbis Comment 使用小端）。 */
+    private int readLeInt(byte[] data, int offset) {
+        return (data[offset] & 0xFF)
+                | ((data[offset + 1] & 0xFF) << 8)
+                | ((data[offset + 2] & 0xFF) << 16)
+                | ((data[offset + 3] & 0xFF) << 24);
     }
 
     /** 读取大端 32 位整数。 */
