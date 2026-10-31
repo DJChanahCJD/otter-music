@@ -438,7 +438,7 @@ public class DesktopLyricPlugin extends Plugin {
 
     /**
      * 药丸触摸：垂直拖动（x 恒 0 居中锁定，纵向自由无边界限制）+
-     * 三击关闭（相邻点击间隔 ≤ 400ms 计一次，满 3 次移除窗口并通知 JS）。
+     * 双击拉起本应用设置项（相邻点击间隔 ≤ 400ms 计一次，满 2 次触发）。
      */
     private void setupTouch(LinearLayout root) {
         root.setOnTouchListener(new View.OnTouchListener() {

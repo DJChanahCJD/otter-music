@@ -160,7 +160,7 @@ export function DesktopLyricSetting() {
               <div className="flex items-center justify-between">
                 <span className="text-xs text-muted-foreground">字号</span>
                 <span className="text-xs tabular-nums text-muted-foreground">
-                  {desktopLyricFontSize}px
+                  {desktopLyricFontSize}sp
                 </span>
               </div>
 

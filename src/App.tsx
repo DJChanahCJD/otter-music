@@ -11,6 +11,7 @@ import { stopBilibiliProxyServer } from "@/lib/bilibili/bilibili-native-player";
 import { App as CapacitorApp } from "@capacitor/app";
 import { IS_NATIVE } from "@/lib/api/config";
 import { preloadRouteChunks } from "@/routes/preload";
+import { applyTopSafeAreaFallback } from "@/lib/safe-area";
 export default function App() {
   // Sync Logic
   const { syncKey } = useSyncStore();
@@ -25,6 +26,9 @@ export default function App() {
   }, [syncKey]);
 
   useEffect(() => {
+    // Android 14 及以下没有原生注入的安全区，这里按系统栏占用补一个顶部兜底值
+    applyTopSafeAreaFallback();
+
     // 启动时静默检查更新（用户关闭更新提醒后跳过，延迟 2s 避免阻塞首屏）
     const timer = setTimeout(() => {
       if (useAppStore.getState().enableUpdateNotify) {

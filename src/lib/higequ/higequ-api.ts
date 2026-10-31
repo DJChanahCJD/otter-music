@@ -7,7 +7,8 @@ import type { MusicTrack } from "@/types/music";
  *
  * 该站点不提供任何 JSON 接口，页面全部由 PHP 服务端渲染，因此只能抓 HTML 后解析：
  * - 搜索：`/s/{关键词}/{页码}/`，每页固定 10 条，结果在 `.result-item[data-rid]`
- * - 播放：`/player/{rid}/`，音频直链以内联 base64（`let code = "..."`）给出，
+ * - 播放：`/player/{rid}/`，音频直链以内联 base64 给出，且**标记名改过**
+ *   （旧 `let code` → 现 `const encodedUrl`），故解析按内容嗅探、不认变量名；
  *   歌词以 `.lyric-line[data-time]`（秒）渲染
  */
 
@@ -234,18 +235,60 @@ function formatLrcTime(seconds: number): string {
   return `${String(minutes).padStart(2, "0")}:${secs.padStart(5, "0")}`;
 }
 
-function parseInlineAudioUrl(html: string): string {
-  // 支持单双引号及多余空格匹配
-  const match = html.match(/let\s+code\s*=\s*["']([^"']+)["']/);
-  const code = match?.[1];
-  if (!code) return "";
+/** 明文音频直链（直接写在 HTML 里的形态） */
+const PLAIN_AUDIO_URL_RE =
+  /https?:\/\/[^\s"'<>]+\.(?:mp3|m4a|aac|flac|ogg|opus)(?:[?#][^\s"'<>]*)?/i;
 
+/** 解码后的音频直链判定：站点 token 在路径里，故只校验域名协议与音频扩展名 */
+const DECODED_AUDIO_URL_RE =
+  /^https?:\/\/[^\s]+\.(?:mp3|m4a|aac|flac|ogg|opus)(?:[?#]\S*)?$/i;
+
+/**
+ * 把 base64 解成字符串。
+ *
+ * 站点是 base64(UTF-8)，浏览器侧用 `TextDecoder` 还原（与站点自身脚本一致），
+ * 不能用 `atob` 的 latin1 结果直接拼 URL。
+ */
+function decodeBase64Utf8(base64: string): string {
   try {
-    const decoded = atob(code);
-    return /^https?:\/\//i.test(decoded) ? decoded : "";
+    const binary = atob(base64);
+    const bytes = Uint8Array.from(binary, (c) => c.charCodeAt(0));
+    return new TextDecoder().decode(bytes).trim();
   } catch {
     return "";
   }
+}
+
+/**
+ * 从播放页 HTML 中取出音频直链。
+ *
+ * 站点把直链以 base64 内联在 `<script>` 里，且**标记名改过**
+ * （旧 `let code = "..."` → 现 `const encodedUrl = "..."`）。
+ * 因此这里按内容嗅探而非依赖变量名：
+ * 1. 明文音频 URL（有的页面直接给）；
+ * 2. 已知标记名（老/新两代，回归最低成本）；
+ * 3. 兜底：扫所有 ≥40 字符的 base64 串，解码后必须是音频 URL —— 站点再怎么改变量名都命中。
+ *
+ * 实测 `/player/228908/` 全页只有 1 个这样的 base64 串，误判风险极低。
+ */
+function parseInlineAudioUrl(html: string): string {
+  const plain = html.match(PLAIN_AUDIO_URL_RE);
+  if (plain) return plain[0];
+
+  const named =
+    html.match(/encodedUrl\s*=\s*["']([A-Za-z0-9+/=]+)["']/)?.[1] ??
+    html.match(/let\s+code\s*=\s*["']([A-Za-z0-9+/=]+)["']/)?.[1];
+  if (named) {
+    const url = decodeBase64Utf8(named);
+    if (/^https?:\/\//i.test(url)) return url;
+  }
+
+  for (const match of html.matchAll(/["']([A-Za-z0-9+/=]{40,})["']/g)) {
+    const url = decodeBase64Utf8(match[1]);
+    if (DECODED_AUDIO_URL_RE.test(url)) return url;
+  }
+
+  return "";
 }
 
 export function parseHigequPlayerHtml(

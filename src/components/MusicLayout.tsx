@@ -23,8 +23,11 @@ export function MusicLayout({
   return (
     <div
       className={cn(
-        "relative flex flex-col h-dvh overflow-hidden bg-background pt-safe",
-        isTab && "pt-[var(--tab-bar-top-offset)]",
+        "relative flex flex-col h-dvh overflow-hidden bg-background",
+        // tab 页的顶部内边距由 --tab-bar-top-offset 独占（max(44px, 安全区)）。
+        // 不能与 pt-safe 并列：两者都在 utilities layer、特异性相同，
+        // 后出现的 .pt-safe 会覆盖前面的任意值类，导致 44px 兜底失效
+        isTab ? "pt-[var(--tab-bar-top-offset)]" : "pt-safe",
         className
       )}
     >

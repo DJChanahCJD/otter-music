@@ -164,6 +164,53 @@ describe("parseHigequPlayerHtml", () => {
     expect(parseHigequPlayerHtml("<html></html>").audioUrl).toBe("");
   });
 
+  it("兼容改版后的 const encodedUrl 内联格式", () => {
+    // 2026-10-31 实测 /player/228908/：站点把 let code 改成了 const encodedUrl
+    const html = `
+<audio id="audio-element" preload="metadata" style="display: none;"></audio>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const audio = document.getElementById('audio-element');
+    const encodedUrl = "aHR0cHM6Ly9rdy1lci5rdXdvLmNuLzFjZTUzY2E4MjE5YTZmOWY1ZjExYWJhOTJiZWIzMzE2LzZhZTU2Njk2L3Jlc291cmNlLzMwMTA2L3RyYWNrbWVkaWEvTTUwMDAwMGJZRGxjMlh4S0xzLm1wMw==";
+    if (audio && encodedUrl) {
+        const binary = atob(encodedUrl);
+        const bytes = Uint8Array.from(binary, c => c.charCodeAt(0));
+        const url = new TextDecoder().decode(bytes);
+        audio.src = url;
+        audio.load();
+    }
+});
+</script>`;
+
+    expect(parseHigequPlayerHtml(html).audioUrl).toBe(
+      "https://kw-er.kuwo.cn/1ce53ca8219a6f9f5f11aba92beb3316/6ae56696/resource/30106/trackmedia/M500000bYDlc2XxKLs.mp3"
+    );
+  });
+
+  it("变量名再改成任意名字也能靠内容嗅探解出直链", () => {
+    const url =
+      "https://kw-er.kuwo.cn/abc/def/resource/30106/trackmedia/testing.mp3";
+    const html = `<script>const someFutureFlag = "${btoa(url)}";</script>`;
+    expect(parseHigequPlayerHtml(html).audioUrl).toBe(url);
+  });
+
+  it("明文音频 URL 优先于 base64 嗅探", () => {
+    const html = `
+<script>let code = "aHR0cHM6Ly9rdy1lci5rdXdvLmNuL2FiYy9kZWYvcmVzb3VyY2UvMzAxMDYvdHJhY2ttZWRpYS9NXLm1wMw==";</script>
+<a href="https://example.com/a/plain.mp3">下载</a>`;
+    expect(parseHigequPlayerHtml(html).audioUrl).toBe(
+      "https://example.com/a/plain.mp3"
+    );
+  });
+
+  it("非音频内容的 base64 串不会被误认成直链", () => {
+    const cover = btoa(
+      "https://img1.kuwo.cn/star/albumcover/300/s3s94/93/211513640.jpg"
+    );
+    const html = `<script>const coverFlag = "${cover}";</script>`;
+    expect(parseHigequPlayerHtml(html).audioUrl).toBe("");
+  });
+
   it("base64 内容非法时不抛错", () => {
     const html = '<script>let code = "!!!not-base64!!!";</script>';
     expect(parseHigequPlayerHtml(html).audioUrl).toBe("");

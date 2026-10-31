@@ -38,7 +38,10 @@ import {
 import { IS_NATIVE } from "@/lib/api/config";
 import { MusicCommentsDrawer } from "./MusicCommentsDrawer";
 import { handleAutoMatch } from "@/lib/audio-match";
-import { getAllVisibleSourcesForSwitch } from "@/hooks/use-aggregated-sources";
+import {
+  EXCLUDED_FOR_SEARCH,
+  getAllVisibleSourcesForSwitch,
+} from "@/hooks/use-aggregated-sources";
 import { parseAlistTrackId } from "@/lib/alist/alist-api";
 import { resolveQqAlbumMid } from "@/lib/qqmusic/qqmusic-api";
 import {
@@ -124,21 +127,11 @@ export function MusicTrackMobileMenu({
 
   const provider = MusicProviderFactory.getProvider(track.source);
 
-  // 音源切换可用性：仅收藏页、歌单页、或当前正在播放的歌曲允许切换
-  const canSwitchSource = useMemo(() => {
-    if (
-      track.source === "local" ||
-      track.source === "podcast" ||
-      track.source === "alist"
-    )
-      return false;
-    const { queue, currentIndex } = useMusicStore.getState();
-    if (queue[currentIndex]?.id === track.id) return true;
-    const path = location.pathname;
-    if (path === "/favorites") return true;
-    if (path.startsWith("/playlist/")) return true;
-    return false;
-  }, [track.id, track.source, location.pathname]);
+  // 音源切换可用性：仅本地/播客/Alist 这类无搜索能力的音源不可换源
+  const canSwitchSource = useMemo(
+    () => !EXCLUDED_FOR_SEARCH.includes(track.source),
+    [track.source]
+  );
 
   const handleSearch = async (
     keyword: string,
@@ -432,7 +425,7 @@ export function MusicTrackMobileMenu({
               </ActionButton>
             )}
 
-            {/* 音源显示：local/podcast 或歌曲不在任何歌单/收藏中时不可切换 */}
+            {/* 音源显示：local/podcast/alist 无搜索能力，不可切换 */}
             <Button
               variant="ghost"
               className="justify-start w-full"
@@ -518,7 +511,14 @@ export function MusicTrackMobileMenu({
                   onClick={async () => {
                     setShowSourceSwitch(false);
                     onOpenChange(false);
-                    await handleAutoMatch(track, source, location.pathname);
+                    // 换源后立即播放：不在队列时插入当前列表，已在队列时定位播放
+                    await handleAutoMatch(
+                      track,
+                      source,
+                      location.pathname,
+                      undefined,
+                      true
+                    );
                   }}
                 >
                   {isCurrent ? (

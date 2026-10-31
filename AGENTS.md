@@ -44,6 +44,8 @@ Otter Music 是一款 Capacitor 混合架构音乐播放器。当前仅面向 An
      生成后务必检查补丁里没有混入 `.gradle/`、`.settings/`、`.classpath` 等本地垃圾文件（可用 `--exclude` 或手工清理补丁文本），并用 `npx patch-package` 验证能干净应用。
 - **新增依赖**：优先用 JS/TS 方案解决。只有涉及文件系统、蓝牙、通知等必须原生 API 的场景才引入 Capacitor 插件。
 - **音乐API**：默认直连 GD 音乐台 API，失败自动回退后端 functions 代理（`/music-api`、`/proxy`，见 `src/lib/api/config.ts` 的 `getOrderedMusicApiUrls`）。严禁自己实现加密算法，优先使用已有的加密库`node-forge`。
+- **下载元数据内嵌**：容器格式按文件头判断（`src/lib/utils/download.ts` 的 `detectAudioContainer`），不看扩展名——无损音质可能拿回 FLAC 而 `track.audioFormat` 未标记。MP3 走 JS 侧 `id3-embed` 写 ID3（整个文件 base64 往返 Capacitor 桥，`NATIVE_EMBED_MAX_BYTES` 超过 10MB 直接跳过以免 OOM）；FLAC 走原生 `LocalMusicPlugin.writeEmbeddedLyrics` 流式重写 VORBIS_COMMENT（音频帧不过桥，无体积上限，暂不内嵌封面）。新增需内嵌的格式时按「能否不经过 JS」选路径。
+- **安全区**：顶部内边距统一消费 `--safe-area-top`（`.pt-safe` 或 tab 页的 `--tab-bar-top-offset`）。Android 14 及以下没有原生注入（`SystemBars` 只在 API 35+ 注入），由 `src/lib/safe-area.ts` 的 `applyTopSafeAreaFallback()` 在启动时按系统栏占用补兜底值。**不要在同一个元素上并列 `pt-safe` 与任意值 `pt-[...]`**：两者同处 utilities layer、特异性相同，后定义的 `.pt-safe` 会静默覆盖前者。
 - **Lucide 图标 Android 兼容**：在低版本 Android WebView 下，被 `bg-*` + Flex 容器包裹的 `<Icon />` 可能被压缩至 0 像素。直接在 SVG 上加 `shrink-0` 无效（低版本 WebView 对 SVG 的 `flex-shrink: 0` 支持有 bug），因此 `shrink-0` 必须加在外层 `div` 上。修复方案：用外层 `div` 包裹 SVG，`div` 固定尺寸 + `shrink-0`，并建议显式声明 `flex-[0_0_Npx]` 与 `min-w-* min-h-*` 作为兜底，内层 SVG 用 `h-full w-full` 继承尺寸。示例：`<div className="h-6 w-6 shrink-0 flex-[0_0_24px] min-w-6 min-h-6"><Icon size={24} className="h-full w-full" /></div>`
 
 ## 编码约定
@@ -80,18 +82,21 @@ Android 原生返回键与 Web 端 Esc 由 `RootLayout` 统一拦截，转发到
 - **必须**实现 `searchArtist` 和 `searchAlbum`（最低限度委托给 `this.search`）。这两个方法当前只作为"支持站内搜索"的能力标志，由 `src/lib/music-provider/search-source.ts` 的 `resolveFallbackSearchSource` 读取：歌手/专辑跳转回退到搜索页时锁定单音源（优先取条目自身音源，不可搜则回退网易云），不再默认走聚合搜索——聚合需等待全部音源返回，会明显拖慢跳转。
 - `getArtistDetail`/`getAlbumDetail`/`getSongDetail` 为可选能力，仅在音源有独立详情页路由时才需实现。当前详情页（`NeteaseDetail`）耦合网易云 API，其他音源无需实现这些方法，走搜索回退即可。
 - **唯一的跨源回退页**是 `QqAlbumDetail`（路由 `/qq-album/:mid`），仅在网易云专辑取不到内容时启用：
-  1. `MusicTrackMobileMenu` 跳 `/netease-album/:id` 时通过 route state 带上 `albumFallback: { name, artist }`；
-  2. `NeteaseDetail` 加载失败（`error`）时用该校验词经 QQ `smartbox_new.fcg` 解析 albummid（精确名优先、包含匹配兜底，且要求歌手一致），再取专辑详情：优先旧版 `fcg_v8_album_info_cp.fcg`（单请求含元信息+全部曲目），失败或无曲目时退回 `musicu.fcg` 的 `req_0`+`req_1`；
-  3. 解析不到则保留原错误页；点击时若连专辑 ID 都拿不到，则在菜单里直接尝试 QQ（仍失败则走默认单音源搜索，不做聚合）。
+  1. 跳 `/netease-album/:id` 时通过 route state 带上 `albumFallback: { name, artist }`，入口有四个：`MusicTrackMobileMenu`、`ArtistAlbumSheet`、`AwardsChart`、`BillboardEntryGrid`；
+  2. `NeteaseDetail` 加载失败（`error`）时用该关键词经 QQ `smartbox_new.fcg` 解析 albummid（`resolveQqAlbumMid`，取舍顺序：精确名+歌手一致 → 名包含+歌手一致 → 仅名精确 → 仅名包含；后两级是给「网易云无版权、QQ 歌手署名不同」留的放宽，不要再收紧成必须歌手一致），再取专辑详情：优先旧版 `fcg_v8_album_info_cp.fcg`（单请求含元信息+全部曲目），失败或无曲目时退回 `musicu.fcg` 的 `req_0`+`req_1`；
+  3. 解析不到则保留原错误页；`MusicTrackMobileMenu` 里连网易云专辑 ID 都拿不到时直接试 QQ（仍失败则走默认单音源搜索，不做聚合）。
 - **单一音质音源**（只有一档音频流，如 higequ、jamendo、B站、本地、播客）：`getUrl` 忽略 `br`，并把音源名加入 `src/hooks/useAudioTrackLoader.ts` 的 `skipQualityReload` 列表，让切音质静默跳过重载，避免多余请求与播放中断。
 - **免鉴权优先**：新音源优先复用站点自身的网页接口（如 jamendo、higequ 的页面/站点接口），不引入需要注册 `client_id` 或额外签名的开发者 API；接口细节（签名头、分页参数、直链模板）写在 `src/lib/<source>/` 的模块注释里，不在根文档重复。
 
-## 媒体会话与车机歌词（Android）
+## 媒体会话、车机歌词与桌面歌词（Android）
 
 系统媒体控件（通知栏/锁屏/蓝牙）的原生实现**不在 `android/` 下**，而在第三方插件补丁 `patches/@jofr+capacitor-media-session+4.0.0.patch`（`MediaSessionPlugin` / `MediaSessionService` / `MediaSessionCallback` / `definitions.d.ts` + 通知按钮图标）。改这里的代码必须走上面的 patch-package 流程，只改 `node_modules` 不算完成。
 
 - **车机歌词**（iOS/Android 通用做法，不是本项目自创）：AVRCP 协议没有歌词字段，故把当前歌词行写进 `TITLE`（`MediaSessionService#setCarLyric`）。`src/hooks/useCarLyric.ts` 只覆写蓝牙端读取的 MediaMetadata，通知栏与锁屏仍显示歌名；总开关为 store 的 `carLyricEnabled`（设置项 `CarLyricSetting`）。
 - 插件代理按原生上报的方法表（`cap.PluginHeaders`）转发：未同步原生改动时 `MediaSession.setCarLyric` 是 `undefined`，**直接调用会同步抛 TypeError，`.catch` 接不住**。调用前必须先过 `isCarLyricSupported()` 探测。
+- **桌面歌词**是自有插件，不在补丁里：原生在 `android/app/src/main/java/com/otterhub/music/DesktopLyricPlugin.java`（`MainActivity` 注册、清单声明 `SYSTEM_ALERT_WINDOW`），JS 侧 `src/hooks/useDesktopLyric.ts` 只按与车机歌词相同的时间轴口径（`currentAudioTime`，约 1s 节流）逐行 `setLyric`；原生不解析 LRC、不起定时器，也不管切歌。
+- 悬浮窗权限不能运行时申请：`checkOverlayPermission` 未授权则 `requestOverlayPermission` 跳系统页，用户返回后需再点一次开关再开启。应用前台由 `ActivityLifecycleCallbacks` 自动隐藏、切后台恢复；双击药丸经 `EXTRA_OPEN_SETTINGS` 拉起本应用，JS 侧 `consumeOpenSettings` 消费后跳设置项并展开。
+- 方法探测同上：`isDesktopLyricSupported()` 之外，`setSize`/`setColor`/`consumeOpenSettings` 也要单独探测（旧 APK 的方法表里没有）。
 
 ## 其他
 

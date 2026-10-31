@@ -496,4 +496,73 @@ describe("handleAutoMatch", () => {
     expect(result).toBe(true);
     expect(useMusicStore.getState().queue[0]?.id).toBe("new");
   });
+
+  it("inserts and plays the matched track when playAfterMatch is true", async () => {
+    const playing = createTrack("playing", "kuwo", "七里香", ["周杰伦"]);
+    const sourceTrack = createTrack("old", "netease");
+    const match = createTrack("new", "joox");
+    useMusicStore.setState({
+      queue: [playing],
+      originalQueue: [playing],
+      currentIndex: 0,
+      isPlaying: false,
+      hasUserGesture: false,
+    });
+    const search = vi
+      .fn()
+      .mockResolvedValue({ items: [match], hasMore: false });
+    vi.mocked(MusicProviderFactory.getProvider).mockReturnValue({
+      source: "joox",
+      search,
+      getUrl: vi.fn(),
+      getPic: vi.fn(),
+      getLyric: vi.fn(),
+    });
+
+    const result = await handleAutoMatch(
+      sourceTrack,
+      "joox",
+      "/search",
+      undefined,
+      true
+    );
+
+    const state = useMusicStore.getState();
+    expect(result).toBe(true);
+    expect(state.queue.map((t) => t.id)).toEqual(["playing", "new"]);
+    expect(state.currentIndex).toBe(1);
+    expect(state.isPlaying).toBe(true);
+    expect(state.hasUserGesture).toBe(true);
+  });
+
+  it("switches the queued track in place and plays it when playAfterMatch is true", async () => {
+    const first = createTrack("first", "kuwo", "七里香", ["周杰伦"]);
+    const second = createTrack("second", "kuwo", "夜曲", ["周杰伦"]);
+    const sourceTrack = createTrack("old", "netease");
+    const match = createTrack("new", "joox");
+    useMusicStore.setState({
+      queue: [first, second, sourceTrack],
+      originalQueue: [first, second, sourceTrack],
+      currentIndex: 0,
+      isPlaying: false,
+      hasUserGesture: false,
+    });
+    const search = vi
+      .fn()
+      .mockResolvedValue({ items: [match], hasMore: false });
+    vi.mocked(MusicProviderFactory.getProvider).mockReturnValue({
+      source: "joox",
+      search,
+      getUrl: vi.fn(),
+      getPic: vi.fn(),
+      getLyric: vi.fn(),
+    });
+
+    await handleAutoMatch(sourceTrack, "joox", undefined, undefined, true);
+
+    const state = useMusicStore.getState();
+    expect(state.queue.map((t) => t.id)).toEqual(["first", "second", "new"]);
+    expect(state.currentIndex).toBe(2);
+    expect(state.isPlaying).toBe(true);
+  });
 });
