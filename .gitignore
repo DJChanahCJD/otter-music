@@ -47,3 +47,8 @@ tsconfig.tsbuildinfo
 .claude/
 openspec/
 .workbuddy/
+
+# Cloudflare Workers
+.dev.vars*
+!.dev.vars.example
+.wrangler/
