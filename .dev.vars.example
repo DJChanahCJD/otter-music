@@ -1,0 +1,9 @@
+# 复制为 .dev.vars 后填入真实值（.dev.vars 已被 .gitignore 忽略，切勿提交）。
+# 本地开发：npx wrangler dev
+# 线上部署：npx wrangler secret put PASSWORD（或在 Dashboard 的 Variables and Secrets 中添加）
+
+# 管理员密码，用于管理 SYNC_KEY（必须）
+PASSWORD=your-admin-password
+
+# 可选：GitHub release 检查接口使用的 token
+GITHUB_TOKEN=

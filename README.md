@@ -148,17 +148,37 @@ functions/                 # Cloudflare Workers 后端
 shared/                     # 跨端共享类型
 ```
 
-## 📦 部署指南 (Cloudflare Pages)
+## 📦 部署指南 (Cloudflare Workers)
 
-1. **创建项目**：Fork 本仓库，在 [Cloudflare Dashboard](https://dash.cloudflare.com/) 创建 Pages 项目。
-2. **构建配置**：
-   - **Build command**: `npm run build`
-   - **Build output directory**: `dist`
-3. **环境变量**：
-   - `PASSWORD`: 设置你的管理员密码，用于管理`SYNC_KEY`（必须）
-4. **KV 绑定**：
-   - 创建 KV Namespace 命名为 `oh_file_url`
-   - 在 Pages 设置中绑定该 KV，变量名设为 `oh_file_url`
+前端由 Workers Static Assets 托管，后端是同一个项目里的 Hono Worker，部署配置统一在根目录 `wrangler.jsonc`。
+
+### 1. 一次性准备
+
+1. **替换 KV namespace id**：把 `wrangler.jsonc` 中的 `REPLACE_WITH_EXISTING_KV_NAMESPACE_ID` 换成你账号下 `oh_file_url` 这个 namespace 的 id。
+   - 查看：`npx wrangler kv namespace list`，或 Dashboard → Storage & Databases → KV。
+   - 首次部署：`npx wrangler kv namespace create oh_file_url`。
+   - ⚠️ 从 Pages 迁移时请**复用原 Pages 绑定的那个 namespace**，否则已分配的 SYNC_KEY 与同步数据会丢失。占位符未替换时 `wrangler deploy` 会直接报错。
+2. **设置密钥**（不要提交到仓库）：`npx wrangler secret put PASSWORD`（必须）；`npx wrangler secret put GITHUB_TOKEN`（可选，用于版本更新检查）。也可在 Dashboard → Worker → Settings → Variables and Secrets 中添加。
+3. 本地调试把 `.dev.vars.example` 复制为 `.dev.vars`；若 Worker 名不是 `otter-music`，修改 `wrangler.jsonc` 的 `name`。
+
+### 2. Workers Builds（Git 集成，推荐）
+
+| 配置项         | 值                                    |
+| -------------- | ------------------------------------- |
+| Build command  | `npm run build`                       |
+| Deploy command | `npx wrangler deploy`                 |
+| Root directory | 留空（`wrangler.jsonc` 在仓库根目录） |
+
+> 构建会使用 `package.json` 里锁定的 `wrangler@4.162.0`。**不要移除这个 devDependency，也不要删 `wrangler.jsonc`**：仓库是 npm workspace 根目录，缺少 Wrangler 配置文件时新版 Wrangler 会进入自动配置，并在框架检测阶段直接失败。
+
+手动部署：`npm run build && npm run deploy`。
+
+### 3. 路由说明
+
+- `assets.directory: ./dist` + `not_found_handling: single-page-application`：静态资源正常返回，SPA 深链接（如 `/admin`）回退到 `index.html`。
+- `assets.run_worker_first` 只把 `/health`、`/auth`、`/proxy`、`/update`、`/music-api`、`/sync`、`/podcast-api` 这些后端前缀交给 Worker，其余请求直接由静态资源返回，不产生额外的 Worker 调用。
+- `functions/worker.ts` 中，Hono 未命中路由的 404 会通过 `ASSETS` binding 回退，行为等价于原 Pages 的 `ctx.next()`。
+- `functions/[[path]].ts` 保留，因此仍可用 Cloudflare Pages 部署（Build command `npm run build`、Build output directory `dist`，并绑定同名 KV 与 `PASSWORD`）。
 
 > 自建后端可在前端页面「设置 → API 地址」中填入自定义域名。
 >

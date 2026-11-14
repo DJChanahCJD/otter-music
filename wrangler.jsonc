@@ -1,0 +1,51 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "otter-music",
+  "main": "functions/worker.ts",
+  // functions/ 内部使用 @utils/*、types/* 等路径别名，定义在 functions/tsconfig.json 中。
+  // 指定它可让 Wrangler 的 esbuild 正确解析这些别名（根 tsconfig.json 排除了 functions/）。
+  "tsconfig": "functions/tsconfig.json",
+  "compatibility_date": "2026-11-14",
+  "compatibility_flags": ["nodejs_compat"],
+  "assets": {
+    "directory": "./dist",
+    "binding": "ASSETS",
+    // SPA 深链接（如 /admin、/settings）回退到 index.html
+    "not_found_handling": "single-page-application",
+    // 只有后端 API 前缀先走 Worker，其余请求直接由静态资源返回，避免无谓的 Worker 调用。
+    // 精确路径与通配路径都要列出：/proxy、/music-api、/sync 本身就是有效端点。
+    "run_worker_first": [
+      "/health",
+      "/auth",
+      "/auth/*",
+      "/proxy",
+      "/proxy/*",
+      "/update",
+      "/update/*",
+      "/music-api",
+      "/music-api/*",
+      "/sync",
+      "/sync/*",
+      "/podcast-api",
+      "/podcast-api/*",
+    ],
+  },
+  // ⚠️ 部署前必须把 id 换成你自己账号下已有的 KV namespace id。
+  //    建议复用原 Pages 项目绑定的 oh_file_url，否则已有 SYNC_KEY / 同步数据会丢失。
+  //    查看：npx wrangler kv namespace list
+  //    没有的话：npx wrangler kv namespace create oh_file_url
+  //    留着占位符会让 wrangler deploy 报错（这是故意的，避免误连到空 namespace）。
+  "kv_namespaces": [
+    {
+      "binding": "oh_file_url",
+      "id": "REPLACE_WITH_EXISTING_KV_NAMESPACE_ID",
+    },
+  ],
+  // PASSWORD / GITHUB_TOKEN 不要写进版本库，用 secret 注入：
+  //   npx wrangler secret put PASSWORD
+  //   npx wrangler secret put GITHUB_TOKEN   (可选)
+  // 本地开发可复制 .dev.vars.example 为 .dev.vars（已被 .gitignore 忽略）。
+  "observability": {
+    "enabled": true,
+  },
+}
